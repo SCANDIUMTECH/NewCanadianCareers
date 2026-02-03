@@ -31,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { PaginationWrapper } from "@/components/ui/pagination"
 
 /**
  * Company Jobs Management
@@ -56,12 +57,15 @@ const statusFilters = [
   { value: "expired", label: "Expired", count: 1 },
 ]
 
+const ITEMS_PER_PAGE = 10
+
 export default function CompanyJobsPage() {
   const [selectedStatus, setSelectedStatus] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedJobs, setSelectedJobs] = useState<number[]>([])
   const [showPublishDialog, setShowPublishDialog] = useState(false)
   const [jobToPublish, setJobToPublish] = useState<typeof allJobs[0] | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
 
   const filteredJobs = allJobs.filter((job) => {
     const matchesStatus = selectedStatus === "all" || job.status === selectedStatus
@@ -69,6 +73,24 @@ export default function CompanyJobsPage() {
                          job.location.toLowerCase().includes(searchQuery.toLowerCase())
     return matchesStatus && matchesSearch
   })
+
+  // Paginate jobs
+  const totalPages = Math.ceil(filteredJobs.length / ITEMS_PER_PAGE)
+  const paginatedJobs = filteredJobs.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  )
+
+  // Reset to page 1 when filters change
+  const handleStatusChange = (status: string) => {
+    setSelectedStatus(status)
+    setCurrentPage(1)
+  }
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value)
+    setCurrentPage(1)
+  }
 
   const toggleSelectJob = (jobId: number) => {
     setSelectedJobs(prev => 
@@ -114,7 +136,7 @@ export default function CompanyJobsPage() {
                 {statusFilters.map((filter) => (
                   <button
                     key={filter.value}
-                    onClick={() => setSelectedStatus(filter.value)}
+                    onClick={() => handleStatusChange(filter.value)}
                     className={cn(
                       "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors",
                       selectedStatus === filter.value
@@ -142,7 +164,7 @@ export default function CompanyJobsPage() {
                   <Input
                     placeholder="Search jobs..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={handleSearchChange}
                     className="pl-9"
                   />
                 </div>
@@ -192,7 +214,7 @@ export default function CompanyJobsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
-                {filteredJobs.map((job) => (
+                {paginatedJobs.map((job) => (
                   <tr key={job.id} className="hover:bg-background-secondary/30 transition-colors group">
                     <td className="px-4 py-4">
                       <Checkbox
@@ -299,6 +321,18 @@ export default function CompanyJobsPage() {
                   Post New Job
                 </Button>
               </Link>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {filteredJobs.length > 0 && (
+            <div className="p-4 border-t border-border/50">
+              <PaginationWrapper
+                currentPage={currentPage}
+                pageSize={ITEMS_PER_PAGE}
+                totalItems={filteredJobs.length}
+                onPageChange={setCurrentPage}
+              />
             </div>
           )}
         </Card>

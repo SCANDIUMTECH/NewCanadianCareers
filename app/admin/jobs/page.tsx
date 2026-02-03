@@ -452,6 +452,33 @@ export default function JobsManagementPage() {
     published: mockJobs.filter(j => j.status === "published").length,
   }
 
+  // Calculate dynamic grid template based on visible columns
+  const gridTemplateColumns = useMemo(() => {
+    // Tablet (sm): checkbox, title, status, views, apps, actions
+    const smCols = ["40px", "minmax(0, 2fr)"]
+    if (visibleColumns.includes("status")) smCols.push("minmax(0, 1fr)")
+    if (visibleColumns.includes("views")) smCols.push("minmax(0, 1fr)")
+    if (visibleColumns.includes("applications")) smCols.push("minmax(0, 1fr)")
+    smCols.push("48px")
+
+    // Desktop (lg): all visible columns
+    const lgCols = ["40px", "minmax(0, 2fr)"]
+    if (visibleColumns.includes("status")) lgCols.push("minmax(0, 1fr)")
+    if (visibleColumns.includes("views")) lgCols.push("minmax(0, 1fr)")
+    if (visibleColumns.includes("applications")) lgCols.push("minmax(0, 1fr)")
+    if (visibleColumns.includes("company")) lgCols.push("minmax(0, 1fr)")
+    if (visibleColumns.includes("location")) lgCols.push("minmax(0, 1fr)")
+    if (visibleColumns.includes("salary")) lgCols.push("minmax(0, 1fr)")
+    if (visibleColumns.includes("posted")) lgCols.push("minmax(0, 1fr)")
+    if (visibleColumns.includes("reports")) lgCols.push("minmax(0, 1fr)")
+    lgCols.push("48px")
+
+    return {
+      sm: smCols.join(" "),
+      lg: lgCols.join(" "),
+    }
+  }, [visibleColumns])
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -527,131 +554,134 @@ export default function JobsManagementPage() {
           </TabsList>
 
           {/* Filters & Controls */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Search */}
-            <div className="relative">
+          <div className="flex flex-col gap-3 w-full lg:w-auto lg:flex-row lg:items-center">
+            {/* Search - full width on mobile */}
+            <div className="relative w-full lg:w-auto">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder="Search jobs..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="pl-9 w-[200px]"
+                className="pl-9 w-full lg:w-[200px]"
               />
             </div>
 
-            {/* Status Filter */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Filter className="w-4 h-4 mr-2" />
-                  Status
-                  {statusFilter.length > 0 && (
-                    <Badge variant="secondary" className="ml-2">
-                      {statusFilter.length}
-                    </Badge>
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                {Object.entries(statusConfig).map(([key, config]) => (
-                  <DropdownMenuCheckboxItem
-                    key={key}
-                    checked={statusFilter.includes(key)}
-                    onCheckedChange={checked => {
-                      setStatusFilter(prev =>
-                        checked ? [...prev, key] : prev.filter(s => s !== key)
-                      )
-                    }}
-                  >
-                    {config.label}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* Filter buttons - horizontal scroll on mobile */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0 -mx-1 px-1">
+              {/* Status Filter */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="flex-shrink-0">
+                    <Filter className="w-4 h-4 mr-2" />
+                    Status
+                    {statusFilter.length > 0 && (
+                      <Badge variant="secondary" className="ml-2">
+                        {statusFilter.length}
+                      </Badge>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  {Object.entries(statusConfig).map(([key, config]) => (
+                    <DropdownMenuCheckboxItem
+                      key={key}
+                      checked={statusFilter.includes(key)}
+                      onCheckedChange={checked => {
+                        setStatusFilter(prev =>
+                          checked ? [...prev, key] : prev.filter(s => s !== key)
+                        )
+                      }}
+                    >
+                      {config.label}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-            {/* Location Type Filter */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <MapPin className="w-4 h-4 mr-2" />
-                  Location
-                  {locationTypeFilter.length > 0 && (
-                    <Badge variant="secondary" className="ml-2">
-                      {locationTypeFilter.length}
-                    </Badge>
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {["remote", "onsite", "hybrid"].map(type => (
-                  <DropdownMenuCheckboxItem
-                    key={type}
-                    checked={locationTypeFilter.includes(type)}
-                    onCheckedChange={checked => {
-                      setLocationTypeFilter(prev =>
-                        checked ? [...prev, type] : prev.filter(t => t !== type)
-                      )
-                    }}
-                  >
-                    {type.charAt(0).toUpperCase() + type.slice(1)}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+              {/* Location Type Filter */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="flex-shrink-0">
+                    <MapPin className="w-4 h-4 mr-2" />
+                    Location
+                    {locationTypeFilter.length > 0 && (
+                      <Badge variant="secondary" className="ml-2">
+                        {locationTypeFilter.length}
+                      </Badge>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {["remote", "onsite", "hybrid"].map(type => (
+                    <DropdownMenuCheckboxItem
+                      key={type}
+                      checked={locationTypeFilter.includes(type)}
+                      onCheckedChange={checked => {
+                        setLocationTypeFilter(prev =>
+                          checked ? [...prev, type] : prev.filter(t => t !== type)
+                        )
+                      }}
+                    >
+                      {type.charAt(0).toUpperCase() + type.slice(1)}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-            {/* Group By */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <ArrowUpDown className="w-4 h-4 mr-2" />
-                  Group: {groupBy === "none" ? "None" : groupBy.charAt(0).toUpperCase() + groupBy.slice(1)}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setGroupBy("none")}>No Grouping</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setGroupBy("company")}>By Company</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setGroupBy("agency")}>By Agency</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              {/* Group By */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="flex-shrink-0">
+                    <ArrowUpDown className="w-4 h-4 mr-2" />
+                    <span className="hidden sm:inline">Group: </span>{groupBy === "none" ? "None" : groupBy.charAt(0).toUpperCase() + groupBy.slice(1)}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setGroupBy("none")}>No Grouping</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setGroupBy("company")}>By Company</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setGroupBy("agency")}>By Agency</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-            {/* Column Visibility */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Columns className="w-4 h-4 mr-2" />
-                  Columns
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuLabel>Visible Columns</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {[
-                  { key: "company" as ColumnKey, label: "Company" },
-                  { key: "agency" as ColumnKey, label: "Agency" },
-                  { key: "status" as ColumnKey, label: "Status" },
-                  { key: "location" as ColumnKey, label: "Location" },
-                  { key: "salary" as ColumnKey, label: "Salary" },
-                  { key: "applyMode" as ColumnKey, label: "Apply Mode" },
-                  { key: "posted" as ColumnKey, label: "Posted" },
-                  { key: "expires" as ColumnKey, label: "Expires" },
-                  { key: "views" as ColumnKey, label: "Views" },
-                  { key: "applications" as ColumnKey, label: "Applications" },
-                  { key: "reports" as ColumnKey, label: "Reports" },
-                ].map(col => (
-                  <DropdownMenuCheckboxItem
-                    key={col.key}
-                    checked={visibleColumns.includes(col.key)}
-                    onCheckedChange={checked => {
-                      setVisibleColumns(prev =>
-                        checked ? [...prev, col.key] : prev.filter(c => c !== col.key)
-                      )
-                    }}
-                  >
-                    {col.label}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+              {/* Column Visibility - hidden on mobile since card layout doesn't use columns */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="flex-shrink-0 hidden sm:flex">
+                    <Columns className="w-4 h-4 mr-2" />
+                    Columns
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuLabel>Visible Columns</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {[
+                    { key: "company" as ColumnKey, label: "Company" },
+                    { key: "agency" as ColumnKey, label: "Agency" },
+                    { key: "status" as ColumnKey, label: "Status" },
+                    { key: "location" as ColumnKey, label: "Location" },
+                    { key: "salary" as ColumnKey, label: "Salary" },
+                    { key: "applyMode" as ColumnKey, label: "Apply Mode" },
+                    { key: "posted" as ColumnKey, label: "Posted" },
+                    { key: "expires" as ColumnKey, label: "Expires" },
+                    { key: "views" as ColumnKey, label: "Views" },
+                    { key: "applications" as ColumnKey, label: "Applications" },
+                    { key: "reports" as ColumnKey, label: "Reports" },
+                  ].map(col => (
+                    <DropdownMenuCheckboxItem
+                      key={col.key}
+                      checked={visibleColumns.includes(col.key)}
+                      onCheckedChange={checked => {
+                        setVisibleColumns(prev =>
+                          checked ? [...prev, col.key] : prev.filter(c => c !== col.key)
+                        )
+                      }}
+                    >
+                      {col.label}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
 
@@ -662,29 +692,29 @@ export default function JobsManagementPage() {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="flex items-center justify-between bg-primary/5 border border-primary/20 rounded-lg px-4 py-2 mb-4"
+              className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-primary/5 border border-primary/20 rounded-lg px-4 py-3 sm:py-2 mb-4"
             >
               <span className="text-sm font-medium">
                 {selectedJobs.length} job{selectedJobs.length > 1 ? "s" : ""} selected
               </span>
-              <div className="flex items-center gap-2">
-                <Button size="sm" variant="outline" onClick={() => handleBulkAction("approve")}>
-                  <Check className="w-4 h-4 mr-1" />
-                  Approve
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+                <Button size="sm" variant="outline" onClick={() => handleBulkAction("approve")} className="flex-shrink-0">
+                  <Check className="w-4 h-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Approve</span>
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => handleBulkAction("pause")}>
-                  <Pause className="w-4 h-4 mr-1" />
-                  Pause
+                <Button size="sm" variant="outline" onClick={() => handleBulkAction("pause")} className="flex-shrink-0">
+                  <Pause className="w-4 h-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Pause</span>
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => handleBulkAction("hide")}>
-                  <EyeOff className="w-4 h-4 mr-1" />
-                  Hide
+                <Button size="sm" variant="outline" onClick={() => handleBulkAction("hide")} className="flex-shrink-0">
+                  <EyeOff className="w-4 h-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Hide</span>
                 </Button>
-                <Button size="sm" variant="outline" className="text-red-600 bg-transparent" onClick={() => handleBulkAction("delete")}>
-                  <Trash2 className="w-4 h-4 mr-1" />
-                  Delete
+                <Button size="sm" variant="outline" className="text-red-600 bg-transparent flex-shrink-0" onClick={() => handleBulkAction("delete")}>
+                  <Trash2 className="w-4 h-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Delete</span>
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => setSelectedJobs([])}>
+                <Button size="sm" variant="ghost" onClick={() => setSelectedJobs([])} className="flex-shrink-0">
                   <X className="w-4 h-4" />
                 </Button>
               </div>
@@ -695,24 +725,57 @@ export default function JobsManagementPage() {
         {/* Jobs Table */}
         <TabsContent value={activeTab} className="mt-0">
           <div className="bg-card border border-border rounded-xl overflow-hidden">
-            {/* Table Header */}
-            <div className="grid grid-cols-[auto_2fr_repeat(8,1fr)_auto] gap-4 px-4 py-3 bg-muted/30 border-b border-border text-sm font-medium text-muted-foreground">
-              <div className="flex items-center">
+            {/* Table Header - Tablet (sm to lg-1) */}
+            <div
+              className="hidden sm:grid lg:hidden gap-4 px-4 py-3 bg-muted/30 border-b border-border text-sm font-medium text-muted-foreground items-center"
+              style={{ gridTemplateColumns: gridTemplateColumns.sm }}
+            >
+              <div>
                 <Checkbox
                   checked={filteredJobs.length > 0 && filteredJobs.every(j => selectedJobs.includes(j.id))}
                   onCheckedChange={() => selectAllVisible()}
                 />
               </div>
               <div>Job Title</div>
-              {visibleColumns.includes("company") && <div>Company</div>}
               {visibleColumns.includes("status") && <div>Status</div>}
+              {visibleColumns.includes("views") && <div>Views</div>}
+              {visibleColumns.includes("applications") && <div>Apps</div>}
+              <div>Actions</div>
+            </div>
+
+            {/* Table Header - Desktop (lg+) */}
+            <div
+              className="hidden lg:grid gap-4 px-4 py-3 bg-muted/30 border-b border-border text-sm font-medium text-muted-foreground items-center"
+              style={{ gridTemplateColumns: gridTemplateColumns.lg }}
+            >
+              <div>
+                <Checkbox
+                  checked={filteredJobs.length > 0 && filteredJobs.every(j => selectedJobs.includes(j.id))}
+                  onCheckedChange={() => selectAllVisible()}
+                />
+              </div>
+              <div>Job Title</div>
+              {visibleColumns.includes("status") && <div>Status</div>}
+              {visibleColumns.includes("views") && <div>Views</div>}
+              {visibleColumns.includes("applications") && <div>Apps</div>}
+              {visibleColumns.includes("company") && <div>Company</div>}
               {visibleColumns.includes("location") && <div>Location</div>}
               {visibleColumns.includes("salary") && <div>Salary</div>}
               {visibleColumns.includes("posted") && <div>Posted</div>}
-              {visibleColumns.includes("views") && <div>Views</div>}
-              {visibleColumns.includes("applications") && <div>Apps</div>}
               {visibleColumns.includes("reports") && <div>Reports</div>}
               <div>Actions</div>
+            </div>
+
+            {/* Mobile header - just select all checkbox */}
+            <div className="sm:hidden flex items-center justify-between px-4 py-3 bg-muted/30 border-b border-border">
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  checked={filteredJobs.length > 0 && filteredJobs.every(j => selectedJobs.includes(j.id))}
+                  onCheckedChange={() => selectAllVisible()}
+                />
+                <span className="text-sm font-medium text-muted-foreground">Select All</span>
+              </div>
+              <span className="text-sm text-muted-foreground">{filteredJobs.length} jobs</span>
             </div>
 
             {/* Table Body */}
@@ -733,6 +796,7 @@ export default function JobsManagementPage() {
                     visibleColumns={visibleColumns}
                     formatSalary={formatSalary}
                     onAction={(action, j) => setActionDialog({ open: true, action, jobs: [j] })}
+                    gridTemplateColumns={gridTemplateColumns}
                   />
                 ))
               ) : (
@@ -785,6 +849,7 @@ export default function JobsManagementPage() {
                               formatSalary={formatSalary}
                               onAction={(action, j) => setActionDialog({ open: true, action, jobs: [j] })}
                               indented
+                              gridTemplateColumns={gridTemplateColumns}
                             />
                           ))}
                         </motion.div>
@@ -1037,7 +1102,7 @@ export default function JobsManagementPage() {
   )
 }
 
-// Job Row Component
+// Job Row Component - with mobile card and responsive table layouts
 function JobRow({
   job,
   index,
@@ -1047,6 +1112,7 @@ function JobRow({
   formatSalary,
   onAction,
   indented = false,
+  gridTemplateColumns,
 }: {
   job: Job
   index: number
@@ -1056,188 +1122,311 @@ function JobRow({
   formatSalary: (salary?: Job["salary"]) => string
   onAction: (action: string, job: Job) => void
   indented?: boolean
+  gridTemplateColumns: { sm: string; lg: string }
 }) {
   const status = statusConfig[job.status]
   const StatusIcon = status.icon
+
+  // Action menu - shared between mobile and desktop
+  const ActionMenu = () => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+          <MoreHorizontal className="w-4 h-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => console.log("View job", job.id)}>
+          <Eye className="w-4 h-4 mr-2" />
+          View Details
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onAction("edit", job)}>
+          <Edit className="w-4 h-4 mr-2" />
+          Edit Job
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {job.status === "pending" && (
+          <DropdownMenuItem onClick={() => onAction("approve", job)}>
+            <Check className="w-4 h-4 mr-2" />
+            Approve
+          </DropdownMenuItem>
+        )}
+        {job.status === "published" && (
+          <DropdownMenuItem onClick={() => onAction("pause", job)}>
+            <Pause className="w-4 h-4 mr-2" />
+            Pause
+          </DropdownMenuItem>
+        )}
+        {job.status === "paused" && (
+          <DropdownMenuItem onClick={() => onAction("approve", job)}>
+            <Play className="w-4 h-4 mr-2" />
+            Resume
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem onClick={() => onAction("hide", job)}>
+          <EyeOff className="w-4 h-4 mr-2" />
+          Hide
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => onAction("delete", job)}
+          className="text-red-600"
+        >
+          <Trash2 className="w-4 h-4 mr-2" />
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ delay: index * 0.02 }}
-      className={cn(
-        "grid grid-cols-[auto_2fr_repeat(8,1fr)_auto] gap-4 px-4 py-3 hover:bg-muted/30 transition-colors items-center",
-        selected && "bg-primary/5",
-        indented && "pl-10"
-      )}
     >
-      {/* Checkbox */}
-      <div>
-        <Checkbox
-          checked={selected}
-          onCheckedChange={() => onSelect(job.id)}
-        />
-      </div>
+      {/* Mobile Card Layout (< sm) */}
+      <div className={cn(
+        "sm:hidden p-4 hover:bg-muted/30 transition-colors",
+        selected && "bg-primary/5",
+        indented && "pl-8"
+      )}>
+        {/* Card Header: Checkbox, Title, Featured badge */}
+        <div className="flex items-start gap-3">
+          <Checkbox
+            checked={selected}
+            onCheckedChange={() => onSelect(job.id)}
+            className="mt-1"
+          />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-medium text-foreground leading-tight">{job.title}</h3>
+                <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-0.5">
+                  <span className="truncate">{job.company.name}</span>
+                  {job.company.verified && (
+                    <Check className="w-3 h-3 text-emerald-500 flex-shrink-0" />
+                  )}
+                  <span>·</span>
+                  <span>{job.category}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {job.featured && (
+                  <Badge variant="secondary" className="bg-amber-100 text-amber-700 text-xs">
+                    Featured
+                  </Badge>
+                )}
+              </div>
+            </div>
 
-      {/* Title */}
-      <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-foreground truncate">{job.title}</span>
-          {job.featured && (
-            <Badge variant="secondary" className="bg-amber-100 text-amber-700 text-xs">
-              Featured
-            </Badge>
-          )}
-        </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-          <span>{job.category}</span>
-          {job.applyMode === "external" && (
-            <>
-              <span>·</span>
-              <span className="flex items-center gap-1">
-                <ExternalLink className="w-3 h-3" />
-                External
+            {/* Status & Location Row */}
+            <div className="flex items-center gap-3 mt-3">
+              <Badge className={cn("text-xs gap-1", status.color)}>
+                <StatusIcon className="w-3 h-3" />
+                {status.label}
+              </Badge>
+              <span className="text-sm text-muted-foreground flex items-center gap-1">
+                <MapPin className="w-3 h-3" />
+                <span className="capitalize">{job.locationType}</span>
+                <span>·</span>
+                <span className="truncate max-w-[120px]">{job.location}</span>
               </span>
-            </>
-          )}
+            </div>
+
+            {/* Stats Row */}
+            <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <span>Posted: {new Date(job.postedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                <span className="flex items-center gap-1">
+                  <Eye className="w-3 h-3" />
+                  {job.views.toLocaleString()}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Users className="w-3 h-3" />
+                  {job.applications}
+                </span>
+                {job.reportCount > 0 && (
+                  <Badge variant="destructive" className="text-xs">
+                    <AlertTriangle className="w-3 h-3 mr-1" />
+                    {job.reportCount}
+                  </Badge>
+                )}
+              </div>
+              <ActionMenu />
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Company */}
-      {visibleColumns.includes("company") && (
-        <div className="min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className="text-sm truncate">{job.company.name}</span>
-            {job.company.verified && (
-              <Check className="w-3 h-3 text-emerald-500 flex-shrink-0" />
+      {/* Tablet Table Row (sm to lg-1) */}
+      <div
+        className={cn(
+          "hidden sm:grid lg:hidden gap-4 px-4 py-3 hover:bg-muted/30 transition-colors items-center",
+          selected && "bg-primary/5",
+          indented && ""
+        )}
+        style={{ gridTemplateColumns: gridTemplateColumns.sm }}
+      >
+        <div>
+          <Checkbox
+            checked={selected}
+            onCheckedChange={() => onSelect(job.id)}
+          />
+        </div>
+        <div className={cn("min-w-0", indented && "pl-6")}>
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-foreground truncate">{job.title}</span>
+            {job.featured && (
+              <Badge variant="secondary" className="bg-amber-100 text-amber-700 text-xs flex-shrink-0">
+                Featured
+              </Badge>
             )}
           </div>
-          {job.agency && (
-            <span className="text-xs text-muted-foreground">via {job.agency.name}</span>
-          )}
-        </div>
-      )}
-
-      {/* Status */}
-      {visibleColumns.includes("status") && (
-        <div>
-          <Badge className={cn("text-xs gap-1", status.color)}>
-            <StatusIcon className="w-3 h-3" />
-            {status.label}
-          </Badge>
-        </div>
-      )}
-
-      {/* Location */}
-      {visibleColumns.includes("location") && (
-        <div className="text-sm">
-          <div className="flex items-center gap-1">
-            <MapPin className="w-3 h-3 text-muted-foreground" />
-            <span className="truncate">{job.location}</span>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+            <span className="truncate">{job.company.name}</span>
+            {job.applyMode === "external" && (
+              <>
+                <span>·</span>
+                <span className="flex items-center gap-1">
+                  <ExternalLink className="w-3 h-3" />
+                  External
+                </span>
+              </>
+            )}
           </div>
-          <span className="text-xs text-muted-foreground capitalize">{job.locationType}</span>
         </div>
-      )}
-
-      {/* Salary */}
-      {visibleColumns.includes("salary") && (
-        <div className="text-sm">
-          {job.salary ? (
-            <span className="flex items-center gap-1">
-              <DollarSign className="w-3 h-3 text-muted-foreground" />
-              {formatSalary(job.salary)}
-            </span>
-          ) : (
-            <span className="text-muted-foreground text-xs">Not specified</span>
-          )}
-        </div>
-      )}
-
-      {/* Posted */}
-      {visibleColumns.includes("posted") && (
-        <div className="text-sm text-muted-foreground">
-          {new Date(job.postedAt).toLocaleDateString()}
-        </div>
-      )}
-
-      {/* Views */}
-      {visibleColumns.includes("views") && (
-        <div className="text-sm text-muted-foreground">
-          {job.views.toLocaleString()}
-        </div>
-      )}
-
-      {/* Applications */}
-      {visibleColumns.includes("applications") && (
-        <div className="text-sm text-muted-foreground">
-          {job.applications}
-        </div>
-      )}
-
-      {/* Reports */}
-      {visibleColumns.includes("reports") && (
-        <div>
-          {job.reportCount > 0 ? (
-            <Badge variant="destructive" className="text-xs">
-              <AlertTriangle className="w-3 h-3 mr-1" />
-              {job.reportCount}
+        {visibleColumns.includes("status") && (
+          <div>
+            <Badge className={cn("text-xs gap-1", status.color)}>
+              <StatusIcon className="w-3 h-3" />
             </Badge>
-          ) : (
-            <span className="text-sm text-muted-foreground">0</span>
-          )}
+          </div>
+        )}
+        {visibleColumns.includes("views") && (
+          <div className="text-sm text-muted-foreground">
+            {job.views.toLocaleString()}
+          </div>
+        )}
+        {visibleColumns.includes("applications") && (
+          <div className="text-sm text-muted-foreground">
+            {job.applications}
+          </div>
+        )}
+        <div>
+          <ActionMenu />
         </div>
-      )}
+      </div>
 
-      {/* Actions */}
-      <div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-              <MoreHorizontal className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => console.log("View job", job.id)}>
-              <Eye className="w-4 h-4 mr-2" />
-              View Details
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onAction("edit", job)}>
-              <Edit className="w-4 h-4 mr-2" />
-              Edit Job
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            {job.status === "pending" && (
-              <DropdownMenuItem onClick={() => onAction("approve", job)}>
-                <Check className="w-4 h-4 mr-2" />
-                Approve
-              </DropdownMenuItem>
+      {/* Desktop Table Row (lg+) */}
+      <div
+        className={cn(
+          "hidden lg:grid gap-4 px-4 py-3 hover:bg-muted/30 transition-colors items-center",
+          selected && "bg-primary/5",
+          indented && ""
+        )}
+        style={{ gridTemplateColumns: gridTemplateColumns.lg }}
+      >
+        <div>
+          <Checkbox
+            checked={selected}
+            onCheckedChange={() => onSelect(job.id)}
+          />
+        </div>
+        <div className={cn("min-w-0", indented && "pl-6")}>
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-foreground truncate">{job.title}</span>
+            {job.featured && (
+              <Badge variant="secondary" className="bg-amber-100 text-amber-700 text-xs flex-shrink-0">
+                Featured
+              </Badge>
             )}
-            {job.status === "published" && (
-              <DropdownMenuItem onClick={() => onAction("pause", job)}>
-                <Pause className="w-4 h-4 mr-2" />
-                Pause
-              </DropdownMenuItem>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+            <span>{job.category}</span>
+            {job.applyMode === "external" && (
+              <>
+                <span>·</span>
+                <span className="flex items-center gap-1">
+                  <ExternalLink className="w-3 h-3" />
+                  External
+                </span>
+              </>
             )}
-            {job.status === "paused" && (
-              <DropdownMenuItem onClick={() => onAction("approve", job)}>
-                <Play className="w-4 h-4 mr-2" />
-                Resume
-              </DropdownMenuItem>
+          </div>
+        </div>
+        {visibleColumns.includes("status") && (
+          <div>
+            <Badge className={cn("text-xs gap-1", status.color)}>
+              <StatusIcon className="w-3 h-3" />
+              <span>{status.label}</span>
+            </Badge>
+          </div>
+        )}
+        {visibleColumns.includes("views") && (
+          <div className="text-sm text-muted-foreground">
+            {job.views.toLocaleString()}
+          </div>
+        )}
+        {visibleColumns.includes("applications") && (
+          <div className="text-sm text-muted-foreground">
+            {job.applications}
+          </div>
+        )}
+        {visibleColumns.includes("company") && (
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm truncate">{job.company.name}</span>
+              {job.company.verified && (
+                <Check className="w-3 h-3 text-emerald-500 flex-shrink-0" />
+              )}
+            </div>
+            {job.agency && (
+              <span className="text-xs text-muted-foreground">via {job.agency.name}</span>
             )}
-            <DropdownMenuItem onClick={() => onAction("hide", job)}>
-              <EyeOff className="w-4 h-4 mr-2" />
-              Hide
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              onClick={() => onAction("delete", job)}
-              className="text-red-600"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          </div>
+        )}
+        {visibleColumns.includes("location") && (
+          <div className="text-sm">
+            <div className="flex items-center gap-1">
+              <MapPin className="w-3 h-3 text-muted-foreground" />
+              <span className="truncate">{job.location}</span>
+            </div>
+            <span className="text-xs text-muted-foreground capitalize">{job.locationType}</span>
+          </div>
+        )}
+        {visibleColumns.includes("salary") && (
+          <div className="text-sm">
+            {job.salary ? (
+              <span className="flex items-center gap-1">
+                <DollarSign className="w-3 h-3 text-muted-foreground" />
+                {formatSalary(job.salary)}
+              </span>
+            ) : (
+              <span className="text-muted-foreground text-xs">Not specified</span>
+            )}
+          </div>
+        )}
+        {visibleColumns.includes("posted") && (
+          <div className="text-sm text-muted-foreground">
+            {new Date(job.postedAt).toLocaleDateString()}
+          </div>
+        )}
+        {visibleColumns.includes("reports") && (
+          <div>
+            {job.reportCount > 0 ? (
+              <Badge variant="destructive" className="text-xs">
+                <AlertTriangle className="w-3 h-3 mr-1" />
+                {job.reportCount}
+              </Badge>
+            ) : (
+              <span className="text-sm text-muted-foreground">0</span>
+            )}
+          </div>
+        )}
+        <div>
+          <ActionMenu />
+        </div>
       </div>
     </motion.div>
   )

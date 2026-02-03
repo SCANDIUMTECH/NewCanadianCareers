@@ -249,46 +249,7 @@ export default function AgencyTeamPage() {
       </div>
 
       {/* Invite Dialog */}
-      <Dialog open={showInviteDialog} onOpenChange={setShowInviteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Invite Team Member</DialogTitle>
-            <DialogDescription>
-              Send an invitation to join your agency team
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
-              <Input id="email" type="email" placeholder="colleague@company.com" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="role">Role</Label>
-              <Select defaultValue="recruiter">
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="recruiter">Recruiter</SelectItem>
-                  <SelectItem value="viewer">Viewer</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-foreground-muted">
-                Recruiters can post and manage jobs. Admins can also manage team and companies.
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowInviteDialog(false)} className="bg-transparent">
-              Cancel
-            </Button>
-            <Button className="bg-primary hover:bg-primary-hover text-primary-foreground">
-              Send Invitation
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <InviteDialog open={showInviteDialog} onOpenChange={setShowInviteDialog} />
     </div>
   )
 }
@@ -305,5 +266,115 @@ function RoleBadge({ role }: { role: string }) {
     <Badge variant="outline" className={cn("text-xs", styles[role])}>
       {role}
     </Badge>
+  )
+}
+
+function InviteDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const [email, setEmail] = useState("")
+  const [role, setRole] = useState("recruiter")
+  const [error, setError] = useState("")
+  const [touched, setTouched] = useState(false)
+
+  const validateEmail = (value: string) => {
+    if (!value.trim()) {
+      return "Please enter an email address"
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(value)) {
+      return "Please enter a valid email address"
+    }
+    return ""
+  }
+
+  const handleSubmit = () => {
+    const validationError = validateEmail(email)
+    setError(validationError)
+    if (!validationError) {
+      // Handle submission
+      setEmail("")
+      setRole("recruiter")
+      setError("")
+      setTouched(false)
+      onOpenChange(false)
+    }
+  }
+
+  const handleClose = () => {
+    setEmail("")
+    setRole("recruiter")
+    setError("")
+    setTouched(false)
+    onOpenChange(false)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Invite Team Member</DialogTitle>
+          <DialogDescription>
+            Send an invitation to join your agency team
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="invite-email" className={cn(error && "text-destructive")}>
+              Email Address <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="invite-email"
+              type="email"
+              placeholder="colleague@company.com"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value)
+                if (error && e.target.value) {
+                  const newError = validateEmail(e.target.value)
+                  setError(newError)
+                }
+              }}
+              onBlur={() => {
+                setTouched(true)
+                setError(validateEmail(email))
+              }}
+              className={cn(error && "border-destructive focus-visible:ring-destructive")}
+              aria-invalid={!!error}
+            />
+            {error && (
+              <p className="text-sm text-destructive flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {error}
+              </p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="role">Role</Label>
+            <Select value={role} onValueChange={setRole}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="recruiter">Recruiter</SelectItem>
+                <SelectItem value="viewer">Viewer</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-foreground-muted">
+              Recruiters can post and manage jobs. Admins can also manage team and companies.
+            </p>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={handleClose} className="bg-transparent">
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit} className="bg-primary hover:bg-primary-hover text-primary-foreground">
+            Send Invitation
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

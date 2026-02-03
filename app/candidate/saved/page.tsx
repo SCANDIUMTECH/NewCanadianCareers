@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { MotionWrapper } from "@/components/motion-wrapper"
+import { EmptyState } from "@/components/jobs/empty-state"
 
 /**
  * Saved Jobs Page
@@ -269,20 +270,19 @@ export default function SavedJobsPage() {
       {/* Empty State */}
       {filteredJobs.length === 0 && (
         <MotionWrapper delay={200}>
-          <div className="text-center py-16">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-background-secondary flex items-center justify-center">
-              <svg className="w-8 h-8 text-foreground-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium text-foreground">No saved jobs found</h3>
-            <p className="text-sm text-foreground-muted mt-1 mb-4">
-              {search ? "Try adjusting your search" : "Start saving jobs to see them here"}
-            </p>
-            <Link href="/jobs">
-              <Button>Browse Jobs</Button>
-            </Link>
-          </div>
+          <EmptyState
+            icon="bookmark"
+            title={search ? "No saved jobs match your search" : "No saved jobs yet"}
+            description={
+              search
+                ? "Try adjusting your search terms to find saved jobs."
+                : "Start saving jobs you're interested in to see them here."
+            }
+            action={{ label: "Browse Jobs", href: "/jobs" }}
+            secondaryAction={
+              search ? { label: "Clear search", onClick: () => setSearch("") } : undefined
+            }
+          />
         </MotionWrapper>
       )}
     </div>

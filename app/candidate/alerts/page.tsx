@@ -309,33 +309,100 @@ function CreateAlertForm({ onClose }: { onClose: () => void }) {
     type: "any",
     frequency: "daily",
   })
+  const [errors, setErrors] = useState<{ keywords?: string; location?: string }>({})
+  const [touched, setTouched] = useState<{ keywords?: boolean; location?: boolean }>({})
+
+  const validate = () => {
+    const newErrors: { keywords?: string; location?: string } = {}
+    if (!formData.keywords.trim()) {
+      newErrors.keywords = "Please enter at least one keyword"
+    }
+    if (!formData.location.trim()) {
+      newErrors.location = "Please enter a location"
+    }
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle form submission
-    onClose()
+    if (validate()) {
+      // Handle form submission
+      onClose()
+    }
+  }
+
+  const handleBlur = (field: "keywords" | "location") => {
+    setTouched({ ...touched, [field]: true })
+    // Validate on blur
+    if (field === "keywords" && !formData.keywords.trim()) {
+      setErrors(prev => ({ ...prev, keywords: "Please enter at least one keyword" }))
+    } else if (field === "keywords") {
+      setErrors(prev => ({ ...prev, keywords: undefined }))
+    }
+    if (field === "location" && !formData.location.trim()) {
+      setErrors(prev => ({ ...prev, location: "Please enter a location" }))
+    } else if (field === "location") {
+      setErrors(prev => ({ ...prev, location: undefined }))
+    }
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 pt-4">
       <div className="space-y-2">
-        <Label htmlFor="keywords">Keywords</Label>
+        <Label htmlFor="keywords" className={cn(errors.keywords && "text-destructive")}>
+          Keywords <span className="text-destructive">*</span>
+        </Label>
         <Input
           id="keywords"
           placeholder="e.g., Frontend Engineer, React Developer"
           value={formData.keywords}
-          onChange={(e) => setFormData({ ...formData, keywords: e.target.value })}
+          onChange={(e) => {
+            setFormData({ ...formData, keywords: e.target.value })
+            if (errors.keywords && e.target.value.trim()) {
+              setErrors({ ...errors, keywords: undefined })
+            }
+          }}
+          onBlur={() => handleBlur("keywords")}
+          className={cn(errors.keywords && "border-destructive focus-visible:ring-destructive")}
+          aria-invalid={!!errors.keywords}
         />
+        {errors.keywords && (
+          <p className="text-sm text-destructive flex items-center gap-1">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {errors.keywords}
+          </p>
+        )}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="location">Location</Label>
+        <Label htmlFor="location" className={cn(errors.location && "text-destructive")}>
+          Location <span className="text-destructive">*</span>
+        </Label>
         <Input
           id="location"
           placeholder="e.g., Remote, New York, San Francisco"
           value={formData.location}
-          onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+          onChange={(e) => {
+            setFormData({ ...formData, location: e.target.value })
+            if (errors.location && e.target.value.trim()) {
+              setErrors({ ...errors, location: undefined })
+            }
+          }}
+          onBlur={() => handleBlur("location")}
+          className={cn(errors.location && "border-destructive focus-visible:ring-destructive")}
+          aria-invalid={!!errors.location}
         />
+        {errors.location && (
+          <p className="text-sm text-destructive flex items-center gap-1">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {errors.location}
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4">

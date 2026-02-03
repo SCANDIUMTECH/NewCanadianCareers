@@ -4,6 +4,16 @@ import React from "react"
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
+import { LayoutGrid } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 /**
  * Ultra Premium Floating Header
@@ -14,10 +24,55 @@ import { cn } from "@/lib/utils"
  */
 
 const navLinks = [
-  { label: "Candidates", href: "#candidates" },
-  { label: "Companies", href: "#companies" },
-  { label: "Platform", href: "#platform" },
+  { label: "Find Jobs", href: "/jobs" },
+  { label: "For Companies", href: "/company" },
+  { label: "For Candidates", href: "/candidate" },
 ]
+
+const devMenuPages = {
+  "Public": [
+    { label: "Home", href: "/" },
+    { label: "Jobs", href: "/jobs" },
+    { label: "Login", href: "/login" },
+    { label: "Signup", href: "/signup" },
+    { label: "Forgot Password", href: "/forgot-password" },
+    { label: "Terms", href: "/terms" },
+    { label: "Privacy", href: "/privacy" },
+  ],
+  "Candidate": [
+    { label: "Dashboard", href: "/candidate" },
+    { label: "Profile", href: "/candidate/profile" },
+    { label: "Saved Jobs", href: "/candidate/saved" },
+    { label: "Applications", href: "/candidate/applications" },
+    { label: "Job Alerts", href: "/candidate/alerts" },
+    { label: "Settings", href: "/candidate/settings" },
+  ],
+  "Company": [
+    { label: "Dashboard", href: "/company" },
+    { label: "Jobs", href: "/company/jobs" },
+    { label: "Create Job", href: "/company/jobs/new" },
+    { label: "Analytics", href: "/company/analytics" },
+    { label: "Team", href: "/company/team" },
+    { label: "Billing", href: "/company/billing" },
+    { label: "Packages", href: "/company/packages" },
+    { label: "Settings", href: "/company/settings" },
+  ],
+  "Agency": [
+    { label: "Dashboard", href: "/agency" },
+    { label: "Companies", href: "/agency/companies" },
+    { label: "Jobs", href: "/agency/jobs" },
+    { label: "Team", href: "/agency/team" },
+    { label: "Billing", href: "/agency/billing" },
+  ],
+  "Admin": [
+    { label: "Dashboard", href: "/admin" },
+    { label: "Users", href: "/admin/users" },
+    { label: "Companies", href: "/admin/companies" },
+    { label: "Jobs", href: "/admin/jobs" },
+    { label: "Moderation", href: "/admin/moderation" },
+    { label: "Settings", href: "/admin/settings" },
+  ],
+}
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false)
@@ -98,20 +153,16 @@ export function Header() {
           {/* Center Navigation - Pill style */}
           <div className="hidden md:flex items-center relative">
             {/* Active indicator background */}
-            <div 
+            <div
               className={cn(
                 "absolute h-8 rounded-full bg-foreground/5 transition-all duration-300 ease-out",
                 activeLink ? "opacity-100" : "opacity-0"
               )}
-              style={{
-                left: activeLink === "Candidates" ? "0px" : activeLink === "Companies" ? "96px" : activeLink === "Platform" ? "192px" : "0px",
-                width: activeLink === "Candidates" ? "88px" : activeLink === "Companies" ? "96px" : activeLink === "Platform" ? "80px" : "0px",
-              }}
             />
-            
+
             {navLinks.map((link) => (
-              <NavLink 
-                key={link.label} 
+              <NavLink
+                key={link.label}
                 href={link.href}
                 onHover={setActiveLink}
                 isActive={activeLink === link.label}
@@ -119,6 +170,9 @@ export function Header() {
                 {link.label}
               </NavLink>
             ))}
+
+            {/* Dev Menu */}
+            <DevMenu />
           </div>
 
           {/* Auth Buttons */}
@@ -145,19 +199,19 @@ export function Header() {
   )
 }
 
-function NavLink({ 
-  href, 
-  children, 
+function NavLink({
+  href,
+  children,
   onHover,
-  isActive 
-}: { 
+  isActive,
+}: {
   href: string
   children: React.ReactNode
   onHover: (label: string | null) => void
   isActive: boolean
 }) {
   return (
-    <a
+    <Link
       href={href}
       className={cn(
         "relative px-4 py-2 text-sm font-medium transition-all duration-300",
@@ -167,7 +221,50 @@ function NavLink({
       onMouseLeave={() => onHover(null)}
     >
       {children}
-    </a>
+    </Link>
+  )
+}
+
+function DevMenu() {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          className={cn(
+            "ml-2 flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-300",
+            "text-foreground-muted hover:text-foreground hover:bg-foreground/5"
+          )}
+          aria-label="All Pages"
+        >
+          <LayoutGrid className="w-4 h-4" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        className="w-56 bg-card/95 backdrop-blur-xl border-white/20"
+      >
+        {Object.entries(devMenuPages).map(([section, pages], index) => (
+          <React.Fragment key={section}>
+            {index > 0 && <DropdownMenuSeparator />}
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="text-xs text-foreground-muted uppercase tracking-wider">
+                {section}
+              </DropdownMenuLabel>
+              {pages.map((page) => (
+                <DropdownMenuItem key={page.href} asChild>
+                  <Link
+                    href={page.href}
+                    className="cursor-pointer"
+                  >
+                    {page.label}
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
+          </React.Fragment>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 
