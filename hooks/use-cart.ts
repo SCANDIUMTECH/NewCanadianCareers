@@ -26,6 +26,8 @@ interface CartState {
 
 const CART_STORAGE_KEY = "orion_cart"
 
+// TODO: In production, promo codes should be validated server-side to prevent
+// client-side manipulation. These are demo codes for development purposes only.
 const validPromoCodes: Record<string, Omit<PromoCode, "code">> = {
   SAVE20: { discountType: "percentage", discountValue: 20 },
   LAUNCH50: { discountType: "fixed", discountValue: 50 },
@@ -65,7 +67,11 @@ export function useCart() {
   // Persist to localStorage on changes
   useEffect(() => {
     if (isHydrated) {
-      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state))
+      try {
+        localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state))
+      } catch {
+        // localStorage may be full or unavailable (e.g., private browsing)
+      }
     }
   }, [state, isHydrated])
 

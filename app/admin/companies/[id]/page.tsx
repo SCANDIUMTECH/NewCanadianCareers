@@ -2,7 +2,7 @@
 
 import React, { useState } from "react"
 import Link from "next/link"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -60,6 +60,7 @@ const mockJobs = [
 
 export default function AdminCompanyDetailPage() {
   const params = useParams()
+  const router = useRouter()
   const [company, setCompany] = useState(mockCompany)
   const [isEditing, setIsEditing] = useState(false)
   const [suspendDialogOpen, setSuspendDialogOpen] = useState(false)
@@ -475,7 +476,7 @@ export default function AdminCompanyDetailPage() {
               variant="destructive"
               onClick={() => {
                 setDeleteDialogOpen(false)
-                window.location.href = "/admin/companies"
+                router.push("/admin/companies")
               }}
             >
               Delete Company

@@ -3,7 +3,7 @@
 import React from "react"
 import { useState } from "react"
 import Link from "next/link"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -106,6 +106,7 @@ As a Senior Product Designer, you'll lead design initiatives from concept to lau
 
 export default function CompanyJobDetailPage() {
   const params = useParams()
+  const router = useRouter()
   const [job, setJob] = useState(mockJob)
   const [isEditing, setIsEditing] = useState(false)
   const [activeTab, setActiveTab] = useState("details")
@@ -136,7 +137,7 @@ export default function CompanyJobDetailPage() {
 
   const handleDuplicate = () => {
     // Navigate to new job with pre-filled data
-    window.location.href = "/company/jobs/new?duplicate=" + job.id
+    router.push("/company/jobs/new?duplicate=" + job.id)
   }
 
   const getStatusBadge = () => {
@@ -729,7 +730,7 @@ export default function CompanyJobDetailPage() {
               onClick={() => {
                 // Handle delete
                 setDeleteDialogOpen(false)
-                window.location.href = "/company/jobs"
+                router.push("/company/jobs")
               }}
             >
               Delete Job

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react"
 import Link from "next/link"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -59,6 +59,7 @@ const mockActivity = [
 
 export default function AdminUserDetailPage() {
   const params = useParams()
+  const router = useRouter()
   const [user, setUser] = useState(mockUser)
   const [isEditing, setIsEditing] = useState(false)
   const [suspendDialogOpen, setSuspendDialogOpen] = useState(false)
@@ -389,7 +390,7 @@ export default function AdminUserDetailPage() {
               variant="destructive"
               onClick={() => {
                 setDeleteDialogOpen(false)
-                window.location.href = "/admin/users"
+                router.push("/admin/users")
               }}
             >
               Delete Account

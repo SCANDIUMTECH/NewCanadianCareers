@@ -51,11 +51,12 @@ export function JobWizard({ company, exitPath = "/company/jobs" }: JobWizardProp
   } = useJobWizard()
 
   // Set company data when provided (agency context)
+  const companyId = company?.id
   useEffect(() => {
     if (company && !data.company) {
       updateData({ company })
     }
-  }, [company, data.company, updateData])
+  }, [companyId, data.company, updateData, company])
 
   const [isPublishing, setIsPublishing] = useState(false)
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
@@ -247,7 +248,7 @@ export function JobWizard({ company, exitPath = "/company/jobs" }: JobWizardProp
               onClick={() => {
                 setShowSuccessDialog(false)
                 clearDraft()
-                window.location.reload()
+                router.refresh()
               }}
               className="w-full bg-transparent"
             >

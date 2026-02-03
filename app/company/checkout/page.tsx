@@ -32,10 +32,12 @@ import {
  * "Cosmic Professional" design with progress steps and trust indicators
  */
 
-// Initialize Stripe (use env variable in production)
-const stripePromise = loadStripe(
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "pk_test_placeholder"
-)
+// Initialize Stripe
+const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+if (!stripeKey) {
+  console.warn("Stripe publishable key not found. Payment features will be limited.")
+}
+const stripePromise = stripeKey ? loadStripe(stripeKey) : null
 
 // Progress steps
 const steps = [
