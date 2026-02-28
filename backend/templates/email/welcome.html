@@ -1,0 +1,62 @@
+{% extends "email/base.html" %}
+{% block title %}Welcome to Orion{% endblock %}
+{% block preheader %}<span style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Your account is ready. Start exploring opportunities on Orion.</span>{% endblock %}
+{% block accent_color %}#3B5BDB{% endblock %}
+
+{% block hero_icon %}
+<tr>
+  <td align="center" style="padding:32px 40px 0 40px;">
+    <div style="display:inline-block;width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,#EEF2FF,#E0E7FF);text-align:center;line-height:56px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3B5BDB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    </div>
+  </td>
+</tr>
+{% endblock %}
+
+{% block content %}
+<h1 style="margin:0 0 8px;font-size:28px;font-weight:700;color:#0F172A;letter-spacing:-0.02em;line-height:1.2;" class="email-heading email-hero-heading">Welcome to Orion</h1>
+<p style="margin:0 0 24px;font-size:16px;color:#6B7280;line-height:1.6;" class="email-text-secondary">Your account is set up and ready to go.</p>
+
+<p style="margin:0 0 24px;font-size:16px;color:#374151;line-height:1.6;" class="email-text">Hi {{ name }},</p>
+
+<p style="margin:0 0 28px;font-size:16px;color:#374151;line-height:1.6;" class="email-text">
+  Thank you for joining Orion. We built this platform to make hiring transparent, efficient, and human. Here's what you can do next:
+</p>
+
+<!-- Feature Cards -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="email-columns" style="margin-bottom:28px;">
+  <tr>
+    <td class="email-column" width="33%" style="padding-right:8px;vertical-align:top;">
+      <div class="email-muted-bg" style="background:#F8FAFC;border-radius:12px;padding:20px;text-align:center;border:1px solid #E2E8F0;">
+        <div style="font-size:24px;margin-bottom:8px;">&#128269;</div>
+        <p style="margin:0 0 4px;font-size:14px;font-weight:600;color:#0F172A;" class="email-heading">Discover</p>
+        <p style="margin:0;font-size:13px;color:#6B7280;line-height:1.4;" class="email-text-secondary">Browse curated job listings</p>
+      </div>
+    </td>
+    <td class="email-column" width="33%" style="padding:0 4px;vertical-align:top;">
+      <div class="email-muted-bg" style="background:#F8FAFC;border-radius:12px;padding:20px;text-align:center;border:1px solid #E2E8F0;">
+        <div style="font-size:24px;margin-bottom:8px;">&#9889;</div>
+        <p style="margin:0 0 4px;font-size:14px;font-weight:600;color:#0F172A;" class="email-heading">Apply</p>
+        <p style="margin:0;font-size:13px;color:#6B7280;line-height:1.4;" class="email-text-secondary">One-click applications</p>
+      </div>
+    </td>
+    <td class="email-column" width="33%" style="padding-left:8px;vertical-align:top;">
+      <div class="email-muted-bg" style="background:#F8FAFC;border-radius:12px;padding:20px;text-align:center;border:1px solid #E2E8F0;">
+        <div style="font-size:24px;margin-bottom:8px;">&#128276;</div>
+        <p style="margin:0 0 4px;font-size:14px;font-weight:600;color:#0F172A;" class="email-heading">Alerts</p>
+        <p style="margin:0;font-size:13px;color:#6B7280;line-height:1.4;" class="email-text-secondary">Get notified on matches</p>
+      </div>
+    </td>
+  </tr>
+</table>
+
+<!-- CTA -->
+<table role="presentation" cellpadding="0" cellspacing="0" border="0">
+  <tr>
+    <td align="center" style="border-radius:10px;background:#3B5BDB;">
+      <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://orion.jobs/login" style="height:48px;v-text-anchor:middle;width:200px;" arcsize="21%" fillcolor="#3B5BDB" stroke="f"><w:anchorlock/><center style="color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;font-weight:600;">Get Started</center></v:roundrect><![endif]-->
+      <!--[if !mso]><!--><a href="https://orion.jobs/login" class="email-cta" style="display:inline-block;padding:14px 32px;background:#3B5BDB;color:#ffffff;text-decoration:none;border-radius:10px;font-size:16px;font-weight:600;line-height:1;">Get Started</a><!--<![endif]-->
+    </td>
+  </tr>
+</table>
+{% endblock %}

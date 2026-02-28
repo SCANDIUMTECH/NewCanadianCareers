@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useMemo } from "react"
+import { validatePromoCode } from "@/lib/api/billing"
 
 export interface CartItem {
   id: string
@@ -15,8 +16,10 @@ export interface CartItem {
 
 interface PromoCode {
   code: string
-  discountType: "percentage" | "fixed"
+  source: "coupon" | "promo_code"
+  discountType: "percentage" | "fixed" | "credits" | "free_trial"
   discountValue: number
+  maxDiscountAmount?: number | null
 }
 
 interface CartState {
@@ -25,13 +28,6 @@ interface CartState {
 }
 
 const CART_STORAGE_KEY = "orion_cart"
-
-// TODO: In production, promo codes should be validated server-side to prevent
-// client-side manipulation. These are demo codes for development purposes only.
-const validPromoCodes: Record<string, Omit<PromoCode, "code">> = {
-  SAVE20: { discountType: "percentage", discountValue: 20 },
-  LAUNCH50: { discountType: "fixed", discountValue: 50 },
-}
 
 function getInitialState(): CartState {
   if (typeof window === "undefined") {
@@ -43,7 +39,7 @@ function getInitialState(): CartState {
     if (stored) {
       const parsed = JSON.parse(stored)
       return {
-        items: Array.isArray(parsed.items) ? parsed.items : [],
+        items: Array.isArray(parsed.items) ? parsed.items.map((i: CartItem) => ({ ...i, unitPrice: Number(i.unitPrice) || 0 })) : [],
         promoCode: parsed.promoCode || null,
       }
     }
@@ -57,14 +53,13 @@ function getInitialState(): CartState {
 export function useCart() {
   const [state, setState] = useState<CartState>({ items: [], promoCode: null })
   const [isHydrated, setIsHydrated] = useState(false)
+  const [isValidatingPromo, setIsValidatingPromo] = useState(false)
 
-  // Hydrate from localStorage on mount
   useEffect(() => {
     setState(getInitialState())
     setIsHydrated(true)
   }, [])
 
-  // Persist to localStorage on changes
   useEffect(() => {
     if (isHydrated) {
       try {
@@ -76,8 +71,9 @@ export function useCart() {
   }, [state, isHydrated])
 
   const addItem = useCallback((item: Omit<CartItem, "quantity">) => {
+    const safeItem = { ...item, unitPrice: Number(item.unitPrice) || 0 }
     setState((prev) => {
-      const existingIndex = prev.items.findIndex((i) => i.id === item.id)
+      const existingIndex = prev.items.findIndex((i) => i.id === safeItem.id)
       if (existingIndex >= 0) {
         const newItems = [...prev.items]
         newItems[existingIndex] = {
@@ -88,7 +84,7 @@ export function useCart() {
       }
       return {
         ...prev,
-        items: [...prev.items, { ...item, quantity: 1 }],
+        items: [...prev.items, { ...safeItem, quantity: 1 }],
       }
     })
   }, [])
@@ -115,19 +111,36 @@ export function useCart() {
     setState({ items: [], promoCode: null })
   }, [])
 
-  const applyPromoCode = useCallback((code: string): boolean => {
-    const normalizedCode = code.toUpperCase().trim()
-    const promoData = validPromoCodes[normalizedCode]
+  const applyPromoCode = useCallback(
+    async (code: string): Promise<{ success: boolean; error?: string }> => {
+      const normalizedCode = code.toUpperCase().trim()
+      if (!normalizedCode) return { success: false, error: "Please enter a promo code" }
 
-    if (promoData) {
-      setState((prev) => ({
-        ...prev,
-        promoCode: { code: normalizedCode, ...promoData },
-      }))
-      return true
-    }
-    return false
-  }, [])
+      setIsValidatingPromo(true)
+      try {
+        const result = await validatePromoCode(normalizedCode)
+        if (result.valid) {
+          setState((prev) => ({
+            ...prev,
+            promoCode: {
+              code: result.code,
+              source: result.source,
+              discountType: result.discount_type,
+              discountValue: result.discount_value,
+              maxDiscountAmount: result.max_discount_amount,
+            },
+          }))
+          return { success: true }
+        }
+        return { success: false, error: result.message || "Invalid promo code" }
+      } catch {
+        return { success: false, error: "Failed to validate promo code. Please try again." }
+      } finally {
+        setIsValidatingPromo(false)
+      }
+    },
+    []
+  )
 
   const removePromoCode = useCallback(() => {
     setState((prev) => ({
@@ -147,9 +160,17 @@ export function useCart() {
     if (!state.promoCode) return 0
 
     if (state.promoCode.discountType === "percentage") {
-      return (subtotal * state.promoCode.discountValue) / 100
+      let d = (subtotal * state.promoCode.discountValue) / 100
+      if (state.promoCode.maxDiscountAmount) {
+        d = Math.min(d, state.promoCode.maxDiscountAmount)
+      }
+      return d
     }
-    return Math.min(state.promoCode.discountValue, subtotal)
+    if (state.promoCode.discountType === "fixed") {
+      return Math.min(state.promoCode.discountValue, subtotal)
+    }
+    // credits and free_trial don't reduce cart total directly
+    return 0
   }, [state.promoCode, subtotal])
 
   const total = useMemo(() => {
@@ -171,6 +192,7 @@ export function useCart() {
     items: state.items,
     promoCode: state.promoCode,
     isHydrated,
+    isValidatingPromo,
     addItem,
     updateQuantity,
     removeItem,

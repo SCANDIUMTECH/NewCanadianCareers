@@ -9,10 +9,6 @@ export type ValidationErrors = {
   [K in keyof JobWizardData]?: string
 }
 
-/**
- * Custom hook for managing job wizard state
- * Handles state management, localStorage persistence, and validation
- */
 export function useJobWizard() {
   const [currentStep, setCurrentStep] = useState(1)
   const [data, setData] = useState<JobWizardData>(defaultJobData)
@@ -20,7 +16,6 @@ export function useJobWizard() {
   const [errors, setErrors] = useState<ValidationErrors>({})
   const [touched, setTouched] = useState<Set<keyof JobWizardData>>(new Set())
 
-  // Load saved draft from localStorage on mount
   useEffect(() => {
     if (typeof window !== "undefined") {
       try {
@@ -30,14 +25,13 @@ export function useJobWizard() {
           setData({ ...defaultJobData, ...parsed.data })
           setCurrentStep(parsed.step || 1)
         }
-      } catch (error) {
-        console.error("Failed to load saved draft:", error)
+      } catch {
+        // Corrupt draft data — start fresh
       }
       setIsLoaded(true)
     }
   }, [])
 
-  // Save to localStorage whenever data or step changes
   useEffect(() => {
     if (isLoaded && typeof window !== "undefined") {
       try {
@@ -46,16 +40,14 @@ export function useJobWizard() {
           step: currentStep,
           savedAt: new Date().toISOString(),
         }))
-      } catch (error) {
-        console.error("Failed to save draft:", error)
+      } catch {
+        // localStorage may be full or unavailable
       }
     }
   }, [data, currentStep, isLoaded])
 
-  // Update specific fields and clear related errors
   const updateData = useCallback((updates: Partial<JobWizardData>) => {
     setData(prev => ({ ...prev, ...updates }))
-    // Clear errors for updated fields
     const updatedFields = Object.keys(updates) as (keyof JobWizardData)[]
     setErrors(prev => {
       const newErrors = { ...prev }
@@ -66,22 +58,20 @@ export function useJobWizard() {
     })
   }, [])
 
-  // Mark field as touched (for showing validation on blur)
   const touchField = useCallback((field: keyof JobWizardData) => {
     setTouched(prev => new Set(prev).add(field))
   }, [])
 
-  // Validate current step and return errors
   const validateStep = useCallback((step: number): ValidationErrors => {
     const stepErrors: ValidationErrors = {}
 
     switch (step) {
-      case 1: // Basics
+      case 1:
         if (!data.title || data.title.length < 3) {
           stepErrors.title = "Job title must be at least 3 characters"
         }
-        if (!data.department) {
-          stepErrors.department = "Please select a department"
+        if (!data.category) {
+          stepErrors.category = "Please select a category"
         }
         if (!data.type) {
           stepErrors.type = "Please select an employment type"
@@ -90,7 +80,7 @@ export function useJobWizard() {
           stepErrors.experience = "Please select an experience level"
         }
         break
-      case 2: // Role Details
+      case 2:
         if (!data.description || data.description.length < 50) {
           stepErrors.description = "Description must be at least 50 characters"
         }
@@ -104,28 +94,34 @@ export function useJobWizard() {
           stepErrors.skills = "Add at least one skill"
         }
         break
-      case 3: // Location
+      case 3:
         if (data.remote !== "remote") {
+          if (!data.address) {
+            stepErrors.address = "Please enter a street address"
+          }
           if (!data.city) {
             stepErrors.city = "Please enter a city"
+          }
+          if (!data.state) {
+            stepErrors.state = "Please enter a province or state"
+          }
+          if (!data.postalCode) {
+            stepErrors.postalCode = "Please enter a postal or zip code"
           }
           if (!data.country) {
             stepErrors.country = "Please select a country"
           }
         }
         break
-      case 4: // Compensation
+      case 4:
         if (data.salaryMin <= 0) {
-          stepErrors.salaryMin = "Please enter a minimum salary"
+          stepErrors.salaryMin = "Please enter a salary"
         }
-        if (data.salaryMax <= 0) {
-          stepErrors.salaryMax = "Please enter a maximum salary"
-        }
-        if (data.salaryMax < data.salaryMin) {
-          stepErrors.salaryMax = "Maximum salary must be greater than minimum"
+        if (data.salaryMax > 0 && data.salaryMax < data.salaryMin) {
+          stepErrors.salaryMax = "Maximum must be greater than minimum"
         }
         break
-      case 5: // Apply Method
+      case 5:
         if (data.applyMethod === "email" && !data.applyEmail) {
           stepErrors.applyEmail = "Please enter an email address"
         }
@@ -138,20 +134,17 @@ export function useJobWizard() {
     return stepErrors
   }, [data])
 
-  // Set errors for current step (called on next button click)
   const setStepErrors = useCallback((step: number) => {
     const stepErrors = validateStep(step)
     setErrors(stepErrors)
     return Object.keys(stepErrors).length === 0
   }, [validateStep])
 
-  // Clear all errors
   const clearErrors = useCallback(() => {
     setErrors({})
     setTouched(new Set())
   }, [])
 
-  // Navigation
   const nextStep = useCallback(() => {
     setCurrentStep(prev => Math.min(prev + 1, 8))
   }, [])
@@ -166,7 +159,6 @@ export function useJobWizard() {
     }
   }, [])
 
-  // Clear draft
   const clearDraft = useCallback(() => {
     if (typeof window !== "undefined") {
       localStorage.removeItem(STORAGE_KEY)
@@ -177,7 +169,6 @@ export function useJobWizard() {
     setTouched(new Set())
   }, [])
 
-  // Check if there's a saved draft
   const hasDraft = useCallback(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem(STORAGE_KEY) !== null
@@ -185,7 +176,6 @@ export function useJobWizard() {
     return false
   }, [])
 
-  // Get draft timestamp
   const getDraftTimestamp = useCallback(() => {
     if (typeof window !== "undefined") {
       try {

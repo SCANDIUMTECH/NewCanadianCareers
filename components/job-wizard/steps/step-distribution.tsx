@@ -1,35 +1,32 @@
 "use client"
 
-import React from "react"
+import { SOCIAL } from "@/lib/constants/colors"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { type JobWizardData } from "@/lib/job-wizard-schema"
+import { useCompanyContext } from "@/hooks/use-company"
 
 interface StepDistributionProps {
   data: JobWizardData
   updateData: (updates: Partial<JobWizardData>) => void
 }
 
-const socialChannels = [
+const socialChannelDefs = [
   {
     key: "linkedin" as const,
     name: "LinkedIn",
     description: "Post to your company page",
-    connected: true,
-    handle: "Acme Corporation",
-    color: "#0077B5",
+    color: SOCIAL.linkedin,
     icon: (
-      <span className="text-sm font-bold text-[#0077B5]">in</span>
+      <span className="text-sm font-bold text-social-linkedin">in</span>
     ),
   },
   {
     key: "twitter" as const,
     name: "X (Twitter)",
     description: "Tweet from company account",
-    connected: true,
-    handle: "@acmecorp",
-    color: "#000000",
+    color: SOCIAL.twitter,
     icon: (
       <span className="text-sm font-bold">X</span>
     ),
@@ -38,20 +35,16 @@ const socialChannels = [
     key: "facebook" as const,
     name: "Facebook",
     description: "Share on company page",
-    connected: false,
-    handle: null,
-    color: "#1877F2",
+    color: SOCIAL.facebook,
     icon: (
-      <span className="text-sm font-bold text-[#1877F2]">f</span>
+      <span className="text-sm font-bold text-social-facebook">f</span>
     ),
   },
   {
     key: "instagram" as const,
     name: "Instagram",
     description: "Share as a story",
-    connected: false,
-    handle: null,
-    color: "#E4405F",
+    color: SOCIAL.instagram,
     icon: (
       <span className="text-sm font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">ig</span>
     ),
@@ -59,6 +52,30 @@ const socialChannels = [
 ]
 
 export function StepDistribution({ data, updateData }: StepDistributionProps) {
+  const { company } = useCompanyContext()
+
+  // Build channels with dynamic connection status from company profile
+  const socialChannels = socialChannelDefs.map((channel) => {
+    let connected = false
+    let handle: string | null = null
+
+    if (channel.key === "linkedin" && company?.linkedin_url) {
+      connected = true
+      handle = company.name || "Connected"
+    } else if (channel.key === "twitter" && company?.twitter_url) {
+      connected = true
+      handle = company.twitter_url.replace(/^https?:\/\/(www\.)?x\.com\//, "@")
+    } else if (channel.key === "facebook" && company?.facebook_url) {
+      connected = true
+      handle = company.name || "Connected"
+    } else if (channel.key === "instagram" && company?.instagram_url) {
+      connected = true
+      handle = company.instagram_url.replace(/^https?:\/\/(www\.)?instagram\.com\//, "@")
+    }
+
+    return { ...channel, connected, handle, description: channel.description }
+  })
+
   const toggleChannel = (key: "linkedin" | "twitter" | "facebook" | "instagram") => {
     updateData({ [key]: !data[key] })
   }

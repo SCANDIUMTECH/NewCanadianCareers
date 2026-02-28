@@ -1,0 +1,406 @@
+services:
+  # ============ Traefik Reverse Proxy ============
+  traefik:
+    image: traefik:v3.0
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "127.0.0.1:8080:8080"  # Dashboard — localhost only, never exposed externally
+    volumes:
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
+      - ./traefik/certs:/etc/traefik/certs:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - frontend_net
+    labels:
+      - "traefik.enable=true"
+      # Dashboard routing (dev only — secured behind localhost binding)
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.localhost`)"
+      - "traefik.http.routers.dashboard.service=api@internal"
+
+  # ============ Cloudflare Tunnel ============
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - traefik
+    networks:
+      - frontend_net
+    profiles:
+      - production  # Only run in production with: docker-compose --profile production up
+
+  # ============ Next.js Frontend (Dev) ============
+  frontend:
+    build:
+      context: ..
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ../:/app
+      - /app/node_modules    # Use container's node_modules, not host's
+      - /app/.next           # Keep .next inside container
+      - ../.env.docker:/app/.env.local:ro  # Override host's .env.local with Docker-specific env
+    environment:
+      - NODE_ENV=development
+    expose:
+      - "3000"
+    restart: unless-stopped
+    networks:
+      - frontend_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=backend_frontend_net"
+      # Catch-all: everything not matched by Django/static goes to Next.js
+      - "traefik.http.routers.frontend.rule=Host(`localhost`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls=true"
+      - "traefik.http.routers.frontend.priority=1"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
+
+  # ============ Django Web App ============
+  web:
+    build: .
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 120
+    volumes:
+      - .:/app                        # Mount source code for live reload in dev
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    env_file:
+      - .env
+    expose:
+      - "8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - frontend_net   # Traefik routes traffic here
+      - backend_net    # Reaches Redis, Kafka, OTel, MinIO
+      - data_net       # Reaches PostgreSQL, ClickHouse
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=backend_frontend_net"
+      # Django API + admin — path-based routing (higher priority than frontend catch-all)
+      - "traefik.http.routers.django.rule=(Host(`localhost`) || Host(`api.orion.jobs`)) && (PathPrefix(`/api`) || PathPrefix(`/health`))"
+      - "traefik.http.routers.django.entrypoints=websecure"
+      - "traefik.http.routers.django.tls=true"
+      - "traefik.http.routers.django.middlewares=rate-limit@file"
+      - "traefik.http.services.django.loadbalancer.server.port=8000"
+      # Apply security headers to Django admin
+      - "traefik.http.routers.django-admin.rule=(Host(`localhost`) || Host(`api.orion.jobs`)) && PathPrefix(`/django-admin`)"
+      - "traefik.http.routers.django-admin.entrypoints=websecure"
+      - "traefik.http.routers.django-admin.tls=true"
+      - "traefik.http.routers.django-admin.middlewares=secure-headers@file,rate-limit@file"
+      - "traefik.http.routers.django-admin.service=django"
+
+  # ============ Static Files Server ============
+  static:
+    image: nginx:alpine
+    volumes:
+      - ./traefik/static-nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - static_volume:/usr/share/nginx/html/static:ro
+      - media_volume:/usr/share/nginx/html/media:ro
+    expose:
+      - "80"
+    restart: unless-stopped
+    networks:
+      - frontend_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.static.rule=(Host(`localhost`) || Host(`api.orion.jobs`)) && (PathPrefix(`/static`) || PathPrefix(`/media`))"
+      - "traefik.http.routers.static.entrypoints=websecure"
+      - "traefik.http.routers.static.tls=true"
+      - "traefik.http.services.static.loadbalancer.server.port=80"
+
+  # ============ Database ============
+  db:
+    image: postgres:15-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${DB_NAME:-orion}
+      POSTGRES_USER: ${DB_USER:-orion}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+    restart: unless-stopped
+    networks:
+      - data_net       # Only app services on data_net can reach PostgreSQL
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-orion}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============ Redis ============
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    command: >
+      redis-server
+      --appendonly yes
+      --requirepass ${REDIS_PASSWORD:-changeme}
+      --rename-command FLUSHDB ""
+      --rename-command FLUSHALL ""
+      --rename-command DEBUG ""
+      --rename-command CONFIG ""
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+    restart: unless-stopped
+    networks:
+      - backend_net    # Only app services on backend_net can reach Redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-changeme}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============ RabbitMQ (Message Broker) ============
+  rabbitmq:
+    image: rabbitmq:4.2-management-alpine
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-orion}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD must be set}
+      RABBITMQ_DEFAULT_VHOST: orion
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    expose:
+      - "5672"         # AMQP — internal only
+    ports:
+      - "127.0.0.1:15672:15672"  # Management UI — localhost only
+    networks:
+      - backend_net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============ Celery Worker ============
+  celery:
+    build: .
+    command: celery -A config worker -l info
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - backend_net
+      - data_net
+
+  # ============ Celery Beat ============
+  celery-beat:
+    build: .
+    command: celery -A config beat -l info
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - backend_net
+      - data_net
+
+  # ============ Kafka ============
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_log:/var/lib/zookeeper/log
+    networks:
+      - backend_net    # Only internal services can reach ZooKeeper
+
+  kafka:
+    image: confluentinc/cp-kafka:7.3.0
+    restart: unless-stopped
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"   # Explicit topic management
+      KAFKA_LOG_RETENTION_HOURS: 168              # 7-day retention
+      KAFKA_LOG_RETENTION_BYTES: 1073741824       # 1 GB max per partition
+      KAFKA_MESSAGE_MAX_BYTES: 1048576            # 1 MB max message
+    expose:
+      - "9092"         # Internal only — no external port binding
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - backend_net
+
+  # ============ ClickHouse (Analytics DB for RUM) ============
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.3-alpine
+    restart: unless-stopped
+    expose:
+      - "8123"         # HTTP interface — internal only
+      - "9000"         # Native protocol — internal only
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./clickhouse/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    environment:
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-default}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-orion}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?CLICKHOUSE_PASSWORD must be set}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    networks:
+      - data_net       # Only app services on data_net can reach ClickHouse
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--user", "${CLICKHOUSE_USER:-orion}", "--password", "${CLICKHOUSE_PASSWORD:-}", "--query", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============ OpenTelemetry Collector ============
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.96.0
+    restart: unless-stopped
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    expose:
+      - "4317"         # OTLP gRPC — internal only
+      - "4318"         # OTLP HTTP — internal only
+    networks:
+      - backend_net    # Only app services can send telemetry
+
+  # ============ RUM Consumer (Kafka → ClickHouse) ============
+  rum-consumer:
+    build: .
+    command: python manage.py rum_consumer
+    env_file:
+      - .env
+    depends_on:
+      kafka:
+        condition: service_started
+      clickhouse:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - backend_net    # Reaches Kafka
+      - data_net       # Reaches ClickHouse, PostgreSQL
+
+  # ============ Grafana ============
+  # Access: http://127.0.0.1:3001 (localhost only, NOT through Traefik)
+  # Production: access via SSH tunnel — ssh -L 3001:localhost:3001 server
+  grafana:
+    image: grafana/grafana:latest
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:?GRAFANA_ADMIN_USER must be set}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD must be set}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_USERS_ALLOW_ORG_CREATE=false
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_SECURITY_COOKIE_SECURE=false          # Set true with TLS
+      - GF_SECURITY_COOKIE_SAMESITE=lax
+      - GF_SECURITY_DISABLE_GRAVATAR=true
+      - GF_SECURITY_STRICT_TRANSPORT_SECURITY=true
+      - GF_SNAPSHOTS_EXTERNAL_ENABLED=false
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource,grafana-clickhouse-datasource
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "127.0.0.1:3001:3000"  # Localhost only — never exposed to public internet
+    depends_on:
+      db:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    networks:
+      - frontend_net   # Required for localhost port binding (no Traefik labels = no public route)
+      - data_net       # Grafana queries ClickHouse + PostgreSQL directly
+
+  # ============ MinIO (S3-compatible storage) ============
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY must be set}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY must be set}
+    expose:
+      - "9000"         # S3 API — internal only (Django connects via backend_net)
+    ports:
+      - "127.0.0.1:9001:9001"  # Console — localhost only for admin access
+    restart: unless-stopped
+    networks:
+      - backend_net    # Django/Celery reach MinIO for file uploads
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+  minio_data:
+  grafana_data:
+  zookeeper_data:
+  kafka_data:
+  zookeeper_log:
+  clickhouse_data:
+  static_volume:
+  media_volume:
+
+# ============ Network Segmentation ============
+# Three-tier isolation:
+#   frontend_net  — Traefik ↔ Django, Nginx, Grafana, Cloudflared (public-facing)
+#   backend_net   — Django ↔ Redis, Kafka, ZooKeeper, OTel, MinIO (app services)
+#   data_net      — Django ↔ PostgreSQL, ClickHouse (databases)
+#
+# Services only join networks they need. Data stores are never on frontend_net.
+networks:
+  frontend_net:
+    driver: bridge
+  backend_net:
+    driver: bridge
+    internal: true   # No outbound internet — pure internal communication
+  data_net:
+    driver: bridge
+    internal: true   # No outbound internet — pure internal communication

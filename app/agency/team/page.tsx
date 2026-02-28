@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
+import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,64 +25,121 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Loader2 } from "lucide-react"
+import {
+  getAgencyTeam,
+  inviteAgencyMember,
+  updateAgencyMember,
+  removeAgencyMember,
+  resendAgencyInvitation,
+} from "@/lib/api/agencies"
+import type { AgencyTeamMember, AgencyMemberRole } from "@/lib/agency/types"
 
 /**
  * Agency Team Management
  * Agency-specific roles (Owner, Admin, Recruiter, Viewer) with multi-company access
  */
 
-const teamMembers = [
-  { 
-    id: 1, 
-    name: "Rachel Kim", 
-    email: "rachel@talentbridge.io", 
-    role: "Owner", 
-    status: "active",
-    lastActive: "Just now",
-    jobsPosted: 24,
-    initials: "RK"
-  },
-  { 
-    id: 2, 
-    name: "James Lee", 
-    email: "james@talentbridge.io", 
-    role: "Admin", 
-    status: "active",
-    lastActive: "2 hours ago",
-    jobsPosted: 18,
-    initials: "JL"
-  },
-  { 
-    id: 3, 
-    name: "Sarah Chen", 
-    email: "sarah@talentbridge.io", 
-    role: "Recruiter", 
-    status: "active",
-    lastActive: "Yesterday",
-    jobsPosted: 12,
-    initials: "SC"
-  },
-  { 
-    id: 4, 
-    name: "Michael Torres", 
-    email: "michael@talentbridge.io", 
-    role: "Viewer", 
-    status: "active",
-    lastActive: "3 days ago",
-    jobsPosted: 0,
-    initials: "MT"
-  },
-]
+// Display format for team member
+interface TeamMemberDisplay {
+  id: number
+  name: string
+  email: string
+  role: string
+  status: string
+  lastActive: string
+  jobsPosted: number
+  initials: string
+}
 
-const pendingInvites = [
-  { id: 1, email: "alex@talentbridge.io", role: "Recruiter", sentAt: "Jan 30, 2026" },
-]
+// Display format for pending invite
+interface PendingInviteDisplay {
+  id: number
+  email: string
+  role: string
+  sentAt: string
+}
+
+// Transform API member to display format
+function transformMemberToDisplay(member: AgencyTeamMember): TeamMemberDisplay {
+  const name = member.user_name || member.user_email.split('@')[0]
+  const nameParts = name.split(' ')
+  const initials = nameParts.length >= 2
+    ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase()
+    : name.slice(0, 2).toUpperCase()
+
+  // Format last active time
+  let lastActive = 'Never'
+  if (member.last_active_at) {
+    const lastActiveDate = new Date(member.last_active_at)
+    const now = new Date()
+    const diffMs = now.getTime() - lastActiveDate.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 5) lastActive = 'Just now'
+    else if (diffMins < 60) lastActive = `${diffMins} minutes ago`
+    else if (diffHours < 24) lastActive = `${diffHours} hours ago`
+    else if (diffDays === 1) lastActive = 'Yesterday'
+    else lastActive = `${diffDays} days ago`
+  }
+
+  // Capitalize role
+  const roleMap: Record<string, string> = {
+    owner: 'Owner',
+    admin: 'Admin',
+    recruiter: 'Recruiter',
+    viewer: 'Viewer',
+  }
+
+  return {
+    id: member.id,
+    name,
+    email: member.user_email,
+    role: roleMap[member.role] || member.role,
+    status: member.is_active !== false ? 'active' : 'inactive',
+    lastActive,
+    jobsPosted: member.jobs_assigned || 0,
+    initials,
+  }
+}
+
+function transformInviteToDisplay(member: AgencyTeamMember): PendingInviteDisplay {
+  const roleMap: Record<string, string> = {
+    owner: 'Owner',
+    admin: 'Admin',
+    recruiter: 'Recruiter',
+    viewer: 'Viewer',
+  }
+
+  return {
+    id: member.id,
+    email: member.user_email,
+    role: roleMap[member.role] || member.role,
+    sentAt: new Date(member.created_at).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }),
+  }
+}
 
 const rolePermissions = {
   Owner: ["Full access", "Manage billing", "Manage team", "Manage companies", "Post jobs"],
@@ -92,6 +150,129 @@ const rolePermissions = {
 
 export default function AgencyTeamPage() {
   const [showInviteDialog, setShowInviteDialog] = useState(false)
+  const [teamMembers, setTeamMembers] = useState<TeamMemberDisplay[]>([])
+  const [pendingInvites, setPendingInvites] = useState<PendingInviteDisplay[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [actionLoading, setActionLoading] = useState<number | null>(null)
+  const [removeMemberId, setRemoveMemberId] = useState<number | null>(null)
+
+  // Fetch team data
+  const fetchTeam = useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const members = await getAgencyTeam()
+      // Active members have is_active !== false and have user details
+      const activeMembers = members.filter(m => m.is_active !== false && m.user_name)
+      // Pending invites don't have user details yet
+      const pending = members.filter(m => m.is_active === false || !m.user_name)
+
+      setTeamMembers(activeMembers.map(transformMemberToDisplay))
+      setPendingInvites(pending.map(transformInviteToDisplay))
+    } catch (err) {
+      console.error('Failed to fetch team:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load team')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchTeam()
+  }, [fetchTeam])
+
+  // Handle role change
+  const handleRoleChange = async (memberId: number, newRole: string) => {
+    setActionLoading(memberId)
+    try {
+      await updateAgencyMember(memberId, { role: newRole.toLowerCase() as AgencyMemberRole })
+      fetchTeam()
+    } catch (err) {
+      console.error('Failed to update role:', err)
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  // Handle remove member
+  const handleRemoveMember = (memberId: number) => {
+    setRemoveMemberId(memberId)
+  }
+
+  const confirmRemoveMember = async () => {
+    if (!removeMemberId) return
+    setActionLoading(removeMemberId)
+    try {
+      await removeAgencyMember(removeMemberId)
+      fetchTeam()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to remove member")
+    } finally {
+      setActionLoading(null)
+      setRemoveMemberId(null)
+    }
+  }
+
+  // Handle resend invite
+  const handleResendInvite = async (inviteId: number) => {
+    setActionLoading(inviteId)
+    try {
+      await resendAgencyInvitation(inviteId)
+      // Could show a toast here
+    } catch (err) {
+      console.error('Failed to resend invite:', err)
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  // Handle cancel invite
+  const handleCancelInvite = async (inviteId: number) => {
+    setActionLoading(inviteId)
+    try {
+      await removeAgencyMember(inviteId)
+      fetchTeam()
+    } catch (err) {
+      console.error('Failed to cancel invite:', err)
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  // Handle invite submission
+  const handleInviteSubmit = async (email: string, role: string) => {
+    try {
+      await inviteAgencyMember({ email, role: role as AgencyMemberRole })
+      setShowInviteDialog(false)
+      fetchTeam()
+    } catch (err) {
+      console.error('Failed to invite member:', err)
+      throw err // Re-throw so dialog can handle it
+    }
+  }
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8">
+        <div className="text-center py-12">
+          <p className="text-destructive mb-4">{error}</p>
+          <Button onClick={fetchTeam} variant="outline">Try Again</Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8">
@@ -154,17 +335,38 @@ export default function AgencyTeamPage() {
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                              </svg>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" disabled={actionLoading === member.id}>
+                              {actionLoading === member.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                                </svg>
+                              )}
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem>View Activity</DropdownMenuItem>
-                            <DropdownMenuItem>Change Role</DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive" disabled={member.role === "Owner"}>
+                            {member.role !== "Owner" && (
+                              <>
+                                <DropdownMenuItem onClick={() => handleRoleChange(member.id, 'Admin')} disabled={member.role === 'Admin'}>
+                                  Make Admin
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleRoleChange(member.id, 'Recruiter')} disabled={member.role === 'Recruiter'}>
+                                  Make Recruiter
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleRoleChange(member.id, 'Viewer')} disabled={member.role === 'Viewer'}>
+                                  Make Viewer
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                              </>
+                            )}
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              disabled={member.role === "Owner"}
+                              onClick={() => handleRemoveMember(member.id)}
+                            >
                               Remove
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -205,8 +407,27 @@ export default function AgencyTeamPage() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button variant="ghost" size="sm">Resend</Button>
-                          <Button variant="ghost" size="sm" className="text-destructive">Cancel</Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleResendInvite(invite.id)}
+                            disabled={actionLoading === invite.id}
+                          >
+                            {actionLoading === invite.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              'Resend'
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive"
+                            onClick={() => handleCancelInvite(invite.id)}
+                            disabled={actionLoading === invite.id}
+                          >
+                            Cancel
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -249,7 +470,28 @@ export default function AgencyTeamPage() {
       </div>
 
       {/* Invite Dialog */}
-      <InviteDialog open={showInviteDialog} onOpenChange={setShowInviteDialog} />
+      <InviteDialog open={showInviteDialog} onOpenChange={setShowInviteDialog} onSubmit={handleInviteSubmit} />
+
+      {/* Remove Member Confirmation */}
+      <AlertDialog open={!!removeMemberId} onOpenChange={(open) => { if (!open) setRemoveMemberId(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove team member?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will revoke their access to the agency dashboard. They will no longer be able to manage jobs or view analytics.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmRemoveMember}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
@@ -269,11 +511,20 @@ function RoleBadge({ role }: { role: string }) {
   )
 }
 
-function InviteDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+function InviteDialog({
+  open,
+  onOpenChange,
+  onSubmit,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSubmit: (email: string, role: string) => Promise<void>
+}) {
   const [email, setEmail] = useState("")
   const [role, setRole] = useState("recruiter")
   const [error, setError] = useState("")
   const [touched, setTouched] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const validateEmail = (value: string) => {
     if (!value.trim()) {
@@ -286,16 +537,22 @@ function InviteDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (op
     return ""
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const validationError = validateEmail(email)
     setError(validationError)
     if (!validationError) {
-      // Handle submission
-      setEmail("")
-      setRole("recruiter")
-      setError("")
-      setTouched(false)
-      onOpenChange(false)
+      setIsSubmitting(true)
+      try {
+        await onSubmit(email, role)
+        setEmail("")
+        setRole("recruiter")
+        setError("")
+        setTouched(false)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to send invitation')
+      } finally {
+        setIsSubmitting(false)
+      }
     }
   }
 
@@ -367,11 +624,18 @@ function InviteDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (op
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose} className="bg-transparent">
+          <Button variant="outline" onClick={handleClose} className="bg-transparent" disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} className="bg-primary hover:bg-primary-hover text-primary-foreground">
-            Send Invitation
+          <Button onClick={handleSubmit} disabled={isSubmitting} className="bg-primary hover:bg-primary-hover text-primary-foreground">
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              'Send Invitation'
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useState, useRef } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { loadStripe } from "@stripe/stripe-js"
@@ -8,12 +8,15 @@ import {
   EmbeddedCheckoutProvider,
   EmbeddedCheckout,
 } from "@stripe/react-stripe-js"
-import { cn } from "@/lib/utils"
+import { cn, getCurrencySymbol, DEFAULT_CURRENCY } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { MotionWrapper } from "@/components/motion-wrapper"
 import { useCart } from "@/hooks/use-cart"
+import { createCheckoutSession } from "@/lib/api/billing"
+import type { CheckoutItem } from "@/lib/company/types"
+import type { Stripe } from "@stripe/stripe-js"
 import {
   ChevronLeft,
   ChevronRight,
@@ -23,7 +26,6 @@ import {
   Shield,
   RefreshCcw,
   AlertCircle,
-  ArrowRight,
 } from "lucide-react"
 
 /**
@@ -32,12 +34,36 @@ import {
  * "Cosmic Professional" design with progress steps and trust indicators
  */
 
-// Initialize Stripe
-const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-if (!stripeKey) {
-  console.warn("Stripe publishable key not found. Payment features will be limited.")
+// Stripe promise — resolved dynamically from API or env var
+let _stripePromise: Promise<Stripe | null> | null = null
+
+function getStripePromise(): Promise<Stripe | null> {
+  if (_stripePromise) return _stripePromise
+
+  // Try env var first (instant, no API call)
+  const envKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  if (envKey) {
+    _stripePromise = loadStripe(envKey)
+    return _stripePromise
+  }
+
+  // Fall back to API fetch
+  _stripePromise = fetch(
+    `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/settings/stripe/publishable-key/`
+  )
+    .then((res) => (res.ok ? res.json() : null))
+    .then((data) => {
+      if (data?.publishable_key) return loadStripe(data.publishable_key)
+      console.warn('Stripe publishable key not found. Payment features will be limited.')
+      return null
+    })
+    .catch(() => {
+      console.warn('Failed to fetch Stripe publishable key')
+      return null
+    })
+
+  return _stripePromise
 }
-const stripePromise = stripeKey ? loadStripe(stripeKey) : null
 
 // Progress steps
 const steps = [
@@ -52,7 +78,14 @@ export default function CheckoutPage() {
     useCart()
 
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [retryKey, setRetryKey] = useState(0)
+  const hasCreatedSession = useRef(false)
+  const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null)
+
+  // Initialize Stripe on mount
+  useEffect(() => {
+    setStripePromise(getStripePromise())
+  }, [])
 
   // Redirect to cart if empty
   useEffect(() => {
@@ -61,42 +94,42 @@ export default function CheckoutPage() {
     }
   }, [isHydrated, items.length, router])
 
-  // Mock fetch client secret for Stripe Embedded Checkout
-  // In production, this would call your backend API
+  // Map cart items to checkout items for backend
+  const mapCartToCheckoutItems = useCallback((): CheckoutItem[] => {
+    return items.map((item) => {
+      if (item.type === "package") {
+        // Extract numeric ID from "pkg-123"
+        const pkgId = parseInt(item.id.replace("pkg-", ""), 10)
+        return { package_id: pkgId, quantity: item.quantity }
+      } else {
+        // credit-pack: Use the stored backend ID directly
+        const packId = parseInt(item.id.replace("credit-", ""), 10)
+        return { credit_pack_id: packId, quantity: item.quantity }
+      }
+    })
+  }, [items])
+
+  // Fetch client secret from backend for Stripe Embedded Checkout
   const fetchClientSecret = useCallback(async () => {
     try {
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      // In production, this would be:
-      // const response = await fetch('/api/checkout/session', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ items, promoCode }),
-      // })
-      // const data = await response.json()
-      // return data.clientSecret
-
-      // For demo purposes, we'll simulate success
-      // In a real app, you'd return the actual client secret
-      // Since we don't have a backend, we'll show a demo state
-      setIsLoading(false)
-
-      // Return a placeholder that will fail gracefully
-      // This allows the UI to render without a real Stripe session
-      return "demo_mode_no_client_secret"
-    } catch {
-      setCheckoutError("Failed to initialize checkout. Please try again.")
-      setIsLoading(false)
-      throw new Error("Failed to fetch client secret")
+      hasCreatedSession.current = true
+      const checkoutItems = mapCartToCheckoutItems()
+      const session = await createCheckoutSession(
+        checkoutItems,
+        promoCode?.code
+      )
+      return session.client_secret
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to initialize checkout."
+      setCheckoutError(message)
+      throw new Error(message, { cause: err })
     }
-  }, [])
+  }, [mapCartToCheckoutItems, promoCode?.code])
 
-  // Handle checkout completion (for demo)
-  const handleDemoComplete = () => {
+  // Handle Stripe checkout completion
+  const handleComplete = useCallback(() => {
     clearCart()
-    router.push("/company/checkout/success")
-  }
+  }, [clearCart])
 
   // Show loading state while hydrating
   if (!isHydrated) {
@@ -167,90 +200,39 @@ export default function CheckoutPage() {
                       variant="outline"
                       onClick={() => {
                         setCheckoutError(null)
-                        setIsLoading(true)
+                        hasCreatedSession.current = false
+                        setRetryKey((k) => k + 1)
                       }}
                     >
                       Try Again
                     </Button>
                   </div>
+                ) : !stripePromise ? (
+                  <div className="p-8 text-center">
+                    <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
+                      <AlertCircle className="w-8 h-8 text-amber-500" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-foreground mb-2">
+                      Payment Not Available
+                    </h3>
+                    <p className="text-foreground-muted mb-6">
+                      Stripe is not configured. Please contact support or try again later.
+                    </p>
+                    <Link href="/company/cart">
+                      <Button variant="outline">
+                        <ChevronLeft className="w-4 h-4 mr-2" />
+                        Back to Cart
+                      </Button>
+                    </Link>
+                  </div>
                 ) : (
-                  <div className="min-h-[400px]">
-                    {/* Demo Mode Notice */}
-                    <div className="p-6 bg-primary/5 border-b border-border/50">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                          <Shield className="w-5 h-5 text-primary" />
-                        </div>
-                        <div>
-                          <h4 className="font-medium text-foreground mb-1">
-                            Demo Mode
-                          </h4>
-                          <p className="text-sm text-foreground-muted">
-                            This is a preview of the checkout experience. In
-                            production, Stripe&apos;s secure embedded checkout will
-                            appear here for real payments.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Demo Checkout Form */}
-                    <div className="p-6 space-y-6">
-                      {isLoading ? (
-                        <div className="space-y-4">
-                          <div className="h-12 bg-muted rounded-lg animate-pulse" />
-                          <div className="h-12 bg-muted rounded-lg animate-pulse" />
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="h-12 bg-muted rounded-lg animate-pulse" />
-                            <div className="h-12 bg-muted rounded-lg animate-pulse" />
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          {/* Card Preview */}
-                          <div className="p-4 rounded-xl bg-gradient-to-br from-primary/20 via-primary/10 to-primary/5 border border-primary/20">
-                            <div className="flex items-center justify-between mb-8">
-                              <div className="w-12 h-8 rounded bg-gradient-to-r from-yellow-400 to-yellow-500" />
-                              <span className="text-xs text-foreground-muted">
-                                DEMO CARD
-                              </span>
-                            </div>
-                            <div className="font-mono text-lg tracking-wider text-foreground mb-4">
-                              4242 4242 4242 4242
-                            </div>
-                            <div className="flex justify-between text-sm text-foreground-muted">
-                              <span>Demo User</span>
-                              <span>12/28</span>
-                            </div>
-                          </div>
-
-                          {/* Demo Complete Button */}
-                          <Button
-                            size="lg"
-                            className="w-full"
-                            onClick={handleDemoComplete}
-                          >
-                            Complete Demo Purchase
-                            <ArrowRight className="w-4 h-4 ml-2" />
-                          </Button>
-
-                          <p className="text-xs text-center text-foreground-muted">
-                            In production, you would enter your real payment
-                            details securely via Stripe.
-                          </p>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Hidden Stripe Embedded Checkout (would be shown in production) */}
-                    {/*
+                  <div className="min-h-[400px]" key={retryKey}>
                     <EmbeddedCheckoutProvider
                       stripe={stripePromise}
-                      options={{ fetchClientSecret }}
+                      options={{ fetchClientSecret, onComplete: handleComplete }}
                     >
                       <EmbeddedCheckout />
                     </EmbeddedCheckoutProvider>
-                    */}
                   </div>
                 )}
               </CardContent>
@@ -281,7 +263,7 @@ export default function CheckoutPage() {
                           {item.name} × {item.quantity}
                         </span>
                         <span className="font-medium">
-                          ${(item.unitPrice * item.quantity).toFixed(2)}
+                          {getCurrencySymbol(DEFAULT_CURRENCY)}{(item.unitPrice * item.quantity).toFixed(2)}
                         </span>
                       </div>
                     ))}
@@ -297,7 +279,7 @@ export default function CheckoutPage() {
                           {promoCode.code} applied
                         </span>
                         <span className="text-sm font-medium text-emerald-600">
-                          -${discount.toFixed(2)}
+                          -{getCurrencySymbol(DEFAULT_CURRENCY)}{discount.toFixed(2)}
                         </span>
                       </div>
                       <Separator />
@@ -308,17 +290,17 @@ export default function CheckoutPage() {
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-foreground-muted">Subtotal</span>
-                      <span>${subtotal.toFixed(2)}</span>
+                      <span>{getCurrencySymbol(DEFAULT_CURRENCY)}{subtotal.toFixed(2)}</span>
                     </div>
                     {discount > 0 && (
                       <div className="flex justify-between text-sm text-emerald-600">
                         <span>Discount</span>
-                        <span>-${discount.toFixed(2)}</span>
+                        <span>-{getCurrencySymbol(DEFAULT_CURRENCY)}{discount.toFixed(2)}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-lg font-semibold pt-2">
                       <span>Total</span>
-                      <span className="text-primary">${total.toFixed(2)}</span>
+                      <span className="text-primary">{getCurrencySymbol(DEFAULT_CURRENCY)}{total.toFixed(2)}</span>
                     </div>
                     <p className="text-xs text-foreground-muted">
                       {totalCredits} credits will be added to your account

@@ -1,15 +1,19 @@
 "use client"
 
-import React from "react"
+import { useEffect, useRef } from "react"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 import { type JobWizardData } from "@/lib/job-wizard-schema"
+import { useAuth } from "@/hooks/use-auth"
+import { useCompanyContext } from "@/hooks/use-company"
 
 interface StepApplyMethodProps {
   data: JobWizardData
   updateData: (updates: Partial<JobWizardData>) => void
+  errors?: Record<string, string>
+  onBlur?: (field: keyof JobWizardData) => void
 }
 
 const applyMethods = [
@@ -49,6 +53,25 @@ const applyMethods = [
 ]
 
 export function StepApplyMethod({ data, updateData }: StepApplyMethodProps) {
+  const { user } = useAuth()
+  const { company } = useCompanyContext()
+  const prefilled = useRef(false)
+
+  // Prefill application email from user email if empty
+  useEffect(() => {
+    if (prefilled.current) return
+    if (!user?.email && !company?.website) return // wait for context data
+
+    prefilled.current = true
+
+    if (!data.applyEmail && user?.email) {
+      updateData({ applyEmail: user.email })
+    }
+    if (!data.applyUrl && company?.website) {
+      updateData({ applyUrl: company.website })
+    }
+  }, [user, company, data.applyEmail, data.applyUrl, updateData])
+
   return (
     <div className="space-y-8">
       <div>

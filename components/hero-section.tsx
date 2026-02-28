@@ -1,15 +1,10 @@
 "use client"
 
+import Link from "next/link"
 import { MotionWrapper } from "./motion-wrapper"
 import { MagneticButton } from "./magnetic-button"
 import { TextReveal } from "./text-reveal"
 import { ConstellationCanvas } from "./constellation-canvas"
-
-/**
- * Hero Section
- * Two-column layout with editorial spacing
- * Premium animations: text reveal, magnetic buttons, live constellation
- */
 
 export function HeroSection() {
   return (
@@ -18,7 +13,7 @@ export function HeroSection() {
       <div 
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59, 91, 219, 0.08) 0%, transparent 50%)"
+          background: "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(var(--primary-rgb), 0.08) 0%, transparent 50%)"
         }}
       />
       
@@ -48,13 +43,17 @@ export function HeroSection() {
             {/* Staggered reveal: CTAs with magnetic effect */}
             <MotionWrapper delay={400}>
               <div className="flex flex-wrap items-center gap-4 pt-4">
-                <MagneticButton variant="primary">
-                  Get Started
-                </MagneticButton>
-                
-                <MagneticButton variant="ghost">
-                  Learn more
-                </MagneticButton>
+                <Link href="/signup">
+                  <MagneticButton variant="primary">
+                    Get Started
+                  </MagneticButton>
+                </Link>
+
+                <Link href="/jobs">
+                  <MagneticButton variant="ghost">
+                    Learn more
+                  </MagneticButton>
+                </Link>
               </div>
             </MotionWrapper>
           </div>
@@ -70,7 +69,7 @@ export function HeroSection() {
               <div 
                 className="absolute inset-0"
                 style={{
-                  background: "radial-gradient(circle at center, rgba(59, 91, 219, 0.12) 0%, rgba(59, 91, 219, 0.04) 40%, transparent 70%)"
+                  background: "radial-gradient(circle at center, rgba(var(--primary-rgb), 0.12) 0%, rgba(var(--primary-rgb), 0.04) 40%, transparent 70%)"
                 }}
               />
               

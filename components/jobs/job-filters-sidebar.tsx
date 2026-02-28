@@ -1,6 +1,5 @@
 "use client"
 
-import React from "react"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -48,7 +47,7 @@ const typeOptions = [
 ]
 
 const dateOptions = [
-  { value: "", label: "Any time" },
+  { value: "any", label: "Any time" },
   { value: "24h", label: "Past 24 hours" },
   { value: "7d", label: "Past week" },
   { value: "30d", label: "Past month" },
@@ -200,15 +199,15 @@ export function JobFiltersSidebar({
           </AccordionTrigger>
           <AccordionContent className="pt-2 pb-4">
             <Select
-              value={filters.datePosted}
-              onValueChange={(value) => updateFilter("datePosted", value)}
+              value={filters.datePosted || "any"}
+              onValueChange={(value) => updateFilter("datePosted", value === "any" ? "" : value)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Any time" />
               </SelectTrigger>
               <SelectContent>
                 {dateOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value || "any"}>
+                  <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
                 ))}

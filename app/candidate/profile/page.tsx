@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
+import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -9,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { UserAvatar } from "@/components/user-avatar"
 import {
   Select,
   SelectContent,
@@ -18,59 +19,223 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { MotionWrapper } from "@/components/motion-wrapper"
+import { useCandidate } from "@/hooks/use-candidate"
+import {
+  getCandidateProfile,
+  updateCandidateProfile,
+  uploadResume,
+  deleteResume,
+  uploadAvatar,
+} from "@/lib/api/candidates"
+import type { CandidateProfile, CandidateProfileUpdate } from "@/lib/candidate/types"
 
-/**
- * Candidate Profile Page
- * Minimal, intentional profile management
- */
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState({
-    firstName: "John",
-    lastName: "Doe",
-    email: "john@example.com",
-    phone: "",
-    headline: "Senior Frontend Engineer",
-    bio: "",
-    preferredLocations: ["Remote", "San Francisco, CA"],
-    preferredKeywords: ["Frontend", "React", "TypeScript"],
-    remotePreference: "remote-first",
-    openToWork: true,
-    resume: {
-      name: "John_Doe_Resume_2026.pdf",
-      uploadedAt: new Date("2026-01-15"),
-      size: "245 KB",
-    },
-  })
+  const { refreshProfile } = useCandidate()
 
+  const [profile, setProfile] = useState<CandidateProfile | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isUploadingResume, setIsUploadingResume] = useState(false)
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+
+  const [formData, setFormData] = useState<CandidateProfileUpdate>({})
   const [newLocation, setNewLocation] = useState("")
   const [newKeyword, setNewKeyword] = useState("")
 
+  const resumeInputRef = useRef<HTMLInputElement>(null)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+
+  const fetchProfile = useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const data = await getCandidateProfile()
+      setProfile(data)
+      setFormData({
+        first_name: data.first_name,
+        last_name: data.last_name,
+        phone: data.phone,
+        headline: data.headline,
+        bio: data.bio,
+        preferred_locations: data.preferred_locations,
+        preferred_keywords: data.preferred_keywords,
+        remote_preference: data.remote_preference,
+        open_to_work: data.open_to_work,
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load profile")
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchProfile()
+  }, [fetchProfile])
+
+  const handleSave = async () => {
+    if (!profile) return
+    setIsSaving(true)
+    try {
+      const updated = await updateCandidateProfile(formData)
+      setProfile(updated)
+      setIsEditing(false)
+      refreshProfile()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save profile")
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleCancel = () => {
+    if (!profile) return
+    setFormData({
+      first_name: profile.first_name,
+      last_name: profile.last_name,
+      phone: profile.phone,
+      headline: profile.headline,
+      bio: profile.bio,
+      preferred_locations: profile.preferred_locations,
+      preferred_keywords: profile.preferred_keywords,
+      remote_preference: profile.remote_preference,
+      open_to_work: profile.open_to_work,
+    })
+    setIsEditing(false)
+  }
+
+  const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsUploadingResume(true)
+    try {
+      const resume = await uploadResume(file)
+      setProfile((prev) => prev ? { ...prev, resume } : prev)
+      refreshProfile()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to upload resume")
+    } finally {
+      setIsUploadingResume(false)
+      if (resumeInputRef.current) resumeInputRef.current.value = ""
+    }
+  }
+
+  const handleResumeDelete = async () => {
+    if (!confirm("Are you sure you want to delete your resume?")) return
+    try {
+      await deleteResume()
+      setProfile((prev) => prev ? { ...prev, resume: null } : prev)
+      refreshProfile()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete resume")
+    }
+  }
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsUploadingAvatar(true)
+    try {
+      const { avatar } = await uploadAvatar(file)
+      setProfile((prev) => prev ? { ...prev, avatar } : prev)
+      refreshProfile()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to upload avatar")
+    } finally {
+      setIsUploadingAvatar(false)
+      if (avatarInputRef.current) avatarInputRef.current.value = ""
+    }
+  }
+
   const addLocation = () => {
-    if (newLocation && !profile.preferredLocations.includes(newLocation)) {
-      setProfile({ ...profile, preferredLocations: [...profile.preferredLocations, newLocation] })
+    if (newLocation && !formData.preferred_locations?.includes(newLocation)) {
+      setFormData({
+        ...formData,
+        preferred_locations: [...(formData.preferred_locations || []), newLocation],
+      })
       setNewLocation("")
     }
   }
 
   const removeLocation = (loc: string) => {
-    setProfile({ ...profile, preferredLocations: profile.preferredLocations.filter((l) => l !== loc) })
+    setFormData({
+      ...formData,
+      preferred_locations: formData.preferred_locations?.filter((l) => l !== loc) || [],
+    })
   }
 
   const addKeyword = () => {
-    if (newKeyword && !profile.preferredKeywords.includes(newKeyword)) {
-      setProfile({ ...profile, preferredKeywords: [...profile.preferredKeywords, newKeyword] })
+    if (newKeyword && !formData.preferred_keywords?.includes(newKeyword)) {
+      setFormData({
+        ...formData,
+        preferred_keywords: [...(formData.preferred_keywords || []), newKeyword],
+      })
       setNewKeyword("")
     }
   }
 
   const removeKeyword = (kw: string) => {
-    setProfile({ ...profile, preferredKeywords: profile.preferredKeywords.filter((k) => k !== kw) })
+    setFormData({
+      ...formData,
+      preferred_keywords: formData.preferred_keywords?.filter((k) => k !== kw) || [],
+    })
+  }
+
+  if (isLoading) {
+    return (
+      <div className="max-w-[900px] mx-auto px-4 md:px-6 lg:px-8">
+        <div className="animate-pulse space-y-6">
+          <div className="flex justify-between items-center">
+            <div className="h-10 bg-background-secondary/50 rounded w-48" />
+            <div className="h-10 bg-background-secondary/50 rounded w-32" />
+          </div>
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-48 bg-background-secondary/50 rounded-lg" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !profile) {
+    return (
+      <div className="max-w-[900px] mx-auto px-4 md:px-6 lg:px-8">
+        <Card className="p-8 text-center">
+          <p className="text-foreground-muted mb-4">{error || "Failed to load profile"}</p>
+          <Button onClick={fetchProfile}>Try Again</Button>
+        </Card>
+      </div>
+    )
   }
 
   return (
     <div className="max-w-[900px] mx-auto px-4 md:px-6 lg:px-8">
+      {/* Hidden file inputs */}
+      <input
+        ref={resumeInputRef}
+        type="file"
+        accept=".pdf,.doc,.docx"
+        className="hidden"
+        onChange={handleResumeUpload}
+      />
+      <input
+        ref={avatarInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleAvatarUpload}
+      />
+
       {/* Header */}
       <MotionWrapper delay={0}>
         <div className="flex items-center justify-between mb-8">
@@ -80,13 +245,20 @@ export default function ProfilePage() {
               Manage your profile and resume
             </p>
           </div>
-          <Button
-            variant={isEditing ? "default" : "outline"}
-            onClick={() => setIsEditing(!isEditing)}
-            className={isEditing ? "bg-primary text-primary-foreground hover:bg-primary-hover" : ""}
-          >
-            {isEditing ? "Save Changes" : "Edit Profile"}
-          </Button>
+          {isEditing ? (
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={handleCancel} disabled={isSaving}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave} disabled={isSaving}>
+                {isSaving ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          ) : (
+            <Button variant="outline" onClick={() => setIsEditing(true)}>
+              Edit Profile
+            </Button>
+          )}
         </div>
       </MotionWrapper>
 
@@ -98,17 +270,21 @@ export default function ProfilePage() {
               <div className="flex flex-col md:flex-row md:items-start gap-6">
                 {/* Avatar */}
                 <div className="flex-shrink-0">
-                  <Avatar className="w-24 h-24 border-4 border-background shadow-lg">
-                    <AvatarImage src="/avatars/candidate.jpg" />
-                    <AvatarFallback className="bg-primary/10 text-primary text-2xl font-semibold">
-                      {profile.firstName.charAt(0)}{profile.lastName.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                  {isEditing && (
-                    <Button variant="outline" size="sm" className="mt-3 w-full bg-transparent">
-                      Change Photo
-                    </Button>
-                  )}
+                  <UserAvatar
+                    name={`${profile.first_name} ${profile.last_name}`}
+                    avatar={profile.avatar}
+                    size="xl"
+                    className="border-4 border-background shadow-lg"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-3 w-full bg-transparent"
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={isUploadingAvatar}
+                  >
+                    {isUploadingAvatar ? "Uploading..." : "Change Photo"}
+                  </Button>
                 </div>
 
                 {/* Name & Headline */}
@@ -118,22 +294,22 @@ export default function ProfilePage() {
                       <Label>First Name</Label>
                       {isEditing ? (
                         <Input
-                          value={profile.firstName}
-                          onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
+                          value={formData.first_name || ""}
+                          onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
                         />
                       ) : (
-                        <p className="text-foreground font-medium">{profile.firstName}</p>
+                        <p className="text-foreground font-medium">{profile.first_name}</p>
                       )}
                     </div>
                     <div className="space-y-2">
                       <Label>Last Name</Label>
                       {isEditing ? (
                         <Input
-                          value={profile.lastName}
-                          onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
+                          value={formData.last_name || ""}
+                          onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                         />
                       ) : (
-                        <p className="text-foreground font-medium">{profile.lastName}</p>
+                        <p className="text-foreground font-medium">{profile.last_name}</p>
                       )}
                     </div>
                   </div>
@@ -142,8 +318,8 @@ export default function ProfilePage() {
                     <Label>Headline</Label>
                     {isEditing ? (
                       <Input
-                        value={profile.headline}
-                        onChange={(e) => setProfile({ ...profile, headline: e.target.value })}
+                        value={formData.headline || ""}
+                        onChange={(e) => setFormData({ ...formData, headline: e.target.value })}
                         placeholder="e.g., Senior Frontend Engineer"
                       />
                     ) : (
@@ -151,10 +327,24 @@ export default function ProfilePage() {
                     )}
                   </div>
 
+                  <div className="space-y-2">
+                    <Label>Bio</Label>
+                    {isEditing ? (
+                      <Textarea
+                        value={formData.bio || ""}
+                        onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                        placeholder="Tell employers about yourself..."
+                        rows={3}
+                      />
+                    ) : (
+                      <p className="text-foreground-muted">{profile.bio || "Add a bio"}</p>
+                    )}
+                  </div>
+
                   <div className="flex items-center gap-3 pt-2">
                     <Switch
-                      checked={profile.openToWork}
-                      onCheckedChange={(checked) => setProfile({ ...profile, openToWork: checked })}
+                      checked={formData.open_to_work ?? profile.open_to_work}
+                      onCheckedChange={(checked) => setFormData({ ...formData, open_to_work: checked })}
                       disabled={!isEditing}
                     />
                     <div>
@@ -186,8 +376,8 @@ export default function ProfilePage() {
                   <Label>Phone (Optional)</Label>
                   {isEditing ? (
                     <Input
-                      value={profile.phone}
-                      onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                      value={formData.phone || ""}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value || null })}
                       placeholder="+1 (555) 000-0000"
                     />
                   ) : (
@@ -216,18 +406,34 @@ export default function ProfilePage() {
                       </svg>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-foreground">{profile.resume.name}</p>
+                      <p className="text-sm font-medium text-foreground">{profile.resume.file_name}</p>
                       <p className="text-xs text-foreground-muted">
-                        {profile.resume.size} · Uploaded {profile.resume.uploadedAt.toLocaleDateString()}
+                        {formatFileSize(profile.resume.file_size)} · Uploaded{" "}
+                        {new Date(profile.resume.uploaded_at).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm">
-                      View
-                    </Button>
-                    <Button variant="outline" size="sm">
+                    <a href={profile.resume.file_url} target="_blank" rel="noopener noreferrer">
+                      <Button variant="ghost" size="sm">
+                        View
+                      </Button>
+                    </a>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => resumeInputRef.current?.click()}
+                      disabled={isUploadingResume}
+                    >
                       Replace
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      onClick={handleResumeDelete}
+                    >
+                      Delete
                     </Button>
                   </div>
                 </div>
@@ -240,8 +446,14 @@ export default function ProfilePage() {
                   </div>
                   <p className="text-sm text-foreground mb-1">Drag and drop or click to upload</p>
                   <p className="text-xs text-foreground-muted">PDF or DOC, max 5MB</p>
-                  <Button variant="outline" size="sm" className="mt-3 bg-transparent">
-                    Upload Resume
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-3 bg-transparent"
+                    onClick={() => resumeInputRef.current?.click()}
+                    disabled={isUploadingResume}
+                  >
+                    {isUploadingResume ? "Uploading..." : "Upload Resume"}
                   </Button>
                 </div>
               )}
@@ -262,22 +474,28 @@ export default function ProfilePage() {
                 <Label>Work Location Preference</Label>
                 {isEditing ? (
                   <Select
-                    value={profile.remotePreference}
-                    onValueChange={(v) => setProfile({ ...profile, remotePreference: v })}
+                    value={formData.remote_preference || ""}
+                    onValueChange={(v) =>
+                      setFormData({
+                        ...formData,
+                        remote_preference: v as CandidateProfileUpdate["remote_preference"],
+                      })
+                    }
                   >
                     <SelectTrigger className="w-full md:w-[250px]">
-                      <SelectValue />
+                      <SelectValue placeholder="Select preference" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="remote-only">Remote Only</SelectItem>
                       <SelectItem value="remote-first">Remote First</SelectItem>
                       <SelectItem value="hybrid">Hybrid</SelectItem>
-                      <SelectItem value="on-site">On-site</SelectItem>
-                      <SelectItem value="flexible">Flexible</SelectItem>
+                      <SelectItem value="onsite-only">On-site Only</SelectItem>
                     </SelectContent>
                   </Select>
                 ) : (
-                  <p className="text-foreground capitalize">{profile.remotePreference.replace("-", " ")}</p>
+                  <p className="text-foreground capitalize">
+                    {profile.remote_preference?.replace("-", " ") || "Not set"}
+                  </p>
                 )}
               </div>
 
@@ -285,7 +503,7 @@ export default function ProfilePage() {
               <div className="space-y-2">
                 <Label>Preferred Locations</Label>
                 <div className="flex flex-wrap gap-2">
-                  {profile.preferredLocations.map((loc) => (
+                  {(isEditing ? formData.preferred_locations : profile.preferred_locations)?.map((loc) => (
                     <Badge
                       key={loc}
                       variant="secondary"
@@ -318,6 +536,9 @@ export default function ProfilePage() {
                       </Button>
                     </div>
                   )}
+                  {!isEditing && profile.preferred_locations.length === 0 && (
+                    <p className="text-foreground-muted text-sm">No locations added</p>
+                  )}
                 </div>
               </div>
 
@@ -326,7 +547,7 @@ export default function ProfilePage() {
                 <Label>Role Keywords</Label>
                 <p className="text-xs text-foreground-muted mb-2">Keywords that match your target roles</p>
                 <div className="flex flex-wrap gap-2">
-                  {profile.preferredKeywords.map((kw) => (
+                  {(isEditing ? formData.preferred_keywords : profile.preferred_keywords)?.map((kw) => (
                     <Badge
                       key={kw}
                       variant="outline"
@@ -358,6 +579,9 @@ export default function ProfilePage() {
                         Add
                       </Button>
                     </div>
+                  )}
+                  {!isEditing && profile.preferred_keywords.length === 0 && (
+                    <p className="text-foreground-muted text-sm">No keywords added</p>
                   )}
                 </div>
               </div>

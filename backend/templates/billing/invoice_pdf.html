@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  @page {
+    size: A4;
+    margin: 2cm 2.5cm 2.8cm 2.5cm;
+    @bottom-right {
+      content: "Page " counter(page) " of " counter(pages);
+      font-size: 9px;
+      color: #94A3B8;
+    }
+    @bottom-left {
+      content: "Orion Hiring Platform • support@orionhiring.com • www.orionhiring.com";
+      font-size: 9px;
+      color: #94A3B8;
+    }
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    color: #1E293B;
+    font-size: 13px;
+    line-height: 1.5;
+    background: #FFFFFF;
+  }
+
+  .top-accent {
+    height: 6px;
+    background: #3B5BDB;
+    border-radius: 999px;
+    margin-bottom: 18px;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 22px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #E2E8F0;
+  }
+
+  .brand-block {
+    padding-top: 2px;
+  }
+
+  .brand {
+    font-size: 28px;
+    font-weight: 700;
+    color: #3B5BDB;
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+  }
+
+  .brand-tagline {
+    font-size: 11px;
+    color: #64748B;
+    margin-top: 2px;
+  }
+
+  .invoice-title {
+    text-align: right;
+  }
+
+  .invoice-title h1 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1E293B;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .invoice-subtitle {
+    font-size: 11px;
+    color: #64748B;
+    margin-top: 6px;
+    max-width: 280px;
+  }
+
+  .invoice-number {
+    font-size: 13px;
+    color: #64748B;
+    margin-top: 4px;
+  }
+
+  .meta-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+
+  .summary-card {
+    width: 44%;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    padding: 14px 16px;
+    background: #FFFFFF;
+  }
+
+  .summary-amount {
+    font-size: 22px;
+    font-weight: 800;
+    color: #0F172A;
+    margin-top: 6px;
+    letter-spacing: -0.2px;
+  }
+
+  .summary-sub {
+    font-size: 11px;
+    color: #64748B;
+    margin-top: 2px;
+  }
+
+  .meta-card {
+    width: 54%;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    padding: 14px 16px;
+    background: #F8FAFC;
+  }
+
+  .meta-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .meta-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .meta-item-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #94A3B8;
+  }
+
+  .meta-item-value {
+    font-size: 12px;
+    font-weight: 600;
+    color: #0F172A;
+  }
+
+  .billing-details {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+
+  .billing-block {
+    width: 48%;
+  }
+
+  .billing-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #94A3B8;
+    margin-bottom: 8px;
+  }
+
+  .billing-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1E293B;
+    margin-bottom: 4px;
+  }
+
+  .billing-line {
+    font-size: 12px;
+    color: #64748B;
+    line-height: 1.6;
+  }
+
+  .status-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  .status-paid {
+    background: #DCFCE7;
+    color: #16A34A;
+  }
+
+  .status-open,
+  .status-pending {
+    background: #FEF3C7;
+    color: #B45309;
+  }
+
+  .status-pending {
+    background: #FEF3C7;
+    color: #B45309;
+  }
+
+  .status-refunded {
+    background: #FEE2E2;
+    color: #DC2626;
+  }
+
+  .status-failed,
+  .status-uncollectible,
+  .status-void {
+    background: #E2E8F0;
+    color: #475569;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 18px;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  .items-table {
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  thead th {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #94A3B8;
+    padding: 10px 12px;
+    border-bottom: 1px solid #E2E8F0;
+    background: #F8FAFC;
+    text-align: left;
+  }
+
+  thead th:last-child,
+  thead th:nth-child(3),
+  thead th:nth-child(4) {
+    text-align: right;
+  }
+
+  tbody td {
+    padding: 12px 12px;
+    border-bottom: 1px solid #F1F5F9;
+    font-size: 13px;
+    vertical-align: top;
+  }
+
+  tbody tr:nth-child(even) td {
+    background: #FBFDFF;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  tbody td:last-child,
+  tbody td:nth-child(3),
+  tbody td:nth-child(4) {
+    text-align: right;
+  }
+
+  .item-description {
+    font-weight: 500;
+    color: #1E293B;
+  }
+
+  .bottom-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    margin-top: 6px;
+  }
+
+  .notes {
+    width: 55%;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    padding: 14px 16px;
+    background: #FFFFFF;
+  }
+
+  .notes-title {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #94A3B8;
+    margin-bottom: 8px;
+  }
+
+  .notes-body {
+    font-size: 12px;
+    color: #475569;
+    line-height: 1.55;
+  }
+
+  .totals {
+    width: 45%;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .totals-table {
+    width: 100%;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    padding: 12px 16px;
+    background: #F8FAFC;
+  }
+
+  .totals-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-size: 13px;
+    color: #64748B;
+  }
+
+  .totals-row.total {
+    border-top: 2px solid #1E293B;
+    margin-top: 4px;
+    padding-top: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #1E293B;
+  }
+</style>
+</head>
+<body>
+
+<div class="top-accent"></div>
+
+<div class="header">
+  <div class="brand-block">
+    <div class="brand">Orion</div>
+    <div class="brand-tagline">Modern Hiring Platform</div>
+  </div>
+  <div class="invoice-title">
+    <h1>Invoice</h1>
+    <div class="invoice-number">{{ invoice.invoice_number }}</div>
+    <div class="invoice-subtitle">{{ invoice.description }}</div>
+  </div>
+</div>
+
+<div class="meta-row">
+  <div class="summary-card">
+    <div class="billing-label">Amount</div>
+    <div class="summary-amount">{{ currency_symbol }}{{ total|floatformat:2 }}</div>
+    <div class="summary-sub">
+      <span class="status-badge status-{{ invoice.status }}">{{ invoice.status|upper }}</span>
+    </div>
+  </div>
+  <div class="meta-card">
+    <div class="meta-list">
+      <div class="meta-item">
+        <div class="meta-item-label">Invoice Date</div>
+        <div class="meta-item-value">{{ invoice_date }}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-item-label">Payment Date</div>
+        <div class="meta-item-value">{{ payment_date }}</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-item-label">Currency</div>
+        <div class="meta-item-value">{{ invoice.currency }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="billing-details">
+  <div class="billing-block">
+    <div class="billing-label">From</div>
+    <div class="billing-name">Orion Platform</div>
+    <div class="billing-line">
+      support@orionhiring.com<br>
+      www.orionhiring.com
+    </div>
+  </div>
+  <div class="billing-block">
+    <div class="billing-label">Bill To</div>
+    <div class="billing-name">{{ bill_to_name }}</div>
+    <div class="billing-line">
+      {{ bill_to_email }}
+    </div>
+  </div>
+</div>
+
+<table class="items-table">
+  <thead>
+    <tr>
+      <th>Description</th>
+      <th>Qty</th>
+      <th>Unit Price</th>
+      <th>Amount</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in items %}
+    <tr>
+      <td class="item-description">{{ item.description }}</td>
+      <td>{{ item.quantity }}</td>
+      <td>{{ currency_symbol }}{{ item.unit_price|floatformat:2 }}</td>
+      <td>{{ currency_symbol }}{{ item.total|floatformat:2 }}</td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td class="item-description">{{ invoice.description }}</td>
+      <td>1</td>
+      <td>{{ currency_symbol }}{{ invoice.amount|floatformat:2 }}</td>
+      <td>{{ currency_symbol }}{{ invoice.amount|floatformat:2 }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div class="bottom-row">
+  <div class="notes">
+    <div class="notes-title">Notes</div>
+    <div class="notes-body">
+      Thank you for using Orion. If you have any questions about this invoice, contact support@orionhiring.com.
+    </div>
+  </div>
+
+  <div class="totals">
+    <div class="totals-table">
+      <div class="totals-row">
+        <span>Subtotal</span>
+        <span>{{ currency_symbol }}{{ subtotal|floatformat:2 }}</span>
+      </div>
+      <div class="totals-row total">
+        <span>Total</span>
+        <span>{{ currency_symbol }}{{ total|floatformat:2 }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

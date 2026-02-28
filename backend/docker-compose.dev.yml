@@ -1,0 +1,38 @@
+version: '3.8'
+
+# Standalone development compose - just PostgreSQL and Redis
+# Usage: docker-compose -f docker-compose.dev.yml up -d
+# Then run Django locally: python manage.py runserver
+
+services:
+  db:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: orion_dev
+      POSTGRES_USER: orion
+      POSTGRES_PASSWORD: orion_dev_password
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orion -d orion_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_dev_data:
+  redis_dev_data:

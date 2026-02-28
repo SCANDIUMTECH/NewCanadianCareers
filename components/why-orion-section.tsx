@@ -3,12 +3,6 @@
 import { MotionWrapper } from "./motion-wrapper"
 import { TextReveal, LineReveal } from "./text-reveal"
 
-/**
- * Why Orion Exists
- * Editorial text section — no cards, no grids
- * Premium text reveal animations
- */
-
 export function WhyOrionSection() {
   return (
     <section className="py-32 md:py-48 relative">
@@ -16,7 +10,7 @@ export function WhyOrionSection() {
       <div 
         className="absolute right-0 top-1/4 w-1/2 h-1/2 pointer-events-none opacity-30"
         style={{
-          background: "radial-gradient(circle at 80% 50%, rgba(59, 91, 219, 0.06) 0%, transparent 50%)"
+          background: "radial-gradient(circle at 80% 50%, rgba(var(--primary-rgb), 0.06) 0%, transparent 50%)"
         }}
       />
       

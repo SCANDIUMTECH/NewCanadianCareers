@@ -1,10 +1,10 @@
 "use client"
 
-import React from "react"
-import { useState, useEffect } from "react"
+import React, { Suspense } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { cn } from "@/lib/utils"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { cn, getInitials, getCompanyInitials } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -25,8 +25,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { toast } from "sonner"
+import { useAuth } from "@/hooks/use-auth"
+import { AgencyProvider, useAgencyContext } from "@/hooks/use-agency"
+import { RequireRole } from "@/lib/auth/require-role"
+import { addAgencyClient } from "@/lib/api/agencies"
+import type { AgencyClient } from "@/lib/agency/types"
+import { CHART_SEQUENCE } from "@/lib/constants/colors"
+import { INDUSTRIES } from "@/lib/constants/industries"
 
 /**
  * Agency Dashboard Layout
@@ -44,26 +59,71 @@ const navigation = [
 
 const secondaryNav = [
   { name: "Billing", href: "/agency/billing" },
-  { name: "Settings", href: "/agency/settings" },
+  {
+    name: "Settings",
+    href: "/agency/settings",
+    subRoutes: [
+      { name: "Job Posting", href: "/agency/settings/job-posting" },
+    ],
+  },
 ]
 
-// Mock client companies
-const clientCompanies = [
-  { id: 1, name: "Acme Corporation", logo: null, verified: true, activeJobs: 5, initials: "AC" },
-  { id: 2, name: "TechStart Inc", logo: null, verified: true, activeJobs: 3, initials: "TS" },
-  { id: 3, name: "Global Dynamics", logo: null, verified: false, activeJobs: 2, initials: "GD" },
-  { id: 4, name: "Innovate Labs", logo: null, verified: true, activeJobs: 0, initials: "IL" },
-]
+// Colors for client companies
+const clientColors = CHART_SEQUENCE
+
+function getClientColor(index: number): string {
+  return clientColors[index % clientColors.length]
+}
+
+// Client company display type with computed fields
+interface ClientCompanyDisplay {
+  id: number
+  name: string
+  logo: string | null
+  verified: boolean
+  activeJobs: number
+  initials: string
+  color: string
+}
 
 export default function AgencyLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  return (
+    <RequireRole allowedRoles={['agency']}>
+      <AgencyProvider>
+        <Suspense fallback={
+          <div className="min-h-screen bg-background flex items-center justify-center">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        }>
+          <AgencyLayoutContent>{children}</AgencyLayoutContent>
+        </Suspense>
+      </AgencyProvider>
+    </RequireRole>
+  )
+}
+
+function AgencyLayoutContent({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   const pathname = usePathname()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { user: authUser, isLoading: authLoading, logout } = useAuth()
+  const { agency, clients, totalCredits, isLoading: agencyLoading, refreshClients } = useAgencyContext()
   const [isScrolled, setIsScrolled] = useState(false)
-  const [selectedCompany, setSelectedCompany] = useState<typeof clientCompanies[0] | null>(null)
+  const [selectedCompany, setSelectedCompany] = useState<ClientCompanyDisplay | null>(null)
   const [showAddCompanyDialog, setShowAddCompanyDialog] = useState(false)
+  const [newCompanyName, setNewCompanyName] = useState("")
+  const [newCompanyWebsite, setNewCompanyWebsite] = useState("")
+  const [newCompanyIndustry, setNewCompanyIndustry] = useState("")
+  const [isAddingCompany, setIsAddingCompany] = useState(false)
+  const [addCompanyError, setAddCompanyError] = useState<string | null>(null)
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 10)
@@ -71,18 +131,108 @@ export default function AgencyLayout({
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  // Mock agency data
-  const agency = {
-    name: "Talent Bridge Agency",
-    logo: null,
-    verified: true,
-    role: "Owner",
-    totalCredits: 45,
-    billingMode: "agency", // "agency" | "company"
-    clientCount: clientCompanies.length,
+  // Transform clients to display format
+  const clientCompanies: ClientCompanyDisplay[] = clients.map((client, index) => ({
+    id: client.id,
+    name: client.company_name,
+    logo: client.company_detail?.logo || null,
+    verified: client.company_detail?.status === 'verified',
+    activeJobs: client.active_jobs_count || 0,
+    initials: getCompanyInitials(client.company_name),
+    color: getClientColor(index),
+  }))
+
+  // URL persistence: restore selectedCompany from ?clientId= param
+  useEffect(() => {
+    const clientIdParam = searchParams.get('clientId')
+    if (clientIdParam && clientCompanies.length > 0) {
+      const match = clientCompanies.find(c => c.id === Number(clientIdParam))
+      if (match && match.id !== selectedCompany?.id) {
+        setSelectedCompany(match)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, clientCompanies.length])
+
+  // Update URL when company selection changes
+  const selectCompany = useCallback((company: ClientCompanyDisplay | null) => {
+    setSelectedCompany(company)
+    const params = new URLSearchParams(searchParams.toString())
+    if (company) {
+      params.set('clientId', String(company.id))
+    } else {
+      params.delete('clientId')
+    }
+    const query = params.toString()
+    router.replace(`${pathname}${query ? `?${query}` : ''}`, { scroll: false })
+  }, [pathname, router, searchParams])
+
+  // Show loading state while auth is hydrating
+  if (authLoading || agencyLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
   }
 
-  const clearCompanyContext = () => setSelectedCompany(null)
+  // Build user display info from auth state
+  const userName = authUser ? (authUser.full_name || `${authUser.first_name} ${authUser.last_name}`) : "Guest"
+  const userEmail = authUser?.email || ""
+  const userInitials = authUser ? getInitials(authUser.first_name, authUser.last_name) : "??"
+
+  const handleSignOut = async () => {
+    await logout()
+    router.push("/login")
+  }
+
+  // Use real agency data or fallback
+  const agencyData = {
+    name: agency?.name || "Agency",
+    logo: agency?.logo || null,
+    verified: agency?.status === 'verified',
+    role: "Owner",
+    totalCredits: totalCredits,
+    billingMode: agency?.billing_model || "agency_pays",
+    clientCount: clients.length,
+  }
+
+  const clearCompanyContext = () => selectCompany(null)
+
+  const handleAddCompany = async () => {
+    if (!newCompanyName.trim()) return
+
+    setIsAddingCompany(true)
+    setAddCompanyError(null)
+    try {
+      await addAgencyClient({
+        name: newCompanyName.trim(),
+        website: newCompanyWebsite.trim() || undefined,
+        industry: newCompanyIndustry || undefined,
+      })
+      await refreshClients()
+      setShowAddCompanyDialog(false)
+      setNewCompanyName("")
+      setNewCompanyWebsite("")
+      setNewCompanyIndustry("")
+      toast.success("Client company added successfully")
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to add company'
+      // Try to extract field-level error (e.g. duplicate name)
+      try {
+        const parsed = JSON.parse(message)
+        if (parsed.name) {
+          setAddCompanyError(Array.isArray(parsed.name) ? parsed.name[0] : parsed.name)
+        } else {
+          setAddCompanyError(message)
+        }
+      } catch {
+        setAddCompanyError(message)
+      }
+    } finally {
+      setIsAddingCompany(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -151,9 +301,9 @@ export default function AgencyLayout({
                     ) : (
                       <>
                         <div className="w-6 h-6 rounded bg-violet-500/10 flex items-center justify-center">
-                          <span className="text-xs font-semibold text-violet-600">TB</span>
+                          <span className="text-xs font-semibold text-violet-600">{getCompanyInitials(agencyData.name)}</span>
                         </div>
-                        <span className="text-sm font-medium">{agency.name}</span>
+                        <span className="text-sm font-medium">{agencyData.name}</span>
                       </>
                     )}
                     <svg className="w-4 h-4 text-foreground-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -172,11 +322,11 @@ export default function AgencyLayout({
                     onClick={clearCompanyContext}
                   >
                     <div className="w-8 h-8 rounded bg-violet-500/10 flex items-center justify-center">
-                      <span className="text-sm font-semibold text-violet-600">TB</span>
+                      <span className="text-sm font-semibold text-violet-600">{getCompanyInitials(agencyData.name)}</span>
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-medium">{agency.name}</p>
-                      <p className="text-xs text-foreground-muted">{agency.clientCount} client companies</p>
+                      <p className="text-sm font-medium">{agencyData.name}</p>
+                      <p className="text-xs text-foreground-muted">{agencyData.clientCount} client companies</p>
                     </div>
                     {!selectedCompany && (
                       <svg className="w-4 h-4 text-primary" fill="currentColor" viewBox="0 0 24 24">
@@ -197,7 +347,7 @@ export default function AgencyLayout({
                           "flex items-center gap-3 p-3",
                           selectedCompany?.id === company.id && "bg-primary/5"
                         )}
-                        onClick={() => setSelectedCompany(company)}
+                        onClick={() => selectCompany(company)}
                       >
                         <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center">
                           <span className="text-sm font-semibold text-primary">{company.initials}</span>
@@ -264,7 +414,7 @@ export default function AgencyLayout({
                 <svg className="w-4 h-4 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
-                <span className="text-sm font-medium text-violet-600">{agency.totalCredits} credits</span>
+                <span className="text-sm font-medium text-violet-600">{agencyData.totalCredits} credits</span>
                 <Badge variant="secondary" className="h-5 px-1.5 text-[10px] bg-violet-500/10 text-violet-600 border-violet-500/20">
                   Pooled
                 </Badge>
@@ -285,9 +435,9 @@ export default function AgencyLayout({
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                     <Avatar className="h-9 w-9 border-2 border-transparent hover:border-primary/20 transition-colors">
-                      <AvatarImage src="/avatars/agency-owner.jpg" alt="Profile" />
+                      <AvatarImage src={authUser?.avatar || undefined} alt="Profile" />
                       <AvatarFallback className="bg-violet-500/10 text-violet-600 font-medium">
-                        RK
+                        {userInitials}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
@@ -295,11 +445,11 @@ export default function AgencyLayout({
                 <DropdownMenuContent className="w-56" align="end">
                   <div className="flex items-center gap-3 p-3">
                     <Avatar className="h-10 w-10">
-                      <AvatarFallback className="bg-violet-500/10 text-violet-600">RK</AvatarFallback>
+                      <AvatarFallback className="bg-violet-500/10 text-violet-600">{userInitials}</AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium">Rachel Kim</span>
-                      <span className="text-xs text-foreground-muted">rachel@talentbridge.io</span>
+                      <span className="text-sm font-medium">{userName}</span>
+                      <span className="text-xs text-foreground-muted">{userEmail}</span>
                     </div>
                   </div>
                   <DropdownMenuSeparator />
@@ -317,7 +467,7 @@ export default function AgencyLayout({
                   <DropdownMenuLabel className="text-xs text-foreground-muted">Account</DropdownMenuLabel>
                   <DropdownMenuItem>Personal Settings</DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-destructive">Sign out</DropdownMenuItem>
+                  <DropdownMenuItem className="text-destructive" onClick={handleSignOut}>Sign out</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -390,7 +540,10 @@ export default function AgencyLayout({
       </main>
 
       {/* Add Company Dialog */}
-      <Dialog open={showAddCompanyDialog} onOpenChange={setShowAddCompanyDialog}>
+      <Dialog open={showAddCompanyDialog} onOpenChange={(open) => {
+        setShowAddCompanyDialog(open)
+        if (!open) setAddCompanyError(null)
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add Client Company</DialogTitle>
@@ -399,25 +552,55 @@ export default function AgencyLayout({
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {addCompanyError && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                {addCompanyError}
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="company-name">Company Name</Label>
-              <Input id="company-name" placeholder="Acme Corporation" />
+              <Input
+                id="company-name"
+                placeholder="Acme Corporation"
+                value={newCompanyName}
+                onChange={(e) => setNewCompanyName(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="company-website">Website</Label>
-              <Input id="company-website" placeholder="https://example.com" />
+              <Input
+                id="company-website"
+                placeholder="https://example.com"
+                value={newCompanyWebsite}
+                onChange={(e) => setNewCompanyWebsite(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="company-industry">Industry</Label>
-              <Input id="company-industry" placeholder="Technology" />
+              <Select value={newCompanyIndustry} onValueChange={setNewCompanyIndustry}>
+                <SelectTrigger id="company-industry">
+                  <SelectValue placeholder="Select industry" />
+                </SelectTrigger>
+                <SelectContent>
+                  {INDUSTRIES.map((ind) => (
+                    <SelectItem key={ind.value} value={ind.value}>
+                      {ind.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddCompanyDialog(false)} className="bg-transparent">
               Cancel
             </Button>
-            <Button className="bg-primary hover:bg-primary-hover text-primary-foreground">
-              Add Company
+            <Button
+              className="bg-primary hover:bg-primary-hover text-primary-foreground"
+              onClick={handleAddCompany}
+              disabled={isAddingCompany || !newCompanyName.trim()}
+            >
+              {isAddingCompany ? "Adding..." : "Add Company"}
             </Button>
           </DialogFooter>
         </DialogContent>

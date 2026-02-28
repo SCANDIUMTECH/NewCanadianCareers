@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { cn } from "@/lib/utils"
+import { cn, formatCurrency, getCurrencySymbol } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -13,8 +13,11 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
-import { Check, ChevronDown, Sparkles, Zap, Building2, CreditCard, ShoppingCart } from "lucide-react"
+import { Check, ChevronDown, Sparkles, Zap, Building2, CreditCard, ShoppingCart, AlertCircle, RefreshCw } from "lucide-react"
 import { useCart } from "@/hooks/use-cart"
+import { getPackages } from "@/lib/api/billing"
+import type { Package } from "@/lib/company/types"
+import type { LucideIcon } from "lucide-react"
 
 /**
  * Job Packages Page
@@ -22,64 +25,15 @@ import { useCart } from "@/hooks/use-cart"
  * "Cosmic Professional" design with elevated recommended card
  */
 
-// Mock data
-const packages = [
-  {
-    id: 1,
-    name: "Starter",
-    price: 99,
-    credits: 3,
-    perCredit: 33,
-    features: [
-      "3 job posting credits",
-      "30-day listing duration",
-      "Basic analytics",
-      "Email support",
-    ],
-    popular: false,
-    icon: Zap,
-  },
-  {
-    id: 2,
-    name: "Professional",
-    price: 249,
-    credits: 10,
-    perCredit: 24.9,
-    features: [
-      "10 job posting credits",
-      "60-day listing duration",
-      "Social media distribution",
-      "Advanced analytics",
-      "Priority support",
-      "Featured badge",
-    ],
-    popular: true,
-    icon: Sparkles,
-  },
-  {
-    id: 3,
-    name: "Enterprise",
-    price: 599,
-    credits: 30,
-    perCredit: 19.97,
-    features: [
-      "30 job posting credits",
-      "90-day listing duration",
-      "Premium placement",
-      "Social + newsletter distribution",
-      "Dedicated account manager",
-      "Custom branding",
-      "API access",
-    ],
-    popular: false,
-    icon: Building2,
-  },
-]
+interface PackageWithIcon extends Package {
+  icon: LucideIcon
+  perCredit: number
+}
 
 const creditPacks = [
-  { credits: 5, price: 75, perCredit: 15, popular: false },
-  { credits: 10, price: 120, perCredit: 12, popular: true },
-  { credits: 25, price: 250, perCredit: 10, popular: false },
+  { id: 1, credits: 5, price: 75, perCredit: 15, popular: false },
+  { id: 2, credits: 10, price: 120, perCredit: 12, popular: true },
+  { id: 3, credits: 25, price: 250, perCredit: 10, popular: false },
 ]
 
 const faqs = [
@@ -111,25 +65,55 @@ export default function PackagesPage() {
   const router = useRouter()
   const { addItem, itemCount } = useCart()
 
-  const handleAddPackage = (pkg: typeof packages[number]) => {
+  const [packages, setPackages] = useState<PackageWithIcon[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchPackages = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const data = await getPackages()
+
+      // Map packages to UI format with icons
+      const packagesWithIcons: PackageWithIcon[] = data.map((pkg, index) => ({
+        ...pkg,
+        icon: pkg.is_popular ? Sparkles : index === 0 ? Zap : Building2,
+        perCredit: pkg.job_credits > 0 ? pkg.price / pkg.job_credits : 0,
+      }))
+
+      setPackages(packagesWithIcons)
+    } catch (err) {
+      console.error('Failed to fetch packages:', err)
+      setError('Failed to load packages. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchPackages()
+  }, [fetchPackages])
+
+  const handleAddPackage = (pkg: PackageWithIcon) => {
     addItem({
       id: `pkg-${pkg.id}`,
       type: "package",
       name: `${pkg.name} Package`,
-      description: `${pkg.credits} job posting credits with ${pkg.features[1]}`,
-      credits: pkg.credits,
+      description: `${pkg.job_credits} job posting credits`,
+      credits: pkg.job_credits,
       unitPrice: pkg.price,
-      popular: pkg.popular,
+      popular: pkg.is_popular,
     })
     router.push("/company/cart")
   }
 
   const handleAddCredits = (pack: typeof creditPacks[number]) => {
     addItem({
-      id: `credit-${pack.credits}`,
+      id: `credit-${pack.id}`,
       type: "credit-pack",
       name: `${pack.credits} Credits Pack`,
-      description: `Additional posting credits at $${pack.perCredit}/credit`,
+      description: `Additional posting credits at ${getCurrencySymbol("USD")}${pack.perCredit}/credit`,
       credits: pack.credits,
       unitPrice: pack.price,
       popular: pack.popular,
@@ -165,13 +149,41 @@ export default function PackagesPage() {
       )}
 
       {/* Package Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16 items-center">
-        {packages.map((pkg, index) => (
-          <MotionWrapper key={pkg.id} delay={100 + index * 50}>
-            <PackageCard package={pkg} onSelect={() => handleAddPackage(pkg)} />
-          </MotionWrapper>
-        ))}
-      </div>
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16 items-center">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-[500px] bg-background-secondary rounded-2xl animate-pulse" />
+          ))}
+        </div>
+      ) : error ? (
+        <MotionWrapper delay={100}>
+          <div className="flex flex-col items-center justify-center py-16 mb-16">
+            <Card className="max-w-md w-full border-border/50 rounded-2xl">
+              <CardContent className="pt-6 text-center space-y-4">
+                <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto">
+                  <AlertCircle className="w-6 h-6 text-red-500" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground mb-1">Failed to Load Packages</h3>
+                  <p className="text-sm text-foreground-muted">{error}</p>
+                </div>
+                <Button onClick={fetchPackages} variant="outline" className="bg-transparent">
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Retry
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </MotionWrapper>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16 items-center">
+          {packages.map((pkg, index) => (
+            <MotionWrapper key={pkg.id} delay={100 + index * 50}>
+              <PackageCard package={pkg} onSelect={() => handleAddPackage(pkg)} />
+            </MotionWrapper>
+          ))}
+        </div>
+      )}
 
       {/* Trust Stats Bar */}
       <MotionWrapper delay={300}>
@@ -252,7 +264,7 @@ function PackageCard({
   package: pkg,
   onSelect,
 }: {
-  package: (typeof packages)[number]
+  package: PackageWithIcon
   onSelect: () => void
 }) {
   const Icon = pkg.icon
@@ -262,14 +274,14 @@ function PackageCard({
       className={cn(
         "relative border-border/50 rounded-2xl transition-all duration-500 h-full",
         "hover:shadow-lg hover:border-primary/30 hover:-translate-y-1",
-        pkg.popular && [
+        pkg.is_popular && [
           "md:scale-105 z-10 border-primary ring-2 ring-primary/20",
-          "shadow-[0_0_60px_rgba(59,91,219,0.15)]",
+          "shadow-[0_0_60px_rgba(var(--primary-rgb),0.15)]",
         ]
       )}
     >
       {/* Popular Badge with Shimmer */}
-      {pkg.popular && (
+      {pkg.is_popular && (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2">
           <Badge className="relative overflow-hidden bg-primary text-primary-foreground px-4 py-1 shadow-lg">
             <span className="relative z-10">Most Popular</span>
@@ -285,7 +297,7 @@ function PackageCard({
         <div
           className={cn(
             "w-12 h-12 rounded-xl mx-auto mb-4 flex items-center justify-center",
-            pkg.popular ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
+            pkg.is_popular ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
           )}
         >
           <Icon className="w-6 h-6" />
@@ -297,18 +309,18 @@ function PackageCard({
         {/* Price */}
         <div>
           <div className="flex items-baseline justify-center gap-1">
-            <span className="text-lg text-foreground-muted">$</span>
+            <span className="text-lg text-foreground-muted">{getCurrencySymbol(pkg.currency)}</span>
             <span className="text-4xl font-bold text-primary">{pkg.price}</span>
           </div>
           <p className="text-sm text-foreground-muted mt-1">
-            {pkg.credits} credits &middot; ${pkg.perCredit.toFixed(2)}/credit
+            {pkg.job_credits} credits &middot; {getCurrencySymbol(pkg.currency)}{pkg.perCredit.toFixed(2)}/credit
           </p>
         </div>
 
         {/* Features */}
         <ul className="space-y-3 text-left">
-          {pkg.features.map((feature) => (
-            <li key={feature} className="flex items-start gap-3">
+          {pkg.features.map((feature, idx) => (
+            <li key={idx} className="flex items-start gap-3">
               <Check className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
               <span className="text-sm text-foreground">{feature}</span>
             </li>
@@ -319,11 +331,11 @@ function PackageCard({
         <Button
           className={cn(
             "w-full",
-            pkg.popular
+            pkg.is_popular
               ? "bg-primary hover:bg-primary/90 text-primary-foreground"
               : "bg-transparent"
           )}
-          variant={pkg.popular ? "default" : "outline"}
+          variant={pkg.is_popular ? "default" : "outline"}
           size="lg"
           onClick={onSelect}
         >
@@ -361,8 +373,8 @@ function CreditPackCard({
           <span className="text-2xl font-bold text-foreground">{pack.credits}</span>
           <span className="text-foreground-muted">credits</span>
         </div>
-        <p className="text-lg font-semibold text-primary mb-1">${pack.price}</p>
-        <p className="text-xs text-foreground-muted mb-4">${pack.perCredit}/credit</p>
+        <p className="text-lg font-semibold text-primary mb-1">{formatCurrency(pack.price, "USD")}</p>
+        <p className="text-xs text-foreground-muted mb-4">{getCurrencySymbol("USD")}{pack.perCredit}/credit</p>
         <Button variant="outline" size="sm" className="w-full bg-transparent" onClick={onSelect}>
           Add Credits
         </Button>

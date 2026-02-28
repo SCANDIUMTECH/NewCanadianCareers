@@ -5,7 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { UserAvatar } from "@/components/user-avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -82,7 +82,8 @@ export function DashboardHeader({
   const isActive = (href: string, basePath?: string) => {
     if (pathname === href) return true
     // Check if we're in a sub-route of this nav item
-    if (basePath && href !== basePath && pathname.startsWith(href)) return true
+    // Ensure startsWith match is at a path boundary (e.g. /company/jobs matches /company/jobs/123 but not /company/jobsettings)
+    if (basePath && href !== basePath && pathname.startsWith(href + '/')) return true
     return false
   }
 
@@ -166,22 +167,22 @@ export function DashboardHeader({
               {/* Profile Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                    <Avatar className="h-9 w-9 border-2 border-transparent hover:border-primary/20 transition-colors">
-                      <AvatarImage src={user.avatarUrl} alt="Profile" />
-                      <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                        {user.initials}
-                      </AvatarFallback>
-                    </Avatar>
-                  </Button>
+                  <button className="relative flex items-center justify-center h-10 w-10 rounded-full hover:bg-accent transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                    <UserAvatar
+                      name={user.name}
+                      avatar={user.avatarUrl}
+                      size="sm"
+                      className="border-2 border-transparent hover:border-primary/20 transition-colors"
+                    />
+                  </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end">
                   <div className="flex items-center gap-3 p-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback className="bg-primary/10 text-primary">
-                        {user.initials}
-                      </AvatarFallback>
-                    </Avatar>
+                    <UserAvatar
+                      name={user.name}
+                      avatar={user.avatarUrl}
+                      size="md"
+                    />
                     <div className="flex flex-col">
                       <span className="text-sm font-medium">{user.name}</span>
                       <span className="text-xs text-foreground-muted">{user.email}</span>

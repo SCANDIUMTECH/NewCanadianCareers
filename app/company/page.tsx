@@ -1,80 +1,172 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
-import { cn } from "@/lib/utils"
+import { cn, formatTimeAgo } from "@/lib/utils"
+import { JOB_STATUS_STYLES } from "@/lib/constants/status-styles"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { MotionWrapper } from "@/components/motion-wrapper"
+import { UserAvatar } from "@/components/user-avatar"
 import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-} from "recharts"
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import dynamic from "next/dynamic"
+import { CHART, STATUS } from "@/lib/constants/colors"
+
+const CompanyPerformanceChart = dynamic(
+  () => import("@/components/charts/company-performance-chart"),
+  { ssr: false }
+)
+const CompanyStatusChart = dynamic(
+  () => import("@/components/charts/company-status-chart"),
+  { ssr: false }
+)
+import { useCompanyContext } from "@/hooks/use-company"
+import { getCompanyJobs, getJobStats, getCompanyAnalytics } from "@/lib/api/jobs"
+import { getCompanyMembers } from "@/lib/api/companies"
+import { getNotifications } from "@/lib/api/notifications"
+import type { JobListItem, JobStatus, TeamMember, Notification } from "@/lib/company/types"
+import type { CompanyAnalytics } from "@/lib/api/jobs"
 
 /**
  * Company Dashboard
  * Overview of jobs, performance, team activity, and billing
- * Premium UI with Recharts visualizations
+ * Integrated with backend API
  */
 
-// Mock data
-const performanceData = [
-  { date: "Jan 1", views: 240, applies: 24 },
-  { date: "Jan 8", views: 320, applies: 35 },
-  { date: "Jan 15", views: 450, applies: 42 },
-  { date: "Jan 22", views: 380, applies: 38 },
-  { date: "Jan 29", views: 520, applies: 56 },
-  { date: "Feb 2", views: 480, applies: 52 },
-]
-
-const jobsByStatus = [
-  { status: "Published", count: 8, color: "#3B5BDB" },
-  { status: "Draft", count: 3, color: "#94A3B8" },
-  { status: "Paused", count: 2, color: "#F59E0B" },
-  { status: "Expired", count: 5, color: "#EF4444" },
-]
-
-const recentJobs = [
-  { id: 1, title: "Senior Frontend Engineer", status: "published", views: 342, applies: 28, posted: "Jan 28, 2026", daysLeft: 22 },
-  { id: 2, title: "Product Designer", status: "published", views: 215, applies: 18, posted: "Jan 25, 2026", daysLeft: 19 },
-  { id: 3, title: "Backend Developer", status: "pending", views: 0, applies: 0, posted: "Feb 1, 2026", daysLeft: 30 },
-  { id: 4, title: "DevOps Engineer", status: "draft", views: 0, applies: 0, posted: "-", daysLeft: null },
-]
-
-const recentActivity = [
-  { id: 1, type: "application", message: "New application for Senior Frontend Engineer", time: "2 hours ago" },
-  { id: 2, type: "view", message: "Product Designer reached 200 views", time: "5 hours ago" },
-  { id: 3, type: "team", message: "Sarah Chen joined as Recruiter", time: "Yesterday" },
-  { id: 4, type: "billing", message: "5 job posting credits added", time: "2 days ago" },
-]
-
-const teamMembers = [
-  { id: 1, name: "Jane Doe", email: "jane@acme.com", role: "Owner", avatar: null },
-  { id: 2, name: "Sarah Chen", email: "sarah@acme.com", role: "Recruiter", avatar: null },
-  { id: 3, name: "Mike Johnson", email: "mike@acme.com", role: "Admin", avatar: null },
-]
-
 export default function CompanyDashboard() {
-  const [isVisible, setIsVisible] = useState(false)
+  const { company, entitlements, isLoading: contextLoading } = useCompanyContext()
 
-  useEffect(() => {
-    setIsVisible(true)
+  // Local state for dashboard data
+  const [recentJobs, setRecentJobs] = useState<JobListItem[]>([])
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
+  const [recentActivity, setRecentActivity] = useState<Notification[]>([])
+  const [jobStats, setJobStats] = useState<{
+    total_jobs: number
+    published_jobs: number
+    draft_jobs: number
+    paused_jobs: number
+    expired_jobs: number
+    total_views: number
+    total_applications: number
+  } | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d'>('30d')
+  const [analytics, setAnalytics] = useState<CompanyAnalytics | null>(null)
+  const [analyticsLoading, setAnalyticsLoading] = useState(true)
+
+  // Fetch dashboard data
+  const fetchDashboardData = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const [jobsRes, stats, members, notifications] = await Promise.all([
+        getCompanyJobs({ page_size: 4 }).catch(() => ({ results: [] })),
+        getJobStats().catch(() => null),
+        getCompanyMembers().catch(() => []),
+        getNotifications({ page_size: 5 }).catch(() => ({ results: [] })),
+      ])
+
+      setRecentJobs(jobsRes.results)
+      setJobStats(stats)
+      setTeamMembers(members.slice(0, 3))
+      setRecentActivity(notifications.results)
+    } finally {
+      setIsLoading(false)
+    }
   }, [])
 
-  // Chart colors (computed, not CSS vars)
+  // Fetch analytics data
+  const fetchAnalytics = useCallback(async () => {
+    setAnalyticsLoading(true)
+    try {
+      const data = await getCompanyAnalytics({ period: dateRange })
+      setAnalytics(data)
+    } catch {
+      // Silently fail - chart will show "No data" state
+    } finally {
+      setAnalyticsLoading(false)
+    }
+  }, [dateRange])
+
+  useEffect(() => {
+    fetchDashboardData()
+  }, [fetchDashboardData])
+
+  useEffect(() => {
+    fetchAnalytics()
+  }, [fetchAnalytics])
+
+  // Compute jobs by status for chart
+  const jobsByStatus = [
+    { status: "Published", count: jobStats?.published_jobs ?? 0, color: CHART.primary },
+    { status: "Draft", count: jobStats?.draft_jobs ?? 0, color: STATUS.draft },
+    { status: "Paused", count: jobStats?.paused_jobs ?? 0, color: CHART.warning },
+    { status: "Expired", count: jobStats?.expired_jobs ?? 0, color: CHART.danger },
+  ]
+
+  // Chart colors
   const chartColors = {
-    views: "#3B5BDB",
-    applies: "#10B981",
-    grid: "#E5E7EB",
+    views: CHART.primary,
+    applies: CHART.success,
+    grid: CHART.grid,
+  }
+
+  const getDaysLeft = (expiresAt: string | null): number | null => {
+    if (!expiresAt) return null
+    const now = new Date()
+    const expires = new Date(expiresAt)
+    const diff = Math.ceil((expires.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    return diff > 0 ? diff : 0
+  }
+
+  const mapNotificationToActivity = (notification: Notification) => {
+    const typeMap: Record<string, string> = {
+      application_received: "application",
+      job_expired: "view",
+      job_expiring: "view",
+      team_invite: "team",
+      payment_success: "billing",
+      credits_low: "billing",
+      credits_expiring: "billing",
+    }
+    return {
+      id: notification.id,
+      type: typeMap[notification.type] || "application",
+      message: notification.title,
+      time: formatTimeAgo(notification.created_at),
+    }
+  }
+
+  // Loading skeleton
+  if (contextLoading || isLoading) {
+    return (
+      <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8">
+        <div className="h-8 w-64 bg-background-secondary rounded animate-pulse mb-8" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="h-24 bg-background-secondary rounded animate-pulse" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="h-80 bg-background-secondary rounded animate-pulse" />
+            <div className="h-64 bg-background-secondary rounded animate-pulse" />
+          </div>
+          <div className="space-y-6">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-48 bg-background-secondary rounded animate-pulse" />
+            ))}
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -89,7 +181,7 @@ export default function CompanyDashboard() {
               <span>{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
-              Company Dashboard
+              {company?.name || "Company"} Dashboard
             </h1>
           </div>
           <div className="flex items-center gap-3">
@@ -110,30 +202,34 @@ export default function CompanyDashboard() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <StatCard
             label="Active Jobs"
-            value="8"
-            change="+2 this month"
+            value={String(jobStats?.published_jobs ?? 0)}
+            change={`${jobStats?.total_jobs ?? 0} total jobs`}
             trend="up"
             href="/company/jobs"
           />
           <StatCard
             label="Total Views"
-            value="2,847"
-            change="+18% vs last week"
+            value={(analytics?.summary.total_views ?? jobStats?.total_views ?? 0).toLocaleString()}
+            change={analytics?.summary.conversion_rate
+              ? `${analytics.summary.conversion_rate.toFixed(1)}% conversion`
+              : "All time"}
             trend="up"
-            href="/company/analytics"
+            href="/company/jobs"
           />
           <StatCard
             label="Applications"
-            value="142"
-            change="+24 this week"
+            value={String(analytics?.summary.total_applications ?? jobStats?.total_applications ?? 0)}
+            change="All time"
             trend="up"
             href="/company/jobs"
           />
           <StatCard
             label="Job Credits"
-            value="12"
-            change="8 expiring soon"
-            trend="warning"
+            value={String(entitlements?.remaining_credits ?? 0)}
+            change={entitlements?.expiring_soon?.count
+              ? `${entitlements.expiring_soon.count} expiring in ${entitlements.expiring_soon.days}d`
+              : "No credits expiring soon"}
+            trend={entitlements?.expiring_soon?.count ? "warning" : "up"}
             href="/company/billing"
           />
         </div>
@@ -160,59 +256,30 @@ export default function CompanyDashboard() {
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: chartColors.applies }} />
                     <span className="text-xs text-foreground-muted">Applications</span>
                   </div>
+                  <Select value={dateRange} onValueChange={(v) => setDateRange(v as '7d' | '30d' | '90d')}>
+                    <SelectTrigger className="w-[140px] h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="7d">Last 7 days</SelectItem>
+                      <SelectItem value="30d">Last 30 days</SelectItem>
+                      <SelectItem value="90d">Last 90 days</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="h-[280px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={performanceData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="viewsGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor={chartColors.views} stopOpacity={0.2} />
-                          <stop offset="95%" stopColor={chartColors.views} stopOpacity={0} />
-                        </linearGradient>
-                        <linearGradient id="appliesGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor={chartColors.applies} stopOpacity={0.2} />
-                          <stop offset="95%" stopColor={chartColors.applies} stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} vertical={false} />
-                      <XAxis 
-                        dataKey="date" 
-                        axisLine={false} 
-                        tickLine={false} 
-                        tick={{ fontSize: 12, fill: "#64748B" }}
-                      />
-                      <YAxis 
-                        axisLine={false} 
-                        tickLine={false} 
-                        tick={{ fontSize: 12, fill: "#64748B" }}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "white",
-                          border: "1px solid #E5E7EB",
-                          borderRadius: "8px",
-                          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                        }}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="views"
-                        stroke={chartColors.views}
-                        strokeWidth={2}
-                        fill="url(#viewsGradient)"
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="applies"
-                        stroke={chartColors.applies}
-                        strokeWidth={2}
-                        fill="url(#appliesGradient)"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
+                {analyticsLoading ? (
+                  <div className="h-[280px] animate-pulse bg-background-secondary/30 rounded" />
+                ) : analytics && analytics.timeseries.length > 0 ? (
+                  <div className="h-[280px] w-full">
+                    <CompanyPerformanceChart data={analytics.timeseries} />
+                  </div>
+                ) : (
+                  <div className="h-[280px] flex items-center justify-center">
+                    <p className="text-sm text-foreground-muted">No data for this period</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </MotionWrapper>
@@ -232,46 +299,67 @@ export default function CompanyDashboard() {
                 </Link>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-border/50 bg-background-secondary/30">
-                        <th className="text-left text-xs font-medium text-foreground-muted px-4 py-3">Job Title</th>
-                        <th className="text-left text-xs font-medium text-foreground-muted px-4 py-3">Status</th>
-                        <th className="text-right text-xs font-medium text-foreground-muted px-4 py-3">Views</th>
-                        <th className="text-right text-xs font-medium text-foreground-muted px-4 py-3">Applies</th>
-                        <th className="text-right text-xs font-medium text-foreground-muted px-4 py-3 hidden sm:table-cell">Days Left</th>
-                        <th className="text-right text-xs font-medium text-foreground-muted px-4 py-3"></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/50">
-                      {recentJobs.map((job) => (
-                        <tr key={job.id} className="hover:bg-background-secondary/30 transition-colors group">
-                          <td className="px-4 py-3">
-                            <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
-                              {job.title}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <JobStatusBadge status={job.status} />
-                          </td>
-                          <td className="px-4 py-3 text-right text-sm text-foreground-muted">{job.views.toLocaleString()}</td>
-                          <td className="px-4 py-3 text-right text-sm text-foreground-muted">{job.applies}</td>
-                          <td className="px-4 py-3 text-right text-sm text-foreground-muted hidden sm:table-cell">
-                            {job.daysLeft !== null ? `${job.daysLeft}d` : "-"}
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                              </svg>
-                            </Button>
-                          </td>
+                {recentJobs.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-border/50 bg-background-secondary/30">
+                          <th className="text-left text-xs font-medium text-foreground-muted px-4 py-3">Job Title</th>
+                          <th className="text-left text-xs font-medium text-foreground-muted px-4 py-3">Status</th>
+                          <th className="text-right text-xs font-medium text-foreground-muted px-4 py-3">Views</th>
+                          <th className="text-right text-xs font-medium text-foreground-muted px-4 py-3">Applies</th>
+                          <th className="text-right text-xs font-medium text-foreground-muted px-4 py-3 hidden sm:table-cell">Days Left</th>
+                          <th className="text-right text-xs font-medium text-foreground-muted px-4 py-3"></th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="divide-y divide-border/50">
+                        {recentJobs.map((job) => {
+                          const daysLeft = getDaysLeft(job.expires_at)
+                          return (
+                          <tr key={job.id} className="hover:bg-background-secondary/30 transition-colors group">
+                            <td className="px-4 py-3">
+                              <Link href={`/company/jobs/${job.job_id}`}>
+                                <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                                  {job.title}
+                                </span>
+                              </Link>
+                            </td>
+                            <td className="px-4 py-3">
+                              <JobStatusBadge status={job.status} />
+                            </td>
+                            <td className="px-4 py-3 text-right text-sm text-foreground-muted">{(job.views ?? 0).toLocaleString()}</td>
+                            <td className="px-4 py-3 text-right text-sm text-foreground-muted">{job.applications_count ?? 0}</td>
+                            <td className="px-4 py-3 text-right text-sm text-foreground-muted hidden sm:table-cell">
+                              {daysLeft !== null ? `${daysLeft}d` : "-"}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <Link href={`/company/jobs/${job.job_id}`}>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                                  </svg>
+                                </Button>
+                              </Link>
+                            </td>
+                          </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <div className="w-12 h-12 rounded-full bg-background-secondary flex items-center justify-center mb-4">
+                      <svg className="w-6 h-6 text-foreground-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <p className="text-sm text-foreground-muted mb-4">No jobs posted yet</p>
+                    <Link href="/company/jobs/new">
+                      <Button size="sm">Post Your First Job</Button>
+                    </Link>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </MotionWrapper>
@@ -287,32 +375,38 @@ export default function CompanyDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="h-[180px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={jobsByStatus} layout="vertical" margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-                      <XAxis type="number" hide />
-                      <YAxis 
-                        type="category" 
-                        dataKey="status" 
-                        axisLine={false} 
-                        tickLine={false}
-                        tick={{ fontSize: 12, fill: "#64748B" }}
-                        width={80}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "white",
-                          border: "1px solid #E5E7EB",
-                          borderRadius: "8px",
-                        }}
-                      />
-                      <Bar 
-                        dataKey="count" 
-                        radius={[0, 4, 4, 0]}
-                        fill="#3B5BDB"
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <CompanyStatusChart data={jobsByStatus} />
                 </div>
+              </CardContent>
+            </Card>
+          </MotionWrapper>
+
+          {/* Traffic Sources */}
+          <MotionWrapper delay={275}>
+            <Card className="border-border/50 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg font-semibold">Traffic Sources</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {analytics?.sources && analytics.sources.length > 0 ? (
+                  <div className="space-y-3">
+                    {analytics.sources.slice(0, 5).map((source) => {
+                      const total = analytics.sources.reduce((sum, s) => sum + s.count, 0)
+                      const pct = total > 0 ? Math.round((source.count / total) * 100) : 0
+                      return (
+                        <div key={source.source} className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-primary" />
+                            <span className="text-sm text-foreground capitalize">{source.source || "Direct"}</span>
+                          </div>
+                          <span className="text-sm font-medium text-foreground">{pct}%</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-foreground-muted text-center py-4">No traffic data yet</p>
+                )}
               </CardContent>
             </Card>
           </MotionWrapper>
@@ -334,24 +428,40 @@ export default function CompanyDashboard() {
                 <div className="p-4 rounded-lg bg-primary/5 border border-primary/10">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-foreground">Job Credits</span>
-                    <span className="text-2xl font-semibold text-primary">12</span>
+                    <span className="text-2xl font-semibold text-primary">
+                      {entitlements?.remaining_credits ?? 0}
+                    </span>
                   </div>
-                  <Progress value={60} className="h-2" />
-                  <p className="text-xs text-foreground-muted mt-2">8 credits expire in 14 days</p>
+                  <Progress
+                    value={entitlements?.total_credits
+                      ? ((entitlements.used_credits / entitlements.total_credits) * 100)
+                      : 0
+                    }
+                    className="h-2"
+                  />
+                  {entitlements?.expiring_soon?.count ? (
+                    <p className="text-xs text-foreground-muted mt-2">
+                      {entitlements.expiring_soon.count} credits expire in {entitlements.expiring_soon.days} days
+                    </p>
+                  ) : (
+                    <p className="text-xs text-foreground-muted mt-2">
+                      {entitlements?.used_credits ?? 0} of {entitlements?.total_credits ?? 0} used
+                    </p>
+                  )}
                 </div>
-                
+
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-foreground-muted">Current Plan</span>
-                    <Badge variant="secondary">Growth</Badge>
+                    <span className="text-sm text-foreground-muted">Featured Credits</span>
+                    <span className="text-sm font-medium">{entitlements?.remaining_featured_credits ?? 0}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-foreground-muted">Next Billing</span>
-                    <span className="text-sm font-medium">Feb 15, 2026</span>
+                    <span className="text-sm text-foreground-muted">Social Credits</span>
+                    <span className="text-sm font-medium">{entitlements?.remaining_social_credits ?? 0}</span>
                   </div>
                 </div>
 
-                <Link href="/company/billing/packages" className="block">
+                <Link href="/company/packages" className="block">
                   <Button variant="outline" size="sm" className="w-full bg-transparent">
                     Buy More Credits
                   </Button>
@@ -374,22 +484,30 @@ export default function CompanyDashboard() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                {teamMembers.map((member) => (
-                  <div key={member.id} className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-xs font-semibold text-primary">
-                        {member.name.split(" ").map(n => n[0]).join("")}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{member.name}</p>
-                      <p className="text-xs text-foreground-muted truncate">{member.role}</p>
-                    </div>
-                  </div>
-                ))}
-                <Button variant="outline" size="sm" className="w-full mt-2 bg-transparent">
-                  + Invite Team Member
-                </Button>
+                {teamMembers.length > 0 ? (
+                  <>
+                    {teamMembers.map((member) => (
+                      <div key={member.id} className="flex items-center gap-3">
+                        <UserAvatar
+                          name={member.user.full_name}
+                          avatar={member.user.avatar}
+                          size="xs"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">{member.user.full_name}</p>
+                          <p className="text-xs text-foreground-muted truncate capitalize">{member.role}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                ) : (
+                  <p className="text-sm text-foreground-muted text-center py-2">No team members yet</p>
+                )}
+                <Link href="/company/team">
+                  <Button variant="outline" size="sm" className="w-full mt-2 bg-transparent">
+                    + Invite Team Member
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
           </MotionWrapper>
@@ -401,15 +519,22 @@ export default function CompanyDashboard() {
                 <CardTitle className="text-lg font-semibold">Recent Activity</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {recentActivity.map((activity) => (
-                  <div key={activity.id} className="flex items-start gap-3">
-                    <ActivityIcon type={activity.type} />
-                    <div>
-                      <p className="text-sm text-foreground">{activity.message}</p>
-                      <p className="text-xs text-foreground-muted mt-0.5">{activity.time}</p>
-                    </div>
-                  </div>
-                ))}
+                {recentActivity.length > 0 ? (
+                  recentActivity.map((notification) => {
+                    const activity = mapNotificationToActivity(notification)
+                    return (
+                      <div key={activity.id} className="flex items-start gap-3">
+                        <ActivityIcon type={activity.type} />
+                        <div>
+                          <p className="text-sm text-foreground">{activity.message}</p>
+                          <p className="text-xs text-foreground-muted mt-0.5">{activity.time}</p>
+                        </div>
+                      </div>
+                    )
+                  })
+                ) : (
+                  <p className="text-sm text-foreground-muted text-center py-4">No recent activity</p>
+                )}
               </CardContent>
             </Card>
           </MotionWrapper>
@@ -452,27 +577,11 @@ function StatCard({
   )
 }
 
-// Job Status Badge
-function JobStatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    published: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-    pending: "bg-amber-500/10 text-amber-600 border-amber-500/20",
-    draft: "bg-slate-500/10 text-slate-600 border-slate-500/20",
-    paused: "bg-orange-500/10 text-orange-600 border-orange-500/20",
-    expired: "bg-red-500/10 text-red-600 border-red-500/20",
-  }
-
-  const labels: Record<string, string> = {
-    published: "Published",
-    pending: "Pending",
-    draft: "Draft",
-    paused: "Paused",
-    expired: "Expired",
-  }
-
+function JobStatusBadge({ status }: { status: JobStatus }) {
+  const style = JOB_STATUS_STYLES[status]
   return (
-    <Badge variant="outline" className={cn("text-xs", styles[status])}>
-      {labels[status]}
+    <Badge variant="outline" className={cn("text-xs", style?.className)}>
+      {style?.label ?? status}
     </Badge>
   )
 }
@@ -480,7 +589,7 @@ function JobStatusBadge({ status }: { status: string }) {
 // Activity Icon
 function ActivityIcon({ type }: { type: string }) {
   const iconClass = "w-8 h-8 rounded-full flex items-center justify-center"
-  
+
   switch (type) {
     case "application":
       return (

@@ -1,25 +1,22 @@
 "use client"
 
-import React from "react"
-import { useState } from "react"
+import { useState, type FormEvent } from "react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { AuthInput } from "@/components/auth-input"
 import { MotionWrapper } from "@/components/motion-wrapper"
-
-/**
- * Forgot Password Page
- * Split-screen auth layout matching /login and /signup
- * Two states: Email input and Success confirmation
- */
+import { TurnstileGuard, useTurnstileToken } from "@/components/turnstile"
+import { requestPasswordReset } from "@/lib/api/auth"
+import type { ApiError } from "@/lib/auth/types"
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [error, setError] = useState("")
+  const { turnstileToken, setTurnstileToken } = useTurnstileToken()
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setError("")
 
@@ -36,16 +33,33 @@ export default function ForgotPasswordPage() {
     }
 
     setIsLoading(true)
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    setIsLoading(false)
-    setIsSuccess(true)
+    try {
+      await requestPasswordReset({ email, turnstile_token: turnstileToken || undefined })
+      setIsSuccess(true)
+    } catch (err) {
+      // Don't reveal if email exists - always show success for security
+      // But still show API errors for other issues (network, etc.)
+      const apiError = err as ApiError
+      if (apiError.status === 400) {
+        // Email not found - still show success for security
+        setIsSuccess(true)
+      } else {
+        setError(apiError.message || "Something went wrong. Please try again.")
+      }
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleResend = async () => {
     setIsLoading(true)
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    setIsLoading(false)
+    try {
+      await requestPasswordReset({ email, turnstile_token: turnstileToken || undefined })
+    } catch {
+      // Silently fail on resend
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -56,13 +70,13 @@ export default function ForgotPasswordPage() {
         <div
           className="absolute inset-0"
           style={{
-            background: "radial-gradient(ellipse 80% 80% at 20% 80%, rgba(59, 91, 219, 0.3) 0%, transparent 50%)"
+            background: "radial-gradient(ellipse 80% 80% at 20% 80%, rgba(var(--primary-rgb), 0.3) 0%, transparent 50%)"
           }}
         />
         <div
           className="absolute inset-0"
           style={{
-            background: "radial-gradient(ellipse 60% 60% at 80% 20%, rgba(59, 91, 219, 0.2) 0%, transparent 50%)"
+            background: "radial-gradient(ellipse 60% 60% at 80% 20%, rgba(var(--primary-rgb), 0.2) 0%, transparent 50%)"
           }}
         />
 
@@ -130,6 +144,8 @@ export default function ForgotPasswordPage() {
                     error={error}
                     required
                   />
+
+                  <TurnstileGuard feature="auth" onToken={setTurnstileToken} />
 
                   <button
                     type="submit"

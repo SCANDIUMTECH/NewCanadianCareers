@@ -3,12 +3,6 @@
 import { MotionWrapper } from "./motion-wrapper"
 import { TextReveal } from "./text-reveal"
 
-/**
- * Platform-Level Control
- * Single strong paragraph — maximum editorial restraint
- * Premium reveal animations
- */
-
 export function PlatformSection() {
   return (
     <section className="py-32 md:py-48 bg-background-secondary relative overflow-hidden">
@@ -16,7 +10,7 @@ export function PlatformSection() {
       <div 
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: "radial-gradient(ellipse 50% 50% at 50% 100%, rgba(59, 91, 219, 0.05) 0%, transparent 50%)"
+          background: "radial-gradient(ellipse 50% 50% at 50% 100%, rgba(var(--primary-rgb), 0.05) 0%, transparent 50%)"
         }}
       />
       

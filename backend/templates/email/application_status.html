@@ -1,0 +1,62 @@
+{% extends "email/base.html" %}
+{% block title %}Application Status Update{% endblock %}
+{% block preheader %}<span style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Your application for {{ job_title }} has been updated.</span>{% endblock %}
+{% block accent_color %}#3B5BDB{% endblock %}
+
+{% block hero_icon %}
+<tr>
+  <td align="center" style="padding:32px 40px 0 40px;">
+    <div style="display:inline-block;width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,#EEF2FF,#E0E7FF);text-align:center;line-height:56px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3B5BDB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+    </div>
+  </td>
+</tr>
+{% endblock %}
+
+{% block content %}
+<h1 style="margin:0 0 8px;font-size:28px;font-weight:700;color:#0F172A;letter-spacing:-0.02em;line-height:1.2;" class="email-heading email-hero-heading">Application Update</h1>
+
+<!-- Dynamic Status Badge -->
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+  <tr>
+    <td style="background:{% if status == 'Accepted' or status == 'Interview' %}#DCFCE7{% elif status == 'Rejected' %}#FEE2E2{% else %}#E0E7FF{% endif %};color:{% if status == 'Accepted' or status == 'Interview' %}#166534{% elif status == 'Rejected' %}#991B1B{% else %}#3730A3{% endif %};padding:4px 14px;border-radius:20px;font-size:12px;font-weight:600;">{{ status }}</td>
+  </tr>
+</table>
+
+<p style="margin:0 0 16px;font-size:16px;color:#374151;line-height:1.6;" class="email-text">Hi {{ name }},</p>
+
+<p style="margin:0 0 24px;font-size:16px;color:#374151;line-height:1.6;" class="email-text">
+  Your application status has been updated.
+</p>
+
+<!-- Job Detail Card -->
+<div class="email-info-card" style="background:#F8FAFC;border:1px solid #E2E8F0;border-left:4px solid #3B5BDB;border-radius:10px;padding:20px;margin-bottom:24px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td style="padding-bottom:6px;">
+        <p style="margin:0;font-size:16px;font-weight:600;color:#0F172A;line-height:1.4;" class="email-heading">{{ job_title }}</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding-bottom:6px;">
+        <p style="margin:0;font-size:14px;color:#374151;line-height:1.5;" class="email-text"><strong>Company:</strong> {{ company_name }}</p>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <p style="margin:0;font-size:14px;color:#374151;line-height:1.5;" class="email-text"><strong>New Status:</strong> {{ status }}</p>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<!-- CTA -->
+<table role="presentation" cellpadding="0" cellspacing="0" border="0">
+  <tr>
+    <td align="center" style="border-radius:10px;background:#3B5BDB;">
+      <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://orion.jobs/candidate/applications" style="height:48px;v-text-anchor:middle;width:240px;" arcsize="21%" fillcolor="#3B5BDB" stroke="f"><w:anchorlock/><center style="color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;font-weight:600;">View Application</center></v:roundrect><![endif]-->
+      <!--[if !mso]><!--><a href="https://orion.jobs/candidate/applications" class="email-cta" style="display:inline-block;padding:14px 32px;background:#3B5BDB;color:#ffffff;text-decoration:none;border-radius:10px;font-size:16px;font-weight:600;line-height:1;">View Application</a><!--<![endif]-->
+    </td>
+  </tr>
+</table>
+{% endblock %}

@@ -14,13 +14,15 @@ interface AuthInputProps extends InputHTMLAttributes<HTMLInputElement> {
  * - Focus ring with brand color
  * - Error state styling
  */
-export function AuthInput({ label, error, className, ...props }: AuthInputProps) {
+export function AuthInput({ label, error, className, id, ...props }: AuthInputProps) {
   const [isFocused, setIsFocused] = useState(false)
   const [hasValue, setHasValue] = useState(false)
+  const inputId = id || label.toLowerCase().replace(/\s+/g, "-")
 
   return (
     <div className="relative">
       <input
+        id={inputId}
         {...props}
         className={cn(
           "peer w-full px-4 py-4 pt-6 bg-card border rounded-lg text-foreground placeholder-transparent",
@@ -49,6 +51,7 @@ export function AuthInput({ label, error, className, ...props }: AuthInputProps)
       
       {/* Floating label */}
       <label
+        htmlFor={inputId}
         className={cn(
           "absolute left-4 transition-all duration-300 pointer-events-none",
           "text-foreground-muted",
@@ -64,7 +67,7 @@ export function AuthInput({ label, error, className, ...props }: AuthInputProps)
 
       {/* Error message */}
       {error && (
-        <p className="mt-2 text-sm text-destructive">{error}</p>
+        <p role="alert" className="mt-2 text-sm text-destructive">{error}</p>
       )}
     </div>
   )

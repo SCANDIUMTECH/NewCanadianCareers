@@ -1,27 +1,35 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
-import { cn } from "@/lib/utils"
+import { cn, getCompanyInitials } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { MotionWrapper } from "@/components/motion-wrapper"
+import { useAgencyContext } from "@/hooks/use-agency"
 import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts"
+  getAgencyAnalytics,
+  getAgencyJobs,
+  getAgencyTeam,
+  getAgencyRecentActivity,
+  getAgencyEntitlements,
+} from "@/lib/api/agencies"
+import type {
+  AgencyAnalytics,
+  AgencyJob,
+  AgencyTeamMember,
+  AgencyRecentActivity,
+} from "@/lib/agency/types"
+import dynamic from "next/dynamic"
+import { CHART } from "@/lib/constants/colors"
+import { JOB_STATUS_STYLES } from "@/lib/constants/status-styles"
+
+const AgencyPerformanceChart = dynamic(
+  () => import("@/components/charts/agency-performance-chart"),
+  { ssr: false }
+)
 
 /**
  * Agency Dashboard
@@ -29,71 +37,164 @@ import {
  * pooled credit management, and recent activity across all clients
  */
 
-// Mock aggregated data
-const performanceData = [
-  { date: "Jan 1", views: 1240, applies: 124 },
-  { date: "Jan 8", views: 1520, applies: 165 },
-  { date: "Jan 15", views: 1850, applies: 192 },
-  { date: "Jan 22", views: 1680, applies: 178 },
-  { date: "Jan 29", views: 2120, applies: 226 },
-  { date: "Feb 2", views: 1980, applies: 212 },
-]
+// Colors for client companies
+const clientColors = [CHART.primary, CHART.success, CHART.warning, CHART.purple, CHART.pink, CHART.cyan]
 
-const jobsByCompany = [
-  { company: "Acme Corp", jobs: 5, views: 842, applies: 68 },
-  { company: "TechStart", jobs: 3, views: 523, applies: 42 },
-  { company: "Global Dyn", jobs: 2, views: 315, applies: 28 },
-  { company: "Innovate", jobs: 0, views: 0, applies: 0 },
-]
+function getClientColor(index: number): string {
+  return clientColors[index % clientColors.length]
+}
 
-const clientCompanies = [
-  { id: 1, name: "Acme Corporation", initials: "AC", verified: true, activeJobs: 5, views: 842, applies: 68, creditsUsed: 8, color: "#3B5BDB" },
-  { id: 2, name: "TechStart Inc", initials: "TS", verified: true, activeJobs: 3, views: 523, applies: 42, creditsUsed: 5, color: "#10B981" },
-  { id: 3, name: "Global Dynamics", initials: "GD", verified: false, activeJobs: 2, views: 315, applies: 28, creditsUsed: 3, color: "#F59E0B" },
-  { id: 4, name: "Innovate Labs", initials: "IL", verified: true, activeJobs: 0, views: 0, applies: 0, creditsUsed: 0, color: "#8B5CF6" },
-]
+// Display type for client companies
+interface ClientCompanyDisplay {
+  id: number
+  name: string
+  initials: string
+  verified: boolean
+  activeJobs: number
+  views: number
+  applies: number
+  creditsUsed: number
+  color: string
+}
 
-const recentJobs = [
-  { id: 1, title: "Senior Frontend Engineer", company: "Acme Corporation", companyInitials: "AC", status: "published", views: 342, applies: 28, posted: "Jan 28" },
-  { id: 2, title: "Product Designer", company: "TechStart Inc", companyInitials: "TS", status: "published", views: 215, applies: 18, posted: "Jan 25" },
-  { id: 3, title: "Backend Developer", company: "Global Dynamics", companyInitials: "GD", status: "pending", views: 0, applies: 0, posted: "Feb 1" },
-  { id: 4, title: "DevOps Engineer", company: "Acme Corporation", companyInitials: "AC", status: "published", views: 189, applies: 15, posted: "Jan 20" },
-]
-
-const recentActivity = [
-  { id: 1, type: "application", message: "New application for Senior Frontend Engineer", company: "Acme Corporation", time: "2 hours ago" },
-  { id: 2, type: "company", message: "Global Dynamics verification pending", company: null, time: "4 hours ago" },
-  { id: 3, type: "view", message: "Product Designer reached 200 views", company: "TechStart Inc", time: "Yesterday" },
-  { id: 4, type: "billing", message: "10 job credits purchased", company: null, time: "2 days ago" },
-  { id: 5, type: "team", message: "Sarah Chen joined as Recruiter", company: null, time: "3 days ago" },
-]
-
-const teamMembers = [
-  { id: 1, name: "Rachel Kim", email: "rachel@talentbridge.io", role: "Owner", avatar: null },
-  { id: 2, name: "James Lee", email: "james@talentbridge.io", role: "Admin", avatar: null },
-  { id: 3, name: "Sarah Chen", email: "sarah@talentbridge.io", role: "Recruiter", avatar: null },
-]
+// Display type for jobs
+interface JobDisplay {
+  id: number
+  job_id: string
+  title: string
+  company: string
+  companyInitials: string
+  status: string
+  views: number
+  applies: number
+  posted: string
+}
 
 export default function AgencyDashboard() {
-  const [isVisible, setIsVisible] = useState(false)
+  const { agency, clients, isLoading: contextLoading } = useAgencyContext()
 
-  useEffect(() => {
-    setIsVisible(true)
+  // Local state for additional data
+  const [analytics, setAnalytics] = useState<AgencyAnalytics | null>(null)
+  const [recentJobs, setRecentJobs] = useState<JobDisplay[]>([])
+  const [teamMembers, setTeamMembers] = useState<AgencyTeamMember[]>([])
+  const [recentActivity, setRecentActivity] = useState<AgencyRecentActivity[]>([])
+  const [entitlements, setEntitlements] = useState<{
+    total_credits: number
+    used_credits: number
+    remaining_credits: number
+  } | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Fetch dashboard data
+  const fetchDashboardData = useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      // Fetch all data in parallel
+      const [analyticsData, jobsResponse, teamData, activityData, entitlementsData] = await Promise.all([
+        getAgencyAnalytics().catch(() => null),
+        getAgencyJobs({ page_size: 5 }).catch(() => ({ results: [] })),
+        getAgencyTeam().catch(() => []),
+        getAgencyRecentActivity(5).catch(() => []),
+        getAgencyEntitlements().catch(() => null),
+      ])
+
+      if (analyticsData) {
+        setAnalytics(analyticsData)
+      }
+
+      // Transform jobs for display
+      const jobDisplays: JobDisplay[] = jobsResponse.results.map((job: AgencyJob) => ({
+        id: job.id,
+        job_id: job.job_id,
+        title: job.title,
+        company: job.company.name,
+        companyInitials: getCompanyInitials(job.company.name),
+        status: job.status,
+        views: job.views ?? 0,
+        applies: job.applications_count ?? 0,
+        posted: job.posted_at ? new Date(job.posted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Draft',
+      }))
+      setRecentJobs(jobDisplays)
+
+      setTeamMembers(teamData)
+      setRecentActivity(activityData as AgencyRecentActivity[])
+
+      if (entitlementsData) {
+        setEntitlements(entitlementsData)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load dashboard data')
+    } finally {
+      setIsLoading(false)
+    }
   }, [])
 
+  useEffect(() => {
+    fetchDashboardData()
+  }, [fetchDashboardData])
+
   const chartColors = {
-    views: "#8B5CF6",
-    applies: "#10B981",
-    grid: "#E5E7EB",
+    views: CHART.purple,
+    applies: CHART.success,
+    grid: CHART.grid,
   }
 
-  // Aggregate stats
-  const totalActiveJobs = clientCompanies.reduce((sum, c) => sum + c.activeJobs, 0)
-  const totalViews = clientCompanies.reduce((sum, c) => sum + c.views, 0)
-  const totalApplies = clientCompanies.reduce((sum, c) => sum + c.applies, 0)
-  const totalCreditsUsed = clientCompanies.reduce((sum, c) => sum + c.creditsUsed, 0)
-  const totalCredits = 45
-  const creditsRemaining = totalCredits - totalCreditsUsed
+  // Transform clients for display
+  const clientCompanies: ClientCompanyDisplay[] = clients.map((client, index) => {
+    const clientAnalytics = analytics?.by_client.find(c => c.client_id === client.company)
+    return {
+      id: client.id,
+      name: client.company_name,
+      initials: getCompanyInitials(client.company_name),
+      verified: client.company_detail?.status === 'verified',
+      activeJobs: client.active_jobs_count || clientAnalytics?.jobs || 0,
+      views: clientAnalytics?.views || 0,
+      applies: clientAnalytics?.applications || 0,
+      creditsUsed: client.credits_used || clientAnalytics?.credits_used || 0,
+      color: getClientColor(index),
+    }
+  })
+
+  // Aggregate stats from analytics or calculate from clients
+  const totalActiveJobs = analytics?.overview.active_jobs ?? clientCompanies.reduce((sum, c) => sum + c.activeJobs, 0)
+  const totalViews = analytics?.overview.total_views ?? clientCompanies.reduce((sum, c) => sum + c.views, 0)
+  const totalApplies = analytics?.overview.total_applications ?? clientCompanies.reduce((sum, c) => sum + c.applies, 0)
+  const totalCredits = entitlements?.total_credits ?? analytics?.overview.total_credits ?? 45
+  const creditsUsed = entitlements?.used_credits ?? analytics?.overview.used_credits ?? clientCompanies.reduce((sum, c) => sum + c.creditsUsed, 0)
+  const creditsRemaining = entitlements?.remaining_credits ?? analytics?.overview.remaining_credits ?? (totalCredits - creditsUsed)
+
+  // Performance data for chart
+  const performanceData = analytics?.trends.map(trend => ({
+    date: new Date(trend.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    views: trend.views,
+    applies: trend.applications,
+  })) || []
+
+  // Show loading state
+  if (contextLoading || isLoading) {
+    return (
+      <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8">
+        <div className="flex items-center justify-center h-96">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      </div>
+    )
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8">
+        <div className="flex flex-col items-center justify-center h-96 gap-4">
+          <p className="text-destructive">{error}</p>
+          <Button onClick={fetchDashboardData}>Try Again</Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8">
@@ -109,10 +210,10 @@ export default function AgencyDashboard() {
               <span>{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
-              Agency Dashboard
+              {agency?.name || 'Agency Dashboard'}
             </h1>
             <p className="text-sm text-foreground-muted mt-1">
-              Managing {clientCompanies.length} client companies
+              Managing {clients.length} client companies
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -141,7 +242,7 @@ export default function AgencyDashboard() {
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
           <StatCard
             label="Client Companies"
-            value={clientCompanies.length.toString()}
+            value={clients.length.toString()}
             change={`${clientCompanies.filter(c => c.verified).length} verified`}
             trend="neutral"
             href="/agency/companies"
@@ -150,28 +251,28 @@ export default function AgencyDashboard() {
           <StatCard
             label="Active Jobs"
             value={totalActiveJobs.toString()}
-            change="+3 this month"
-            trend="up"
+            change="Currently live"
+            trend="neutral"
             href="/agency/jobs"
           />
           <StatCard
             label="Total Views"
             value={totalViews.toLocaleString()}
-            change="+22% vs last week"
-            trend="up"
+            change="All time"
+            trend="neutral"
             href="/agency/analytics"
           />
           <StatCard
             label="Applications"
             value={totalApplies.toString()}
-            change="+38 this week"
-            trend="up"
+            change="Across all jobs"
+            trend="neutral"
             href="/agency/jobs"
           />
           <StatCard
             label="Credits Remaining"
             value={creditsRemaining.toString()}
-            change={`${totalCreditsUsed} used this month`}
+            change={`${creditsUsed} used this month`}
             trend="warning"
             href="/agency/billing"
             accent="violet"
@@ -204,54 +305,13 @@ export default function AgencyDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="h-[280px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={performanceData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="agencyViewsGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor={chartColors.views} stopOpacity={0.2} />
-                          <stop offset="95%" stopColor={chartColors.views} stopOpacity={0} />
-                        </linearGradient>
-                        <linearGradient id="agencyAppliesGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor={chartColors.applies} stopOpacity={0.2} />
-                          <stop offset="95%" stopColor={chartColors.applies} stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} vertical={false} />
-                      <XAxis 
-                        dataKey="date" 
-                        axisLine={false} 
-                        tickLine={false} 
-                        tick={{ fontSize: 12, fill: "#64748B" }}
-                      />
-                      <YAxis 
-                        axisLine={false} 
-                        tickLine={false} 
-                        tick={{ fontSize: 12, fill: "#64748B" }}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "white",
-                          border: "1px solid #E5E7EB",
-                          borderRadius: "8px",
-                          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                        }}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="views"
-                        stroke={chartColors.views}
-                        strokeWidth={2}
-                        fill="url(#agencyViewsGradient)"
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="applies"
-                        stroke={chartColors.applies}
-                        strokeWidth={2}
-                        fill="url(#agencyAppliesGradient)"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                  {performanceData.length > 0 ? (
+                    <AgencyPerformanceChart data={performanceData} colors={chartColors} />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-foreground-muted">
+                      No performance data available yet
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -272,39 +332,45 @@ export default function AgencyDashboard() {
                 </Link>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {clientCompanies.map((company) => (
-                    <div key={company.id} className="flex items-center gap-4">
-                      <div 
-                        className="w-10 h-10 rounded-lg flex items-center justify-center"
-                        style={{ backgroundColor: `${company.color}15` }}
-                      >
-                        <span className="text-sm font-semibold" style={{ color: company.color }}>
-                          {company.initials}
-                        </span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-foreground truncate">{company.name}</p>
-                          {company.verified && (
-                            <svg className="w-4 h-4 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                            </svg>
-                          )}
+                {clientCompanies.length > 0 ? (
+                  <div className="space-y-4">
+                    {clientCompanies.map((company) => (
+                      <div key={company.id} className="flex items-center gap-4">
+                        <div
+                          className="w-10 h-10 rounded-lg flex items-center justify-center"
+                          style={{ backgroundColor: `${company.color}15` }}
+                        >
+                          <span className="text-sm font-semibold" style={{ color: company.color }}>
+                            {company.initials}
+                          </span>
                         </div>
-                        <div className="flex items-center gap-3 mt-1">
-                          <span className="text-xs text-foreground-muted">{company.activeJobs} jobs</span>
-                          <span className="text-xs text-foreground-muted">{company.views.toLocaleString()} views</span>
-                          <span className="text-xs text-foreground-muted">{company.applies} applies</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium text-foreground truncate">{company.name}</p>
+                            {company.verified && (
+                              <svg className="w-4 h-4 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                              </svg>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 mt-1">
+                            <span className="text-xs text-foreground-muted">{company.activeJobs} jobs</span>
+                            <span className="text-xs text-foreground-muted">{company.views.toLocaleString()} views</span>
+                            <span className="text-xs text-foreground-muted">{company.applies} applies</span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-foreground">{company.creditsUsed}</p>
+                          <p className="text-xs text-foreground-muted">credits</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium text-foreground">{company.creditsUsed}</p>
-                        <p className="text-xs text-foreground-muted">credits</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-foreground-muted">
+                    No client companies yet. <Link href="/agency/companies" className="text-primary hover:underline">Add your first client</Link>.
+                  </div>
+                )}
               </CardContent>
             </Card>
           </MotionWrapper>
@@ -324,50 +390,56 @@ export default function AgencyDashboard() {
                 </Link>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-border/50 bg-background-secondary/30">
-                        <th className="text-left text-xs font-medium text-foreground-muted px-4 py-3">Job / Company</th>
-                        <th className="text-center text-xs font-medium text-foreground-muted px-4 py-3">Status</th>
-                        <th className="text-right text-xs font-medium text-foreground-muted px-4 py-3">Views</th>
-                        <th className="text-right text-xs font-medium text-foreground-muted px-4 py-3">Applies</th>
-                        <th className="text-right text-xs font-medium text-foreground-muted px-4 py-3"></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/50">
-                      {recentJobs.map((job) => (
-                        <tr key={job.id} className="hover:bg-background-secondary/30 transition-colors group">
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                <span className="text-xs font-semibold text-primary">{job.companyInitials}</span>
-                              </div>
-                              <div>
-                                <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
-                                  {job.title}
-                                </span>
-                                <p className="text-xs text-foreground-muted">{job.company}</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <JobStatusBadge status={job.status} />
-                          </td>
-                          <td className="px-4 py-3 text-right text-sm text-foreground-muted">{job.views.toLocaleString()}</td>
-                          <td className="px-4 py-3 text-right text-sm text-foreground-muted">{job.applies}</td>
-                          <td className="px-4 py-3 text-right">
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                              </svg>
-                            </Button>
-                          </td>
+                {recentJobs.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-border/50 bg-background-secondary/30">
+                          <th className="text-left text-xs font-medium text-foreground-muted px-4 py-3">Job / Company</th>
+                          <th className="text-center text-xs font-medium text-foreground-muted px-4 py-3">Status</th>
+                          <th className="text-right text-xs font-medium text-foreground-muted px-4 py-3">Views</th>
+                          <th className="text-right text-xs font-medium text-foreground-muted px-4 py-3">Applies</th>
+                          <th className="text-right text-xs font-medium text-foreground-muted px-4 py-3"></th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="divide-y divide-border/50">
+                        {recentJobs.map((job) => (
+                          <tr key={job.id} className="hover:bg-background-secondary/30 transition-colors group">
+                            <td className="px-4 py-3">
+                              <Link href={`/agency/jobs/${job.job_id}`} className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                  <span className="text-xs font-semibold text-primary">{job.companyInitials}</span>
+                                </div>
+                                <div>
+                                  <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                                    {job.title}
+                                  </span>
+                                  <p className="text-xs text-foreground-muted">{job.company}</p>
+                                </div>
+                              </Link>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <JobStatusBadge status={job.status} />
+                            </td>
+                            <td className="px-4 py-3 text-right text-sm text-foreground-muted">{(job.views ?? 0).toLocaleString()}</td>
+                            <td className="px-4 py-3 text-right text-sm text-foreground-muted">{job.applies}</td>
+                            <td className="px-4 py-3 text-right">
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                                </svg>
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-foreground-muted">
+                    No jobs posted yet. <Link href="/agency/jobs/new" className="text-primary hover:underline">Post your first job</Link>.
+                  </div>
+                )}
               </CardContent>
             </Card>
           </MotionWrapper>
@@ -399,31 +471,33 @@ export default function AgencyDashboard() {
                     <span className="text-sm font-medium text-foreground">Available Credits</span>
                     <span className="text-2xl font-semibold text-violet-600">{creditsRemaining}</span>
                   </div>
-                  <Progress value={(creditsRemaining / totalCredits) * 100} className="h-2" />
+                  <Progress value={totalCredits > 0 ? (creditsRemaining / totalCredits) * 100 : 0} className="h-2" />
                   <p className="text-xs text-foreground-muted mt-2">
-                    {totalCreditsUsed} of {totalCredits} credits used this billing cycle
+                    {creditsUsed} of {totalCredits} credits used this billing cycle
                   </p>
                 </div>
-                
-                <div className="space-y-3">
-                  <p className="text-xs font-medium text-foreground-muted uppercase">Usage by Company</p>
-                  {clientCompanies.filter(c => c.creditsUsed > 0).map((company) => (
-                    <div key={company.id} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-6 h-6 rounded flex items-center justify-center"
-                          style={{ backgroundColor: `${company.color}15` }}
-                        >
-                          <span className="text-[10px] font-semibold" style={{ color: company.color }}>
-                            {company.initials}
-                          </span>
+
+                {clientCompanies.some(c => c.creditsUsed > 0) && (
+                  <div className="space-y-3">
+                    <p className="text-xs font-medium text-foreground-muted uppercase">Usage by Company</p>
+                    {clientCompanies.filter(c => c.creditsUsed > 0).map((company) => (
+                      <div key={company.id} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-6 h-6 rounded flex items-center justify-center"
+                            style={{ backgroundColor: `${company.color}15` }}
+                          >
+                            <span className="text-[10px] font-semibold" style={{ color: company.color }}>
+                              {company.initials}
+                            </span>
+                          </div>
+                          <span className="text-sm text-foreground-muted">{company.name}</span>
                         </div>
-                        <span className="text-sm text-foreground-muted">{company.name}</span>
+                        <span className="text-sm font-medium">{company.creditsUsed}</span>
                       </div>
-                      <span className="text-sm font-medium">{company.creditsUsed}</span>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
 
                 <Link href="/agency/billing/packages" className="block">
                   <Button variant="outline" size="sm" className="w-full bg-transparent border-violet-500/20 text-violet-600 hover:bg-violet-500/10">
@@ -448,40 +522,48 @@ export default function AgencyDashboard() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                {clientCompanies.map((company) => (
-                  <Link 
-                    key={company.id} 
-                    href={`/agency/companies/${company.id}`}
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-background-secondary/50 transition-colors"
-                  >
-                    <div 
-                      className="w-9 h-9 rounded-lg flex items-center justify-center"
-                      style={{ backgroundColor: `${company.color}15` }}
-                    >
-                      <span className="text-sm font-semibold" style={{ color: company.color }}>
-                        {company.initials}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-foreground truncate">{company.name}</p>
-                        {company.verified ? (
-                          <svg className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                          </svg>
-                        ) : (
-                          <Badge variant="outline" className="h-4 px-1 text-[9px] text-amber-600 border-amber-500/30">
-                            Pending
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-xs text-foreground-muted">{company.activeJobs} active jobs</p>
-                    </div>
-                  </Link>
-                ))}
-                <Button variant="outline" size="sm" className="w-full mt-2 bg-transparent">
-                  + Add Company
-                </Button>
+                {clientCompanies.length > 0 ? (
+                  <>
+                    {clientCompanies.map((company) => (
+                      <Link
+                        key={company.id}
+                        href={`/agency/companies/${company.id}`}
+                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-background-secondary/50 transition-colors"
+                      >
+                        <div
+                          className="w-9 h-9 rounded-lg flex items-center justify-center"
+                          style={{ backgroundColor: `${company.color}15` }}
+                        >
+                          <span className="text-sm font-semibold" style={{ color: company.color }}>
+                            {company.initials}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium text-foreground truncate">{company.name}</p>
+                            {company.verified ? (
+                              <svg className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                              </svg>
+                            ) : (
+                              <Badge variant="outline" className="h-4 px-1 text-[9px] text-amber-600 border-amber-500/30">
+                                Pending
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-foreground-muted">{company.activeJobs} active jobs</p>
+                        </div>
+                      </Link>
+                    ))}
+                  </>
+                ) : (
+                  <p className="text-sm text-foreground-muted text-center py-4">No client companies yet</p>
+                )}
+                <Link href="/agency/companies">
+                  <Button variant="outline" size="sm" className="w-full mt-2 bg-transparent">
+                    + Add Company
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
           </MotionWrapper>
@@ -500,22 +582,28 @@ export default function AgencyDashboard() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                {teamMembers.map((member) => (
-                  <div key={member.id} className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-violet-500/10 flex items-center justify-center">
-                      <span className="text-xs font-semibold text-violet-600">
-                        {member.name.split(" ").map(n => n[0]).join("")}
-                      </span>
+                {teamMembers.length > 0 ? (
+                  teamMembers.map((member) => (
+                    <div key={member.id} className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-violet-500/10 flex items-center justify-center">
+                        <span className="text-xs font-semibold text-violet-600">
+                          {member.user_name.split(" ").map(n => n[0]).join("")}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{member.user_name}</p>
+                        <p className="text-xs text-foreground-muted truncate capitalize">{member.role}</p>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{member.name}</p>
-                      <p className="text-xs text-foreground-muted truncate">{member.role}</p>
-                    </div>
-                  </div>
-                ))}
-                <Button variant="outline" size="sm" className="w-full mt-2 bg-transparent">
-                  + Invite Team Member
-                </Button>
+                  ))
+                ) : (
+                  <p className="text-sm text-foreground-muted text-center py-4">No team members yet</p>
+                )}
+                <Link href="/agency/team">
+                  <Button variant="outline" size="sm" className="w-full mt-2 bg-transparent">
+                    + Invite Team Member
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
           </MotionWrapper>
@@ -527,23 +615,27 @@ export default function AgencyDashboard() {
                 <CardTitle className="text-lg font-semibold">Recent Activity</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {recentActivity.map((activity) => (
-                  <div key={activity.id} className="flex items-start gap-3">
-                    <ActivityIcon type={activity.type} />
-                    <div>
-                      <p className="text-sm text-foreground">{activity.message}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        {activity.company && (
-                          <>
-                            <span className="text-xs text-primary">{activity.company}</span>
-                            <span className="text-xs text-foreground-muted">·</span>
-                          </>
-                        )}
-                        <span className="text-xs text-foreground-muted">{activity.time}</span>
+                {recentActivity.length > 0 ? (
+                  recentActivity.map((activity) => (
+                    <div key={activity.id} className="flex items-start gap-3">
+                      <ActivityIcon type={activity.type} />
+                      <div>
+                        <p className="text-sm text-foreground">{activity.message}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {activity.company && (
+                            <>
+                              <span className="text-xs text-primary">{activity.company}</span>
+                              <span className="text-xs text-foreground-muted">·</span>
+                            </>
+                          )}
+                          <span className="text-xs text-foreground-muted">{activity.time}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-sm text-foreground-muted text-center py-4">No recent activity</p>
+                )}
               </CardContent>
             </Card>
           </MotionWrapper>
@@ -597,27 +689,11 @@ function StatCard({
   )
 }
 
-// Job Status Badge
 function JobStatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    published: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-    pending: "bg-amber-500/10 text-amber-600 border-amber-500/20",
-    draft: "bg-slate-500/10 text-slate-600 border-slate-500/20",
-    paused: "bg-orange-500/10 text-orange-600 border-orange-500/20",
-    expired: "bg-red-500/10 text-red-600 border-red-500/20",
-  }
-
-  const labels: Record<string, string> = {
-    published: "Published",
-    pending: "Pending",
-    draft: "Draft",
-    paused: "Paused",
-    expired: "Expired",
-  }
-
+  const style = JOB_STATUS_STYLES[status] || JOB_STATUS_STYLES.draft
   return (
-    <Badge variant="outline" className={cn("text-xs", styles[status])}>
-      {labels[status]}
+    <Badge variant="outline" className={cn("text-xs", style.className)}>
+      {style.label}
     </Badge>
   )
 }
@@ -625,7 +701,7 @@ function JobStatusBadge({ status }: { status: string }) {
 // Activity Icon Component
 function ActivityIcon({ type }: { type: string }) {
   const baseClass = "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-  
+
   switch (type) {
     case "application":
       return (
@@ -665,6 +741,14 @@ function ActivityIcon({ type }: { type: string }) {
         <div className={cn(baseClass, "bg-primary/10")}>
           <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+          </svg>
+        </div>
+      )
+    case "job":
+      return (
+        <div className={cn(baseClass, "bg-primary/10")}>
+          <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
           </svg>
         </div>
       )

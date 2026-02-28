@@ -1,0 +1,338 @@
+[
+  {
+    "name": "Technology",
+    "slug": "technology",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 0
+  },
+  {
+    "name": "Finance & Banking",
+    "slug": "finance-banking",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 1
+  },
+  {
+    "name": "Healthcare",
+    "slug": "healthcare",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 2
+  },
+  {
+    "name": "Retail",
+    "slug": "retail",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 3
+  },
+  {
+    "name": "Sales",
+    "slug": "sales",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 4
+  },
+  {
+    "name": "Manufacturing",
+    "slug": "manufacturing",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 5
+  },
+  {
+    "name": "Education",
+    "slug": "education",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 6
+  },
+  {
+    "name": "Energy & Utilities",
+    "slug": "energy-utilities",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 7
+  },
+  {
+    "name": "Media & Entertainment",
+    "slug": "media-entertainment",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 8
+  },
+  {
+    "name": "Real Estate",
+    "slug": "real-estate",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 9
+  },
+  {
+    "name": "Transportation & Logistics",
+    "slug": "transportation-logistics",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 10
+  },
+  {
+    "name": "Construction",
+    "slug": "construction",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 11
+  },
+  {
+    "name": "Hospitality & Tourism",
+    "slug": "hospitality-tourism",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 12
+  },
+  {
+    "name": "Legal Services",
+    "slug": "legal-services",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 13
+  },
+  {
+    "name": "Nonprofit",
+    "slug": "nonprofit",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 14
+  },
+  {
+    "name": "Government",
+    "slug": "government",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 15
+  },
+  {
+    "name": "Agriculture",
+    "slug": "agriculture",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 16
+  },
+  {
+    "name": "Telecommunications",
+    "slug": "telecommunications",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 17
+  },
+  {
+    "name": "Professional Services",
+    "slug": "professional-services",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 18
+  },
+  {
+    "name": "Consumer Goods",
+    "slug": "consumer-goods",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 19
+  },
+  {
+    "name": "Automotive",
+    "slug": "automotive",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 20
+  },
+  {
+    "name": "Aerospace & Defense",
+    "slug": "aerospace-defense",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 21
+  },
+  {
+    "name": "Pharmaceuticals",
+    "slug": "pharmaceuticals",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 22
+  },
+  {
+    "name": "Insurance",
+    "slug": "insurance",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 23
+  },
+  {
+    "name": "Food & Beverage",
+    "slug": "food-beverage",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 24
+  },
+  {
+    "name": "Fashion & Apparel",
+    "slug": "fashion-apparel",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 25
+  },
+  {
+    "name": "E-commerce",
+    "slug": "e-commerce",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 26
+  },
+  {
+    "name": "Consulting",
+    "slug": "consulting",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 27
+  },
+  {
+    "name": "Marketing & Advertising",
+    "slug": "marketing-advertising",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 28
+  },
+  {
+    "name": "Human Resources",
+    "slug": "human-resources",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 29
+  },
+  {
+    "name": "Mining & Metals",
+    "slug": "mining-metals",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 30
+  },
+  {
+    "name": "Environmental Services",
+    "slug": "environmental-services",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 31
+  },
+  {
+    "name": "Sports & Recreation",
+    "slug": "sports-recreation",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 32
+  },
+  {
+    "name": "Arts & Design",
+    "slug": "arts-design",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 33
+  },
+  {
+    "name": "Security & Investigations",
+    "slug": "security-investigations",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 34
+  },
+  {
+    "name": "Venture Capital & Private Equity",
+    "slug": "venture-capital-private-equity",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 35
+  },
+  {
+    "name": "Staffing & Recruiting",
+    "slug": "staffing-recruiting",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 36
+  },
+  {
+    "name": "Biotechnology",
+    "slug": "biotechnology",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 37
+  },
+  {
+    "name": "Logistics & Supply Chain",
+    "slug": "logistics-supply-chain",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 38
+  },
+  {
+    "name": "Information Services",
+    "slug": "information-services",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 39
+  },
+  {
+    "name": "Other",
+    "slug": "other",
+    "description": "",
+    "icon": "",
+    "is_active": true,
+    "sort_order": 40
+  },
+  {
+    "name": "AI & Machine Learning",
+    "slug": "ai-machine-learning",
+    "description": "Artificial Intelligence and ML companies",
+    "icon": "brain",
+    "is_active": false,
+    "sort_order": 42
+  }
+]

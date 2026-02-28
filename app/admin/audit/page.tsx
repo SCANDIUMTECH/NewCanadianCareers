@@ -1,11 +1,30 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { motion } from "framer-motion"
+import {
+  Search,
+  Download,
+  ScrollText,
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCw,
+  User,
+  Building2,
+  Briefcase,
+  Package,
+  ToggleLeft,
+  CreditCard,
+  Bot,
+  ShieldCheck,
+  AlertTriangle,
+} from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -31,91 +50,46 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
+import { getAuditLogs, exportAuditLogs } from "@/lib/api/admin-audit"
+import type {
+  AuditLog,
+  AuditLogAction,
+  AuditLogFilters,
+  PaginatedResponse,
+} from "@/lib/admin/types"
 
-// Sample audit log data
-const auditLogs = [
-  {
-    id: 1,
-    actor: "Sarah Admin",
-    actorRole: "Super Admin",
-    action: "job.approve",
-    targetType: "Job",
-    targetId: "job_123",
-    targetName: "Senior Software Engineer",
-    timestamp: "2024-03-15 14:32:45",
-    reason: "Content verified",
-    changes: { status: { from: "pending", to: "published" } },
-  },
-  {
-    id: 2,
-    actor: "Mike Ops",
-    actorRole: "Ops Admin",
-    action: "company.suspend",
-    targetType: "Company",
-    targetId: "company_456",
-    targetName: "QuickHire Solutions",
-    timestamp: "2024-03-15 13:18:22",
-    reason: "Repeated policy violations",
-    changes: { status: { from: "active", to: "suspended" } },
-  },
-  {
-    id: 3,
-    actor: "System",
-    actorRole: "Automated",
-    action: "entitlement.expire",
-    targetType: "Entitlement",
-    targetId: "ent_789",
-    targetName: "Premium Package - TechCorp",
-    timestamp: "2024-03-15 12:00:00",
-    reason: "Subscription ended",
-    changes: { status: { from: "active", to: "expired" }, credits: { from: 5, to: 0 } },
-  },
-  {
-    id: 4,
-    actor: "Sarah Admin",
-    actorRole: "Super Admin",
-    action: "feature_flag.toggle",
-    targetType: "Feature Flag",
-    targetId: "flag_social_dist",
-    targetName: "Social Distribution",
-    timestamp: "2024-03-15 11:45:00",
-    reason: "Enabling for all users",
-    changes: { enabled: { from: false, to: true } },
-  },
-  {
-    id: 5,
-    actor: "Jane Billing",
-    actorRole: "Billing Admin",
-    action: "entitlement.grant",
-    targetType: "Entitlement",
-    targetId: "ent_012",
-    targetName: "Starter Package - DesignCo",
-    timestamp: "2024-03-15 10:22:15",
-    reason: "Promotional credit",
-    changes: { credits: { from: 0, to: 3 } },
-  },
-  {
-    id: 6,
-    actor: "Mike Ops",
-    actorRole: "Ops Admin",
-    action: "user.password_reset",
-    targetType: "User",
-    targetId: "user_345",
-    targetName: "john.doe@example.com",
-    timestamp: "2024-03-15 09:15:00",
-    reason: "User request via support ticket #1234",
-    changes: null,
-  },
-]
+// =============================================================================
+// Constants
+// =============================================================================
 
-const actionColors: Record<string, string> = {
-  approve: "bg-green-100 text-green-700",
-  suspend: "bg-red-100 text-red-700",
-  expire: "bg-gray-100 text-gray-700",
-  toggle: "bg-blue-100 text-blue-700",
-  grant: "bg-purple-100 text-purple-700",
-  password_reset: "bg-amber-100 text-amber-700",
+const actionConfig: Record<string, { label: string; color: string }> = {
+  create: { label: "Create", color: "bg-green-100 text-green-700" },
+  update: { label: "Update", color: "bg-blue-100 text-blue-700" },
+  delete: { label: "Delete", color: "bg-red-100 text-red-700" },
+  suspend: { label: "Suspend", color: "bg-red-100 text-red-700" },
+  activate: { label: "Activate", color: "bg-green-100 text-green-700" },
+  verify: { label: "Verify", color: "bg-emerald-100 text-emerald-700" },
+  approve: { label: "Approve", color: "bg-green-100 text-green-700" },
+  reject: { label: "Reject", color: "bg-red-100 text-red-700" },
+  grant: { label: "Grant", color: "bg-purple-100 text-purple-700" },
+  revoke: { label: "Revoke", color: "bg-orange-100 text-orange-700" },
+  login: { label: "Login", color: "bg-gray-100 text-gray-700" },
+  logout: { label: "Logout", color: "bg-gray-100 text-gray-700" },
+  impersonate: { label: "Impersonate", color: "bg-amber-100 text-amber-700" },
 }
+
+const targetTypeIcons: Record<string, typeof User> = {
+  user: User,
+  company: Building2,
+  agency: Building2,
+  job: Briefcase,
+  entitlement: Package,
+  package: Package,
+  featureflag: ToggleLeft,
+  banner: CreditCard,
+}
+
+const PAGE_SIZE = 20
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -127,50 +101,171 @@ const containerVariants = {
 
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
 }
 
-export default function AuditPage() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [actionFilter, setActionFilter] = useState("all")
-  const [selectedLog, setSelectedLog] = useState<typeof auditLogs[0] | null>(null)
+// =============================================================================
+// Component
+// =============================================================================
 
-  const filteredLogs = auditLogs.filter((log) => {
-    const matchesSearch =
-      log.actor.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.targetName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.action.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesAction = actionFilter === "all" || log.action.includes(actionFilter)
-    return matchesSearch && matchesAction
-  })
+export default function AuditPage() {
+  const [logs, setLogs] = useState<AuditLog[]>([])
+  const [loading, setLoading] = useState(true)
+  const [totalCount, setTotalCount] = useState(0)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [actionFilter, setActionFilter] = useState<AuditLogAction | "all">("all")
+  const [targetTypeFilter, setTargetTypeFilter] = useState<string>("all")
+  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null)
+  const [exporting, setExporting] = useState(false)
+
+  // Debounced search
+  const [debouncedSearch, setDebouncedSearch] = useState("")
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [debouncedSearch, actionFilter, targetTypeFilter])
+
+  const fetchLogs = useCallback(async () => {
+    setLoading(true)
+    try {
+      const filters: AuditLogFilters = {
+        page: currentPage,
+        page_size: PAGE_SIZE,
+        ordering: '-created_at',
+      }
+      if (debouncedSearch) filters.search = debouncedSearch
+      if (actionFilter !== 'all') filters.action = actionFilter
+      if (targetTypeFilter !== 'all') filters.target_type = targetTypeFilter
+
+      const data: PaginatedResponse<AuditLog> = await getAuditLogs(filters)
+      setLogs(data.results)
+      setTotalCount(data.count)
+    } catch (error) {
+      console.error('Failed to fetch audit logs:', error)
+      setLogs([])
+      setTotalCount(0)
+    } finally {
+      setLoading(false)
+    }
+  }, [currentPage, debouncedSearch, actionFilter, targetTypeFilter])
+
+  useEffect(() => {
+    fetchLogs()
+  }, [fetchLogs])
+
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE)
+
+  const handleExport = async () => {
+    setExporting(true)
+    try {
+      const filters: AuditLogFilters = {}
+      if (debouncedSearch) filters.search = debouncedSearch
+      if (actionFilter !== 'all') filters.action = actionFilter
+      if (targetTypeFilter !== 'all') filters.target_type = targetTypeFilter
+
+      const blob = await exportAuditLogs(filters)
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Failed to export audit logs:', error)
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const formatTimestamp = (ts: string) => {
+    const date = new Date(ts)
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    })
+  }
+
+  const getRelativeTime = (ts: string) => {
+    const now = Date.now()
+    const diff = now - new Date(ts).getTime()
+    const minutes = Math.floor(diff / 60000)
+    if (minutes < 1) return "just now"
+    if (minutes < 60) return `${minutes}m ago`
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) return `${hours}h ago`
+    const days = Math.floor(hours / 24)
+    if (days < 7) return `${days}d ago`
+    return undefined
+  }
+
+  const getActorInitials = (log: AuditLog) => {
+    if (!log.actor_name || log.actor_name === 'None') return 'SYS'
+    return log.actor_name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
+  }
+
+  const getActorDisplay = (log: AuditLog) => {
+    if (!log.actor) return 'System'
+    return log.actor_name || log.actor_email || `User #${log.actor}`
+  }
 
   return (
     <motion.div
       variants={containerVariants}
       initial="hidden"
       animate="show"
-      className="space-y-6"
+      className="space-y-8"
     >
       {/* Page Header */}
       <motion.div variants={itemVariants} className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Audit Logs</h1>
-          <p className="text-muted-foreground mt-1">
-            Immutable record of all administrative actions
-          </p>
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
+              <ScrollText className="h-6 w-6 text-white" />
+            </div>
+            <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-green-500 border-2 border-background" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Audit Logs</h1>
+            <p className="text-muted-foreground text-sm mt-0.5">
+              Immutable record of all administrative actions
+            </p>
+          </div>
         </div>
-        <Button variant="outline">
-          <DownloadIcon className="mr-2 h-4 w-4" />
-          Export CSV
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={fetchLogs} disabled={loading}>
+            <RefreshCw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />
+            Refresh
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={exporting}>
+            <Download className="mr-2 h-4 w-4" />
+            {exporting ? 'Exporting...' : 'Export CSV'}
+          </Button>
+        </div>
       </motion.div>
 
       {/* Info Banner */}
       <motion.div variants={itemVariants}>
-        <Card className="border-blue-200 bg-blue-50/50">
+        <Card className="border-amber-200 bg-amber-50/50">
           <CardContent className="p-4 flex items-center gap-3">
-            <ShieldCheckIcon className="h-5 w-5 text-blue-600" />
-            <p className="text-sm text-blue-800">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-sm shrink-0">
+              <ShieldCheck className="h-4 w-4" />
+            </div>
+            <p className="text-sm text-amber-800">
               Audit logs are immutable and cannot be modified or deleted. All sensitive actions require a reason.
             </p>
           </CardContent>
@@ -183,35 +278,47 @@ export default function AuditPage() {
           <CardContent className="p-4">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">
-                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by actor, target, or action..."
+                  placeholder="Search by target, actor, or description..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9"
                 />
               </div>
-              <Select value={actionFilter} onValueChange={setActionFilter}>
+              <Select value={actionFilter} onValueChange={(v) => setActionFilter(v as AuditLogAction | "all")}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Action Type" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Actions</SelectItem>
-                  <SelectItem value="approve">Approvals</SelectItem>
-                  <SelectItem value="suspend">Suspensions</SelectItem>
-                  <SelectItem value="grant">Grants</SelectItem>
-                  <SelectItem value="toggle">Toggles</SelectItem>
+                  <SelectItem value="create">Create</SelectItem>
+                  <SelectItem value="update">Update</SelectItem>
+                  <SelectItem value="delete">Delete</SelectItem>
+                  <SelectItem value="approve">Approve</SelectItem>
+                  <SelectItem value="reject">Reject</SelectItem>
+                  <SelectItem value="suspend">Suspend</SelectItem>
+                  <SelectItem value="activate">Activate</SelectItem>
+                  <SelectItem value="verify">Verify</SelectItem>
+                  <SelectItem value="grant">Grant</SelectItem>
+                  <SelectItem value="revoke">Revoke</SelectItem>
+                  <SelectItem value="impersonate">Impersonate</SelectItem>
                 </SelectContent>
               </Select>
-              <Select defaultValue="today">
+              <Select value={targetTypeFilter} onValueChange={setTargetTypeFilter}>
                 <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Time Range" />
+                  <SelectValue placeholder="Target Type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="week">Last 7 days</SelectItem>
-                  <SelectItem value="month">Last 30 days</SelectItem>
-                  <SelectItem value="all">All time</SelectItem>
+                  <SelectItem value="all">All Targets</SelectItem>
+                  <SelectItem value="user">Users</SelectItem>
+                  <SelectItem value="company">Companies</SelectItem>
+                  <SelectItem value="agency">Agencies</SelectItem>
+                  <SelectItem value="job">Jobs</SelectItem>
+                  <SelectItem value="entitlement">Entitlements</SelectItem>
+                  <SelectItem value="package">Packages</SelectItem>
+                  <SelectItem value="featureflag">Feature Flags</SelectItem>
+                  <SelectItem value="banner">Banners</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -221,69 +328,170 @@ export default function AuditPage() {
 
       {/* Table */}
       <motion.div variants={itemVariants}>
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Timestamp</TableHead>
-                <TableHead>Actor</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>Target</TableHead>
-                <TableHead>Reason</TableHead>
-                <TableHead className="text-right">Details</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredLogs.map((log) => (
-                <TableRow key={log.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedLog(log)}>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    {log.timestamp}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-7 w-7">
-                        <AvatarFallback className={cn(
-                          "text-[10px]",
-                          log.actorRole === "Automated" ? "bg-gray-100 text-gray-600" : "bg-primary/10 text-primary"
-                        )}>
-                          {log.actor === "System" ? "SYS" : log.actor.split(" ").map(n => n[0]).join("")}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="text-sm font-medium">{log.actor}</p>
-                        <p className="text-xs text-muted-foreground">{log.actorRole}</p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="secondary"
-                      className={cn(
-                        "font-mono text-xs",
-                        Object.entries(actionColors).find(([key]) => log.action.includes(key))?.[1] || "bg-gray-100"
-                      )}
-                    >
-                      {log.action}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <p className="text-sm">{log.targetName}</p>
-                      <p className="text-xs text-muted-foreground">{log.targetType} • {log.targetId}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
-                    {log.reason}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm">
-                      <EyeIcon className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
+        <Card className="relative overflow-hidden">
+          {loading ? (
+            <div className="p-6 space-y-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <Skeleton className="h-4 w-[140px]" />
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                  <Skeleton className="h-4 w-[100px]" />
+                  <Skeleton className="h-5 w-[80px] rounded-full" />
+                  <Skeleton className="h-4 w-[160px]" />
+                  <Skeleton className="h-4 w-[120px] ml-auto" />
+                </div>
               ))}
-            </TableBody>
-          </Table>
+            </div>
+          ) : logs.length === 0 ? (
+            <div className="p-12 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 mx-auto mb-4">
+                <ScrollText className="h-7 w-7 text-amber-500/50" />
+              </div>
+              <h3 className="text-lg font-medium">No audit logs found</h3>
+              <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
+                {debouncedSearch || actionFilter !== 'all' || targetTypeFilter !== 'all'
+                  ? 'Try adjusting your search or filters'
+                  : 'Audit logs will appear here as admin actions are performed'}
+              </p>
+            </div>
+          ) : (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Timestamp</TableHead>
+                    <TableHead>Actor</TableHead>
+                    <TableHead className="w-[110px]">Action</TableHead>
+                    <TableHead>Target</TableHead>
+                    <TableHead>Reason</TableHead>
+                    <TableHead className="text-right w-[80px]">Details</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {logs.map((log) => {
+                    const TargetIcon = targetTypeIcons[log.target_type] || Briefcase
+                    const actionCfg = actionConfig[log.action] || { label: log.action, color: 'bg-gray-100 text-gray-700' }
+                    const relTime = getRelativeTime(log.created_at)
+                    const isSensitive = ['delete', 'suspend', 'impersonate', 'revoke'].includes(log.action)
+
+                    return (
+                      <TableRow
+                        key={log.id}
+                        className={cn(
+                          "cursor-pointer transition-colors",
+                          isSensitive && "bg-red-50/30 hover:bg-red-50/50",
+                          !isSensitive && "hover:bg-muted/50",
+                        )}
+                        onClick={() => setSelectedLog(log)}
+                      >
+                        <TableCell className="whitespace-nowrap">
+                          <div>
+                            <p className="font-mono text-xs text-muted-foreground">
+                              {formatTimestamp(log.created_at)}
+                            </p>
+                            {relTime && (
+                              <p className="text-[11px] text-muted-foreground/60 mt-0.5">{relTime}</p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2.5">
+                            <Avatar className="h-7 w-7">
+                              <AvatarFallback
+                                className={cn(
+                                  "text-[10px] font-medium",
+                                  !log.actor
+                                    ? "bg-gray-100 text-gray-500"
+                                    : "bg-gradient-to-br from-indigo-100 to-blue-100 text-indigo-700"
+                                )}
+                              >
+                                {!log.actor ? (
+                                  <Bot className="h-3.5 w-3.5" />
+                                ) : (
+                                  getActorInitials(log)
+                                )}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate">{getActorDisplay(log)}</p>
+                              {log.actor_email && log.actor_name && (
+                                <p className="text-[11px] text-muted-foreground truncate">{log.actor_email}</p>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="secondary"
+                            className={cn("text-[11px] font-medium", actionCfg.color)}
+                          >
+                            {isSensitive && <AlertTriangle className="h-3 w-3 mr-1" />}
+                            {actionCfg.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className={cn(
+                              "flex h-7 w-7 items-center justify-center rounded-md shrink-0",
+                              "bg-muted/80 text-muted-foreground"
+                            )}>
+                              <TargetIcon className="h-3.5 w-3.5" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm truncate">{log.target_repr || log.target_id}</p>
+                              <p className="text-[11px] text-muted-foreground capitalize">
+                                {log.target_type}
+                              </p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="max-w-[200px]">
+                          <p className="text-sm text-muted-foreground truncate">
+                            {log.reason || <span className="text-muted-foreground/40">—</span>}
+                          </p>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between border-t px-4 py-3">
+                  <p className="text-sm text-muted-foreground">
+                    Showing {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, totalCount)} of {totalCount} logs
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage((p) => p - 1)}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm text-muted-foreground tabular-nums">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage === totalPages}
+                      onClick={() => setCurrentPage((p) => p + 1)}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </Card>
       </motion.div>
 
@@ -293,42 +501,88 @@ export default function AuditPage() {
           <DialogHeader>
             <DialogTitle>Audit Log Details</DialogTitle>
             <DialogDescription>
-              {selectedLog?.timestamp}
+              {selectedLog && formatTimestamp(selectedLog.created_at)}
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedLog && (
             <div className="space-y-4">
+              {/* Actor + Action row */}
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Actor</p>
-                  <p className="font-medium">{selectedLog.actor}</p>
-                  <p className="text-xs text-muted-foreground">{selectedLog.actorRole}</p>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Actor</p>
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-6 w-6">
+                      <AvatarFallback className={cn(
+                        "text-[9px] font-medium",
+                        !selectedLog.actor
+                          ? "bg-gray-100 text-gray-500"
+                          : "bg-gradient-to-br from-indigo-100 to-blue-100 text-indigo-700"
+                      )}>
+                        {!selectedLog.actor ? <Bot className="h-3 w-3" /> : getActorInitials(selectedLog)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-sm font-medium">{getActorDisplay(selectedLog)}</p>
+                      {selectedLog.actor_email && (
+                        <p className="text-[11px] text-muted-foreground">{selectedLog.actor_email}</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Action</p>
-                  <Badge variant="secondary" className="font-mono mt-1">
-                    {selectedLog.action}
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Action</p>
+                  <Badge
+                    variant="secondary"
+                    className={cn(
+                      "text-xs font-medium mt-1",
+                      actionConfig[selectedLog.action]?.color || "bg-gray-100"
+                    )}
+                  >
+                    {actionConfig[selectedLog.action]?.label || selectedLog.action}
                   </Badge>
                 </div>
               </div>
 
-              <div>
-                <p className="text-sm text-muted-foreground">Target</p>
-                <p className="font-medium">{selectedLog.targetName}</p>
-                <p className="text-xs text-muted-foreground">{selectedLog.targetType} • {selectedLog.targetId}</p>
+              {/* Target */}
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Target</p>
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-md bg-muted/80 text-muted-foreground">
+                    {(() => {
+                      const Icon = targetTypeIcons[selectedLog.target_type] || Briefcase
+                      return <Icon className="h-3.5 w-3.5" />
+                    })()}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{selectedLog.target_repr || selectedLog.target_id}</p>
+                    <p className="text-[11px] text-muted-foreground capitalize">
+                      {selectedLog.target_type} &middot; ID {selectedLog.target_id}
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <p className="text-sm text-muted-foreground">Reason</p>
-                <p className="text-sm mt-1">{selectedLog.reason}</p>
+              {/* Reason */}
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Reason</p>
+                <p className="text-sm">{selectedLog.reason || 'No reason provided'}</p>
               </div>
 
-              {selectedLog.changes && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-2">Changes</p>
-                  <ScrollArea className="h-[120px] rounded-lg border bg-muted/30 p-3">
-                    <pre className="text-xs font-mono">
+              {/* IP Address */}
+              {selectedLog.ip_address && (
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">IP Address</p>
+                  <p className="text-sm font-mono">{selectedLog.ip_address}</p>
+                </div>
+              )}
+
+              {/* Changes */}
+              {selectedLog.changes && Object.keys(selectedLog.changes).length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Changes</p>
+                  <ScrollArea className="max-h-[200px] rounded-lg border bg-muted/30 p-3">
+                    <pre className="text-xs font-mono whitespace-pre-wrap">
                       {JSON.stringify(selectedLog.changes, null, 2)}
                     </pre>
                   </ScrollArea>
@@ -339,43 +593,5 @@ export default function AuditPage() {
         </DialogContent>
       </Dialog>
     </motion.div>
-  )
-}
-
-// Icons
-function SearchIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="11" cy="11" r="8" />
-      <path d="m21 21-4.3-4.3" />
-    </svg>
-  )
-}
-
-function DownloadIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="7 10 12 15 17 10" />
-      <line x1="12" x2="12" y1="15" y2="3" />
-    </svg>
-  )
-}
-
-function ShieldCheckIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
-  )
-}
-
-function EyeIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
   )
 }

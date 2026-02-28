@@ -1,9 +1,7 @@
 "use client"
 
-import React from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
 import { type JobWizardData } from "@/lib/job-wizard-schema"
 
 interface StepPreviewProps {
@@ -18,7 +16,10 @@ export function StepPreview({ data, onEdit }: StepPreviewProps) {
       currency: data.currency,
       maximumFractionDigits: 0,
     })
-    return `${formatter.format(data.salaryMin)} - ${formatter.format(data.salaryMax)}`
+    if (data.salaryMax > 0 && data.salaryMax > data.salaryMin) {
+      return `${formatter.format(data.salaryMin)} - ${formatter.format(data.salaryMax)}`
+    }
+    return formatter.format(data.salaryMin)
   }
 
   const getRemoteLabel = () => {
@@ -76,7 +77,7 @@ export function StepPreview({ data, onEdit }: StepPreviewProps) {
                 </div>
                 <div>
                   <p className="text-sm text-foreground-muted">{data.company?.name || "Your Company"}</p>
-                  {data.company?.verified !== false && (
+                  {data.company?.verified === true && (
                     <Badge variant="secondary" className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
                       Verified
                     </Badge>
@@ -95,8 +96,8 @@ export function StepPreview({ data, onEdit }: StepPreviewProps) {
 
               <div className="flex flex-wrap gap-2 mt-4">
                 <Badge variant="secondary" className="bg-foreground/5">
-                  {data.city && data.state
-                    ? `${data.city}, ${data.state}`
+                  {data.city
+                    ? [data.city, data.state].filter(Boolean).join(", ")
                     : data.remote === "remote"
                     ? "Remote"
                     : "Location not set"}
@@ -110,7 +111,7 @@ export function StepPreview({ data, onEdit }: StepPreviewProps) {
                 </Badge>
               </div>
 
-              {data.showSalary && data.salaryMin > 0 && data.salaryMax > 0 && (
+              {data.showSalary && data.salaryMin > 0 && (
                 <p className="text-xl font-semibold text-foreground mt-4">
                   {formatSalary()}
                   <span className="text-sm font-normal text-foreground-muted ml-1">/ {data.period}</span>

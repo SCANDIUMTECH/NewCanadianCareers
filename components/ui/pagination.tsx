@@ -1,6 +1,5 @@
 "use client"
 
-import * as React from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
@@ -12,10 +11,6 @@ export interface PaginationProps {
   className?: string
 }
 
-/**
- * Pagination component for list views
- * Provides page navigation with current/total display
- */
 export function Pagination({
   currentPage,
   totalPages,
@@ -26,25 +21,21 @@ export function Pagination({
   const canGoPrev = currentPage > 1
   const canGoNext = currentPage < totalPages
 
-  // Generate page numbers to display
   const getPageNumbers = (): (number | "...")[] => {
     const pages: (number | "...")[] = []
-    const maxVisible = 5 // Max visible page buttons
+    const maxVisible = 5
 
     if (totalPages <= maxVisible) {
-      // Show all pages if total is small
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i)
       }
     } else {
-      // Always show first page
       pages.push(1)
 
       if (currentPage > 3) {
         pages.push("...")
       }
 
-      // Show pages around current
       const start = Math.max(2, currentPage - 1)
       const end = Math.min(totalPages - 1, currentPage + 1)
 
@@ -56,7 +47,6 @@ export function Pagination({
         pages.push("...")
       }
 
-      // Always show last page
       if (totalPages > 1) {
         pages.push(totalPages)
       }
@@ -73,7 +63,6 @@ export function Pagination({
       aria-label="Pagination"
       className={cn("flex items-center justify-center gap-1", className)}
     >
-      {/* Previous Button */}
       <Button
         variant="outline"
         size="sm"
@@ -97,7 +86,6 @@ export function Pagination({
         <span className="hidden sm:inline">Previous</span>
       </Button>
 
-      {/* Page Numbers */}
       {showPageNumbers && (
         <div className="flex items-center gap-1">
           {getPageNumbers().map((page, index) =>
@@ -130,7 +118,6 @@ export function Pagination({
         </div>
       )}
 
-      {/* Next Button */}
       <Button
         variant="outline"
         size="sm"
@@ -164,9 +151,6 @@ export interface PaginationInfoProps {
   className?: string
 }
 
-/**
- * Displays pagination information (e.g., "Showing 1-10 of 50")
- */
 export function PaginationInfo({
   currentPage,
   pageSize,
@@ -194,9 +178,6 @@ export interface PaginationWrapperProps {
   className?: string
 }
 
-/**
- * Complete pagination wrapper with info and controls
- */
 export function PaginationWrapper({
   currentPage,
   pageSize,

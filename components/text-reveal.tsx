@@ -1,8 +1,6 @@
 "use client"
 
-import React from "react"
-
-import { useEffect, useRef, useState, type ReactNode } from "react"
+import { useEffect, useRef, useState, type RefObject, type ReactNode } from "react"
 import { cn } from "@/lib/utils"
 
 interface TextRevealProps {
@@ -10,20 +8,13 @@ interface TextRevealProps {
   className?: string
   delay?: number
   as?: "h1" | "h2" | "h3" | "p" | "span"
-  splitBy?: "word" | "line"
 }
 
-/**
- * Text Reveal Component
- * Premium staggered text reveal animation
- * Words animate in sequence with subtle y-offset and opacity
- */
-export function TextReveal({ 
-  children, 
-  className, 
+export function TextReveal({
+  children,
+  className,
   delay = 0,
   as: Component = "span",
-  splitBy = "word"
 }: TextRevealProps) {
   const containerRef = useRef<HTMLElement>(null)
   const [isVisible, setIsVisible] = useState(false)
@@ -66,7 +57,7 @@ export function TextReveal({
 
   return (
     <Component
-      ref={containerRef as React.RefObject<HTMLHeadingElement>}
+      ref={containerRef as RefObject<HTMLHeadingElement>}
       className={cn("overflow-hidden", className)}
     >
       {words.map((word, i) => (
@@ -92,10 +83,6 @@ export function TextReveal({
   )
 }
 
-/**
- * Line Reveal Component
- * For revealing multiple lines of text with staggered animation
- */
 interface LineRevealProps {
   lines: string[]
   className?: string

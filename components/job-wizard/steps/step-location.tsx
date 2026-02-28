@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import { useEffect, useRef } from "react"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import {
@@ -12,28 +12,32 @@ import {
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { type JobWizardData } from "@/lib/job-wizard-schema"
+import { type ValidationErrors } from "@/hooks/use-job-wizard"
+import { useCompanyContext } from "@/hooks/use-company"
 
 interface StepLocationProps {
   data: JobWizardData
   updateData: (updates: Partial<JobWizardData>) => void
+  errors?: ValidationErrors
+  onBlur?: (field: keyof JobWizardData) => void
 }
 
 const countries = [
-  { code: "USA", name: "United States" },
-  { code: "CAN", name: "Canada" },
-  { code: "GBR", name: "United Kingdom" },
-  { code: "DEU", name: "Germany" },
-  { code: "FRA", name: "France" },
-  { code: "AUS", name: "Australia" },
-  { code: "IND", name: "India" },
-  { code: "SGP", name: "Singapore" },
-  { code: "JPN", name: "Japan" },
-  { code: "BRA", name: "Brazil" },
-  { code: "NLD", name: "Netherlands" },
-  { code: "ESP", name: "Spain" },
-  { code: "ITA", name: "Italy" },
-  { code: "SWE", name: "Sweden" },
-  { code: "CHE", name: "Switzerland" },
+  { code: "CA", name: "Canada" },
+  { code: "US", name: "United States" },
+  { code: "GB", name: "United Kingdom" },
+  { code: "DE", name: "Germany" },
+  { code: "FR", name: "France" },
+  { code: "AU", name: "Australia" },
+  { code: "IN", name: "India" },
+  { code: "SG", name: "Singapore" },
+  { code: "JP", name: "Japan" },
+  { code: "BR", name: "Brazil" },
+  { code: "NL", name: "Netherlands" },
+  { code: "ES", name: "Spain" },
+  { code: "IT", name: "Italy" },
+  { code: "SE", name: "Sweden" },
+  { code: "CH", name: "Switzerland" },
 ]
 
 const remoteOptions = [
@@ -69,7 +73,37 @@ const remoteOptions = [
   },
 ]
 
-export function StepLocation({ data, updateData }: StepLocationProps) {
+export function StepLocation({ data, updateData, errors = {}, onBlur }: StepLocationProps) {
+  const { company } = useCompanyContext()
+  const prefilled = useRef(false)
+
+  // Prefill empty fields from company profile address on first mount
+  useEffect(() => {
+    if (prefilled.current || !company) return
+    prefilled.current = true
+
+    const updates: Partial<JobWizardData> = {}
+    if (!data.address && company.headquarters_address) updates.address = company.headquarters_address
+    if (!data.city && company.headquarters_city) updates.city = company.headquarters_city
+    if (!data.state && company.headquarters_state) updates.state = company.headquarters_state
+    if (!data.postalCode && company.headquarters_postal_code) updates.postalCode = company.headquarters_postal_code
+    if (company.headquarters_country) {
+      const match = countries.find(
+        (c) => c.name === company.headquarters_country || c.code === company.headquarters_country
+      )
+      if (match && data.country === "CA" && match.code !== "CA") {
+        // Only override default country if company has a different one
+        updates.country = match.code
+      } else if (match && !data.country) {
+        updates.country = match.code
+      }
+    }
+
+    if (Object.keys(updates).length > 0) {
+      updateData(updates)
+    }
+  }, [company, data.address, data.city, data.state, data.postalCode, data.country, updateData])
+
   return (
     <div className="space-y-8">
       <div>
@@ -121,24 +155,74 @@ export function StepLocation({ data, updateData }: StepLocationProps) {
       {data.remote !== "remote" && (
         <div className="space-y-4 p-5 rounded-xl bg-foreground/[0.02] border border-border/50">
           <p className="text-sm font-medium text-foreground">Office Location</p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+          {/* Street Address - full width (Google Maps: route + street_number) */}
+          <div className="space-y-2">
+            <Label htmlFor="address">Street Address <span className="text-destructive">*</span></Label>
+            <Input
+              id="address"
+              autoComplete="street-address"
+              placeholder="e.g., 123 Main Street, Suite 400"
+              value={data.address}
+              onChange={(e) => updateData({ address: e.target.value })}
+              onBlur={() => onBlur?.("address")}
+              className={errors.address ? "border-destructive" : ""}
+            />
+            {errors.address && (
+              <p className="text-xs text-destructive">{errors.address}</p>
+            )}
+          </div>
+
+          {/* City + State/Province (Google Maps: locality + administrative_area_level_1) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="city">City <span className="text-destructive">*</span></Label>
               <Input
                 id="city"
-                placeholder="e.g., San Francisco"
+                autoComplete="address-level2"
+                placeholder="e.g., Vancouver"
                 value={data.city}
                 onChange={(e) => updateData({ city: e.target.value })}
+                onBlur={() => onBlur?.("city")}
+                className={errors.city ? "border-destructive" : ""}
               />
+              {errors.city && (
+                <p className="text-xs text-destructive">{errors.city}</p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="state">State / Province</Label>
+              <Label htmlFor="state">Province / State <span className="text-destructive">*</span></Label>
               <Input
                 id="state"
-                placeholder="e.g., CA"
+                autoComplete="address-level1"
+                placeholder="e.g., BC"
                 value={data.state}
                 onChange={(e) => updateData({ state: e.target.value })}
+                onBlur={() => onBlur?.("state")}
+                className={errors.state ? "border-destructive" : ""}
               />
+              {errors.state && (
+                <p className="text-xs text-destructive">{errors.state}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Postal Code + Country (Google Maps: postal_code + country) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="postalCode">Postal / Zip Code <span className="text-destructive">*</span></Label>
+              <Input
+                id="postalCode"
+                autoComplete="postal-code"
+                placeholder="e.g., V6B 1A1"
+                value={data.postalCode}
+                onChange={(e) => updateData({ postalCode: e.target.value })}
+                onBlur={() => onBlur?.("postalCode")}
+                className={errors.postalCode ? "border-destructive" : ""}
+              />
+              {errors.postalCode && (
+                <p className="text-xs text-destructive">{errors.postalCode}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="country">Country <span className="text-destructive">*</span></Label>
@@ -146,7 +230,7 @@ export function StepLocation({ data, updateData }: StepLocationProps) {
                 value={data.country}
                 onValueChange={(value) => updateData({ country: value })}
               >
-                <SelectTrigger>
+                <SelectTrigger className={errors.country ? "border-destructive" : ""}>
                   <SelectValue placeholder="Select country" />
                 </SelectTrigger>
                 <SelectContent>
@@ -157,6 +241,9 @@ export function StepLocation({ data, updateData }: StepLocationProps) {
                   ))}
                 </SelectContent>
               </Select>
+              {errors.country && (
+                <p className="text-xs text-destructive">{errors.country}</p>
+              )}
             </div>
           </div>
         </div>
@@ -180,14 +267,14 @@ export function StepLocation({ data, updateData }: StepLocationProps) {
             <div className="space-y-2">
               <Label htmlFor="country">Primary Region (Optional)</Label>
               <Select
-                value={data.country}
-                onValueChange={(value) => updateData({ country: value })}
+                value={data.country || "any"}
+                onValueChange={(value) => updateData({ country: value === "any" ? "" : value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Any region" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Any region</SelectItem>
+                  <SelectItem value="any">Any region</SelectItem>
                   {countries.map((country) => (
                     <SelectItem key={country.code} value={country.code}>
                       {country.name}

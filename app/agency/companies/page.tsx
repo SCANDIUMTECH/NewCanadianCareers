@@ -1,8 +1,10 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect, useCallback } from "react"
 import Link from "next/link"
+import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { CompanyAvatar } from "@/components/company-avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -41,80 +43,60 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { ArrowUpDown, ArrowUp, ArrowDown, MoreHorizontal, Plus, X, Download, CheckCircle, Trash2 } from "lucide-react"
+import { ArrowUpDown, ArrowUp, ArrowDown, MoreHorizontal, Plus, X, Download, CheckCircle, Trash2, Loader2, AlertCircle, RefreshCw } from "lucide-react"
+import {
+  getAgencyClients,
+  addAgencyClient,
+  updateAgencyClient,
+  removeAgencyClient,
+} from "@/lib/api/agencies"
+import type { AgencyClient, CreateAgencyClientData } from "@/lib/agency/types"
 
 /**
  * Agency Companies Management
  * Spreadsheet-style list view with sorting, filtering, and bulk selection
  */
 
-// Mock companies data
-const clientCompanies = [
-  {
-    id: 1,
-    name: "Acme Corporation",
-    initials: "AC",
-    website: "https://acme.com",
-    industry: "Technology",
-    verified: true,
-    activeJobs: 5,
-    totalJobs: 12,
-    views: 842,
-    applies: 68,
-    creditsUsed: 8,
-    color: "#3B5BDB",
-    createdAt: "2026-01-15",
-    contact: "john@acme.com",
-  },
-  {
-    id: 2,
-    name: "TechStart Inc",
-    initials: "TS",
-    website: "https://techstart.io",
-    industry: "SaaS",
-    verified: true,
-    activeJobs: 3,
-    totalJobs: 8,
-    views: 523,
-    applies: 42,
-    creditsUsed: 5,
-    color: "#10B981",
-    createdAt: "2026-01-20",
-    contact: "hr@techstart.io",
-  },
-  {
-    id: 3,
-    name: "Global Dynamics",
-    initials: "GD",
-    website: "https://globaldynamics.com",
-    industry: "Finance",
-    verified: false,
-    activeJobs: 2,
-    totalJobs: 3,
-    views: 315,
-    applies: 28,
-    creditsUsed: 3,
-    color: "#F59E0B",
-    createdAt: "2026-01-25",
-    contact: "careers@globaldynamics.com",
-  },
-  {
-    id: 4,
-    name: "Innovate Labs",
-    initials: "IL",
-    website: "https://innovatelabs.co",
-    industry: "Research",
-    verified: true,
-    activeJobs: 0,
-    totalJobs: 2,
-    views: 0,
-    applies: 0,
-    creditsUsed: 0,
-    color: "#8B5CF6",
-    createdAt: "2026-01-28",
-    contact: "team@innovatelabs.co",
-  },
-]
+// UI display type for companies
+interface ClientCompanyDisplay {
+  id: number
+  name: string
+  initials: string
+  website: string
+  industry: string
+  verified: boolean
+  activeJobs: number
+  totalJobs: number
+  views: number
+  applies: number
+  creditsUsed: number
+  color: string
+  createdAt: string
+  contact: string
+}
+
+
+// Transform API data to display format
+function transformClientToDisplay(client: AgencyClient): ClientCompanyDisplay {
+  const companyName = client.company_detail?.name || client.company_name || "Unknown"
+  const colors = ["bg-blue-500", "bg-emerald-500", "bg-violet-500", "bg-amber-500", "bg-rose-500"]
+  return {
+    id: client.id,
+    name: companyName,
+    initials: companyName.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2),
+    color: colors[client.id % colors.length],
+    website: client.company_detail?.website || "",
+    industry: client.company_detail?.industry || "Other",
+    verified: client.company_detail?.status === "verified",
+    activeJobs: client.active_jobs_count || 0,
+    totalJobs: (client.active_jobs_count || 0) + (client.total_placements || 0),
+    views: 0, // Not provided by API
+    applies: 0, // Not provided by API
+    creditsUsed: client.credits_used || 0,
+    createdAt: client.created_at,
+    contact: "", // Would need to be fetched separately
+  }
+}
 
 // Types
 type SortField = "name" | "industry" | "activeJobs" | "views" | "applies" | "createdAt"
@@ -163,17 +145,43 @@ function SortableHeader({
   )
 }
 
-// Get unique industries from data
-const industries = [...new Set(clientCompanies.map(c => c.industry))]
+// Static industries list
+const INDUSTRIES = ["Technology", "SaaS", "Finance", "Healthcare", "Retail", "Research", "Manufacturing", "Other"]
 
 export default function AgencyCompaniesPage() {
+  // Data state
+  const [clients, setClients] = useState<ClientCompanyDisplay[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Filter state
   const [searchQuery, setSearchQuery] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
   const [industryFilter, setIndustryFilter] = useState("all")
   const [activityFilter, setActivityFilter] = useState("all")
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
-  const [selectedCompany, setSelectedCompany] = useState<typeof clientCompanies[0] | null>(null)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [selectedCompany, setSelectedCompany] = useState<ClientCompanyDisplay | null>(null)
+
+  // Add form state
+  const [addForm, setAddForm] = useState({
+    name: "",
+    website: "",
+    industry: "",
+    size: "",
+    contact: "",
+    description: "",
+  })
+
+  // Edit form state
+  const [editForm, setEditForm] = useState({
+    name: "",
+    website: "",
+    industry: "",
+    contact: "",
+  })
 
   // Sort state
   const [sortField, setSortField] = useState<SortField>("name")
@@ -181,6 +189,103 @@ export default function AgencyCompaniesPage() {
 
   // Bulk selection
   const [selectedIds, setSelectedIds] = useState<number[]>([])
+
+  // Fetch clients on mount
+  const fetchClients = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      const response = await getAgencyClients({ page_size: 100 })
+      const displayClients = response.results.map(transformClientToDisplay)
+      setClients(displayClients)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load clients")
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchClients()
+  }, [fetchClients])
+
+  // Handle add client
+  const handleAddClient = async () => {
+    if (!addForm.name.trim()) return
+
+    try {
+      setIsSubmitting(true)
+      await addAgencyClient({
+        name: addForm.name.trim(),
+        website: addForm.website.trim() || undefined,
+        industry: addForm.industry || undefined,
+      })
+      await fetchClients()
+      setShowAddDialog(false)
+      setAddForm({ name: "", website: "", industry: "", size: "", contact: "", description: "" })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add client")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Handle edit client
+  const handleEditClient = async () => {
+    if (!selectedCompany) return
+
+    try {
+      setIsSubmitting(true)
+      await updateAgencyClient(selectedCompany.id, {
+        name: editForm.name || undefined,
+        website: editForm.website || undefined,
+        industry: editForm.industry || undefined,
+        notes: editForm.contact || undefined,
+      })
+      await fetchClients()
+      setShowEditDialog(false)
+      setSelectedCompany(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update client")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Handle remove client
+  const handleRemoveClient = async () => {
+    if (!selectedCompany) return
+
+    try {
+      setIsSubmitting(true)
+      await removeAgencyClient(selectedCompany.id)
+      await fetchClients()
+      setShowDeleteDialog(false)
+      setSelectedCompany(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to remove client")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Open edit dialog
+  const openEditDialog = (company: ClientCompanyDisplay) => {
+    setSelectedCompany(company)
+    setEditForm({
+      name: company.name,
+      website: company.website,
+      industry: company.industry,
+      contact: company.contact,
+    })
+    setShowEditDialog(true)
+  }
+
+  // Open delete dialog
+  const openDeleteDialog = (company: ClientCompanyDisplay) => {
+    setSelectedCompany(company)
+    setShowDeleteDialog(true)
+  }
 
   const handleSort = (field: SortField) => {
     if (field === sortField) {
@@ -191,8 +296,14 @@ export default function AgencyCompaniesPage() {
     }
   }
 
+  // Get unique industries from current data
+  const industries = useMemo(() => {
+    const unique = [...new Set(clients.map((c) => c.industry).filter(Boolean))]
+    return unique.length > 0 ? unique : INDUSTRIES
+  }, [clients])
+
   const filteredCompanies = useMemo(() => {
-    return clientCompanies.filter((company) => {
+    return clients.filter((company) => {
       const matchesSearch = company.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            company.industry.toLowerCase().includes(searchQuery.toLowerCase())
       const matchesStatus = filterStatus === "all" ||
@@ -204,7 +315,7 @@ export default function AgencyCompaniesPage() {
                              (activityFilter === "inactive" && company.activeJobs === 0)
       return matchesSearch && matchesStatus && matchesIndustry && matchesActivity
     })
-  }, [searchQuery, filterStatus, industryFilter, activityFilter])
+  }, [clients, searchQuery, filterStatus, industryFilter, activityFilter])
 
   const sortedCompanies = useMemo(() => {
     return [...filteredCompanies].sort((a, b) => {
@@ -254,8 +365,50 @@ export default function AgencyCompaniesPage() {
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
   }
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8">
+        <div className="flex flex-col items-center justify-center py-24">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
+          <p className="text-sm text-foreground-muted">Loading client companies...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error && clients.length === 0) {
+    return (
+      <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8">
+        <div className="flex flex-col items-center justify-center py-24">
+          <AlertCircle className="w-12 h-12 text-destructive mb-4" />
+          <h3 className="text-lg font-medium text-foreground mb-2">Failed to load clients</h3>
+          <p className="text-sm text-foreground-muted mb-4">{error}</p>
+          <Button onClick={fetchClients} variant="outline" className="gap-2">
+            <RefreshCw className="w-4 h-4" />
+            Try Again
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8">
+      {/* Error banner */}
+      {error && (
+        <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-destructive" />
+            <span className="text-sm text-destructive">{error}</span>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setError(null)}>
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
+
       {/* Header */}
       <MotionWrapper delay={0}>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
@@ -281,14 +434,14 @@ export default function AgencyCompaniesPage() {
           <Card className="border-border/50">
             <CardContent className="p-4">
               <p className="text-xs font-medium text-foreground-muted uppercase">Total Companies</p>
-              <p className="text-2xl font-semibold text-foreground mt-1">{clientCompanies.length}</p>
+              <p className="text-2xl font-semibold text-foreground mt-1">{clients.length}</p>
             </CardContent>
           </Card>
           <Card className="border-border/50">
             <CardContent className="p-4">
               <p className="text-xs font-medium text-foreground-muted uppercase">Verified</p>
               <p className="text-2xl font-semibold text-emerald-600 mt-1">
-                {clientCompanies.filter(c => c.verified).length}
+                {clients.filter(c => c.verified).length}
               </p>
             </CardContent>
           </Card>
@@ -296,7 +449,7 @@ export default function AgencyCompaniesPage() {
             <CardContent className="p-4">
               <p className="text-xs font-medium text-foreground-muted uppercase">Active Jobs</p>
               <p className="text-2xl font-semibold text-foreground mt-1">
-                {clientCompanies.reduce((sum, c) => sum + c.activeJobs, 0)}
+                {clients.reduce((sum, c) => sum + c.activeJobs, 0)}
               </p>
             </CardContent>
           </Card>
@@ -304,7 +457,7 @@ export default function AgencyCompaniesPage() {
             <CardContent className="p-4">
               <p className="text-xs font-medium text-foreground-muted uppercase">Total Applications</p>
               <p className="text-2xl font-semibold text-foreground mt-1">
-                {clientCompanies.reduce((sum, c) => sum + c.applies, 0)}
+                {clients.reduce((sum, c) => sum + c.applies, 0)}
               </p>
             </CardContent>
           </Card>
@@ -380,15 +533,15 @@ export default function AgencyCompaniesPage() {
               {selectedIds.length} selected
             </span>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" className="gap-1.5 bg-transparent">
+              <Button variant="outline" size="sm" className="gap-1.5 bg-transparent" onClick={() => toast.info("Export coming soon")}>
                 <Download className="w-3.5 h-3.5" />
                 Export
               </Button>
-              <Button variant="outline" size="sm" className="gap-1.5 bg-transparent text-emerald-600 border-emerald-200 hover:bg-emerald-50">
+              <Button variant="outline" size="sm" className="gap-1.5 bg-transparent text-emerald-600 border-emerald-200 hover:bg-emerald-50" onClick={() => toast.info("Bulk verify coming soon")}>
                 <CheckCircle className="w-3.5 h-3.5" />
                 Verify All
               </Button>
-              <Button variant="outline" size="sm" className="gap-1.5 bg-transparent text-destructive border-destructive/30 hover:bg-destructive/5">
+              <Button variant="outline" size="sm" className="gap-1.5 bg-transparent text-destructive border-destructive/30 hover:bg-destructive/5" onClick={() => toast.info("Bulk remove coming soon")}>
                 <Trash2 className="w-3.5 h-3.5" />
                 Remove
               </Button>
@@ -495,14 +648,7 @@ export default function AgencyCompaniesPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div
-                        className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                        style={{ backgroundColor: `${company.color}15` }}
-                      >
-                        <span className="text-sm font-bold" style={{ color: company.color }}>
-                          {company.initials}
-                        </span>
-                      </div>
+                      <CompanyAvatar name={company.name} size="xs" />
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="text-[13px] font-medium text-foreground truncate">
@@ -563,7 +709,7 @@ export default function AgencyCompaniesPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => { setSelectedCompany(company); setShowEditDialog(true); }}>
+                        <DropdownMenuItem onClick={() => openEditDialog(company)}>
                           Edit Details
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
@@ -577,7 +723,12 @@ export default function AgencyCompaniesPage() {
                           <Link href={`/agency/analytics?company=${company.id}`}>View Analytics</Link>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive">Remove Company</DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => openDeleteDialog(company)}
+                        >
+                          Remove Company
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -604,7 +755,12 @@ export default function AgencyCompaniesPage() {
       </MotionWrapper>
 
       {/* Add Company Dialog */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+      <Dialog open={showAddDialog} onOpenChange={(open) => {
+        setShowAddDialog(open)
+        if (!open) {
+          setAddForm({ name: "", website: "", industry: "", size: "", contact: "", description: "" })
+        }
+      }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Add Client Company</DialogTitle>
@@ -615,31 +771,49 @@ export default function AgencyCompaniesPage() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="name">Company Name *</Label>
-              <Input id="name" placeholder="Acme Corporation" />
+              <Input
+                id="name"
+                placeholder="Acme Corporation"
+                value={addForm.name}
+                onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="website">Website</Label>
-              <Input id="website" placeholder="https://example.com" />
+              <Input
+                id="website"
+                placeholder="https://example.com"
+                value={addForm.website}
+                onChange={(e) => setAddForm({ ...addForm, website: e.target.value })}
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="industry">Industry</Label>
-                <Select>
+                <Select
+                  value={addForm.industry}
+                  onValueChange={(value) => setAddForm({ ...addForm, industry: value })}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="tech">Technology</SelectItem>
-                    <SelectItem value="finance">Finance</SelectItem>
-                    <SelectItem value="healthcare">Healthcare</SelectItem>
-                    <SelectItem value="retail">Retail</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                    <SelectItem value="Technology">Technology</SelectItem>
+                    <SelectItem value="Finance">Finance</SelectItem>
+                    <SelectItem value="Healthcare">Healthcare</SelectItem>
+                    <SelectItem value="Retail">Retail</SelectItem>
+                    <SelectItem value="SaaS">SaaS</SelectItem>
+                    <SelectItem value="Research">Research</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="size">Company Size</Label>
-                <Select>
+                <Select
+                  value={addForm.size}
+                  onValueChange={(value) => setAddForm({ ...addForm, size: value })}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>
@@ -655,68 +829,125 @@ export default function AgencyCompaniesPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="contact">Primary Contact Email</Label>
-              <Input id="contact" type="email" placeholder="hr@example.com" />
+              <Input
+                id="contact"
+                type="email"
+                placeholder="hr@example.com"
+                value={addForm.contact}
+                onChange={(e) => setAddForm({ ...addForm, contact: e.target.value })}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
-              <Textarea id="description" placeholder="Brief company description..." rows={3} />
+              <Textarea
+                id="description"
+                placeholder="Brief company description..."
+                rows={3}
+                value={addForm.description}
+                onChange={(e) => setAddForm({ ...addForm, description: e.target.value })}
+              />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddDialog(false)} className="bg-transparent">
               Cancel
             </Button>
-            <Button className="bg-primary hover:bg-primary-hover text-primary-foreground">
-              Add Company
+            <Button
+              className="bg-primary hover:bg-primary-hover text-primary-foreground"
+              onClick={handleAddClient}
+              disabled={isSubmitting || !addForm.name.trim()}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                "Add Company"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Edit Company Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+      <Dialog open={showEditDialog} onOpenChange={(open) => {
+        setShowEditDialog(open)
+        if (!open) {
+          setSelectedCompany(null)
+          setEditForm({ name: "", website: "", industry: "", contact: "" })
+        }
+      }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit Company</DialogTitle>
+            <DialogTitle>Edit Notes</DialogTitle>
             <DialogDescription>
-              Update company details for {selectedCompany?.name}
+              Update notes for {selectedCompany?.name}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-name">Company Name *</Label>
-              <Input id="edit-name" defaultValue={selectedCompany?.name} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-website">Website</Label>
-              <Input id="edit-website" defaultValue={selectedCompany?.website} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-industry">Industry</Label>
-              <Select defaultValue={selectedCompany?.industry.toLowerCase()}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="technology">Technology</SelectItem>
-                  <SelectItem value="finance">Finance</SelectItem>
-                  <SelectItem value="saas">SaaS</SelectItem>
-                  <SelectItem value="research">Research</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-contact">Primary Contact</Label>
-              <Input id="edit-contact" defaultValue={selectedCompany?.contact} />
+              <Label htmlFor="edit-contact">Notes / Primary Contact</Label>
+              <Input
+                id="edit-contact"
+                placeholder="e.g., primary contact name, notes..."
+                value={editForm.contact}
+                onChange={(e) => setEditForm({ ...editForm, contact: e.target.value })}
+              />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowEditDialog(false)} className="bg-transparent">
               Cancel
             </Button>
-            <Button className="bg-primary hover:bg-primary-hover text-primary-foreground">
-              Save Changes
+            <Button
+              className="bg-primary hover:bg-primary-hover text-primary-foreground"
+              onClick={handleEditClient}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Company Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={(open) => {
+        setShowDeleteDialog(open)
+        if (!open) setSelectedCompany(null)
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Remove Company</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove {selectedCompany?.name} from your client list?
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)} className="bg-transparent">
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRemoveClient}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Removing...
+                </>
+              ) : (
+                "Remove Company"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

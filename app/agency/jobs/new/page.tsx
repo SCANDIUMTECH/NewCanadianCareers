@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { useRouter } from "next/navigation"
+import { Suspense, useState, useMemo, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
@@ -18,15 +18,32 @@ import {
 } from "@/components/ui/dialog"
 import { JobWizard } from "@/components/job-wizard/job-wizard"
 import { type JobWizardCompany } from "@/lib/job-wizard-schema"
-import { Building2, CheckCircle, Check, Search, Plus, ArrowLeft } from "lucide-react"
+import { Building2, CheckCircle, Check, Search, Plus, ArrowLeft, Loader2 } from "lucide-react"
+import { useAgencySettings } from "@/hooks/use-quick-job-post"
+import { useAgencyContext } from "@/hooks/use-agency"
+import type { AgencyClient } from "@/lib/agency/types"
+import { CHART } from "@/lib/constants/colors"
 
-// Mock companies data (same as jobs page)
-const clientCompanies: (JobWizardCompany & { industry: string; activeJobs: number })[] = [
-  { id: 1, name: "Acme Corporation", initials: "AC", color: "#3B5BDB", verified: true, industry: "Technology", activeJobs: 5 },
-  { id: 2, name: "TechStart Inc", initials: "TS", color: "#10B981", verified: true, industry: "SaaS", activeJobs: 3 },
-  { id: 3, name: "Global Dynamics", initials: "GD", color: "#F59E0B", verified: false, industry: "Finance", activeJobs: 2 },
-  { id: 4, name: "Innovate Labs", initials: "IL", color: "#8B5CF6", verified: true, industry: "Research", activeJobs: 1 },
-]
+// Company colors for visual distinction
+const companyColors = [CHART.primary, CHART.success, CHART.warning, CHART.purple, CHART.pink, CHART.indigo]
+function getClientColor(clientId: number): string {
+  return companyColors[clientId % companyColors.length]
+}
+
+// Transform AgencyClient to display format
+type ClientCompanyDisplay = JobWizardCompany & { industry: string; activeJobs: number }
+
+function transformClientsToDisplayFormat(clients: AgencyClient[]): ClientCompanyDisplay[] {
+  return clients.map(client => ({
+    id: client.company,
+    name: client.company_name,
+    initials: client.company_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
+    color: getClientColor(client.id),
+    verified: client.company_detail?.status === 'verified',
+    industry: client.company_detail?.industry || 'Technology',
+    activeJobs: client.active_jobs_count || 0,
+  }))
+}
 
 /**
  * Company Selection Card Component
@@ -37,7 +54,7 @@ function CompanyCard({
   onSelect,
   index,
 }: {
-  company: typeof clientCompanies[0]
+  company: ClientCompanyDisplay
   isSelected: boolean
   onSelect: () => void
   index: number
@@ -158,16 +175,23 @@ function EmptyState() {
 }
 
 /**
- * Agency Job Posting Page
+ * Agency Job Posting Page Content
  * Pre-flight company selection before launching the job wizard
+ * Checks workflow preference and redirects to quick mode if enabled
  */
-export default function AgencyNewJobPage() {
+function AgencyNewJobPageContent() {
   const router = useRouter()
-  const [selectedCompany, setSelectedCompany] = useState<typeof clientCompanies[0] | null>(null)
+  const searchParams = useSearchParams()
+  const { settings, isLoaded } = useAgencySettings()
+  const { clients, isLoading: clientsLoading } = useAgencyContext()
+  const [selectedCompany, setSelectedCompany] = useState<ClientCompanyDisplay | null>(null)
   const [showWizard, setShowWizard] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
 
-  // Filter companies based on search query
+  // Transform clients to display format
+  const clientCompanies = useMemo(() => transformClientsToDisplayFormat(clients), [clients])
+
+  // Filter companies based on search query - must be before any early returns
   const filteredCompanies = useMemo(() => {
     if (!searchQuery.trim()) return clientCompanies
     const query = searchQuery.toLowerCase()
@@ -176,13 +200,48 @@ export default function AgencyNewJobPage() {
         company.name.toLowerCase().includes(query) ||
         company.industry.toLowerCase().includes(query)
     )
-  }, [searchQuery])
+  }, [searchQuery, clientCompanies])
+
+  // Check workflow preference and redirect to quick mode if enabled
+  useEffect(() => {
+    if (isLoaded && settings.job_post_workflow === "quick") {
+      const companyParam = searchParams.get("company")
+      const redirectUrl = companyParam
+        ? `/agency/jobs/new/quick?company=${companyParam}`
+        : "/agency/jobs/new/quick"
+      router.replace(redirectUrl)
+    }
+  }, [isLoaded, settings.job_post_workflow, router, searchParams])
 
   // Handle continue to wizard
   const handleContinue = () => {
     if (selectedCompany) {
       setShowWizard(true)
     }
+  }
+
+  // Show loading while checking workflow preference or loading clients
+  if (!isLoaded || clientsLoading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // If quick mode is enabled, don't render (will redirect)
+  if (settings.job_post_workflow === "quick") {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Redirecting...</p>
+        </div>
+      </div>
+    )
   }
 
   // Show empty state if no companies
@@ -316,5 +375,26 @@ export default function AgencyNewJobPage() {
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+/**
+ * Agency Job Posting Page
+ * Wrapped in Suspense for useSearchParams
+ */
+export default function AgencyNewJobPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">Loading...</p>
+          </div>
+        </div>
+      }
+    >
+      <AgencyNewJobPageContent />
+    </Suspense>
   )
 }

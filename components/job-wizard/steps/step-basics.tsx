@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import { useEffect, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -11,8 +11,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox"
 import { type JobWizardData } from "@/lib/job-wizard-schema"
 import { type ValidationErrors } from "@/hooks/use-job-wizard"
+import { getCategories } from "@/lib/api/jobs"
 
 interface StepBasicsProps {
   data: JobWizardData
@@ -21,26 +30,11 @@ interface StepBasicsProps {
   onBlur?: (field: keyof JobWizardData) => void
 }
 
-const departments = [
-  "Engineering",
-  "Design",
-  "Product",
-  "Marketing",
-  "Sales",
-  "Customer Success",
-  "Operations",
-  "Finance",
-  "HR",
-  "Legal",
-  "Other",
-]
-
 const employmentTypes = [
   { value: "full-time", label: "Full-time" },
   { value: "part-time", label: "Part-time" },
   { value: "contract", label: "Contract" },
   { value: "internship", label: "Internship" },
-  { value: "temporary", label: "Temporary" },
 ]
 
 const experienceLevels = [
@@ -52,6 +46,40 @@ const experienceLevels = [
 ]
 
 export function StepBasics({ data, updateData, errors = {}, onBlur }: StepBasicsProps) {
+  const categoryContainerRef = useRef<HTMLDivElement>(null)
+
+  const [categories, setCategories] = useState<{ value: string; label: string; count: number }[]>([])
+  const [categoriesLoading, setCategoriesLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    async function fetchCategories() {
+      try {
+        const result = await getCategories()
+        if (!cancelled && Array.isArray(result)) setCategories(result)
+      } catch (err) {
+        console.error("Failed to fetch categories:", err)
+      } finally {
+        if (!cancelled) setCategoriesLoading(false)
+      }
+    }
+    fetchCategories()
+    return () => { cancelled = true }
+  }, [])
+
+  const categoryLabels = categories.map((c) => c.label)
+
+  const handleCategoryChange = (label: string | null) => {
+    if (!label) {
+      updateData({ category: "", categoryLabel: "" })
+      return
+    }
+    const cat = categories.find((c) => c.label === label)
+    if (cat) {
+      updateData({ category: cat.value, categoryLabel: cat.label })
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -89,31 +117,40 @@ export function StepBasics({ data, updateData, errors = {}, onBlur }: StepBasics
           )}
         </div>
 
+        {/* Category (required) */}
         <div className="space-y-2">
-          <Label htmlFor="department" className={cn(errors.department && "text-destructive")}>
-            Department <span className="text-destructive">*</span>
+          <Label className={cn(errors.category && "text-destructive")}>
+            Category <span className="text-destructive">*</span>
           </Label>
-          <Select
-            value={data.department}
-            onValueChange={(value) => updateData({ department: value })}
-          >
-            <SelectTrigger className={cn(errors.department && "border-destructive focus:ring-destructive")}>
-              <SelectValue placeholder="Select a department" />
-            </SelectTrigger>
-            <SelectContent>
-              {departments.map((dept) => (
-                <SelectItem key={dept} value={dept}>
-                  {dept}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {errors.department && (
+          <div ref={categoryContainerRef} className="relative">
+            <Combobox
+              items={categoryLabels}
+              value={data.categoryLabel || null}
+              onValueChange={handleCategoryChange}
+            >
+              <ComboboxInput
+                placeholder={categoriesLoading ? "Loading..." : "Select category..."}
+                showClear
+                disabled={categoriesLoading}
+              />
+              <ComboboxContent container={categoryContainerRef}>
+                <ComboboxEmpty>No category found.</ComboboxEmpty>
+                <ComboboxList>
+                  {(item: string) => (
+                    <ComboboxItem key={item} value={item}>
+                      {item}
+                    </ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
+          </div>
+          {errors.category && (
             <p className="text-sm text-destructive flex items-center gap-1">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              {errors.department}
+              {errors.category}
             </p>
           )}
         </div>

@@ -1,13 +1,12 @@
 "use client"
 
-import { useState } from "react"
-import { cn } from "@/lib/utils"
+import { useState, useEffect, useCallback, Suspense } from "react"
+import { useSearchParams } from "next/navigation"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { MotionWrapper } from "@/components/motion-wrapper"
 import {
@@ -23,151 +22,233 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  getCompanySettings,
+  updateJobDefaults,
+  getCompanyNotificationPreferences,
+  updateCompanyNotifications,
+  type CompanySettings,
+  type CompanyJobDefaults,
+  type CompanyNotificationPreferences,
+} from "@/lib/api/companies"
+import { CompanyTeamManagement } from "@/components/company-team-management"
+import { AccountSecurity } from "@/components/account-security"
+import { useCompanyContext } from "@/hooks/use-company"
+
+/**
+ * Inline email field with validation and save button.
+ */
+function ApplyEmailField({ currentEmail, onSave }: { currentEmail: string; onSave: (email: string) => Promise<void> }) {
+  const [email, setEmail] = useState(currentEmail)
+  const [emailError, setEmailError] = useState<string | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  // Sync when parent data loads/changes
+  useEffect(() => {
+    setEmail(currentEmail)
+  }, [currentEmail])
+
+  const hasChanges = email.trim() !== currentEmail
+
+  const validateEmail = (value: string): boolean => {
+    if (!value.trim()) {
+      setEmailError(null)
+      return true // empty is valid (optional field)
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(value.trim())) {
+      setEmailError('Please enter a valid email address')
+      return false
+    }
+    setEmailError(null)
+    return true
+  }
+
+  const handleSave = async () => {
+    if (!validateEmail(email)) return
+    setIsSaving(true)
+    try {
+      await onSave(email.trim())
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch {
+      setEmailError('Failed to save. Please try again.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  return (
+    <div className="space-y-2 max-w-sm">
+      <Label htmlFor="default-apply-email">Default Apply Email</Label>
+      <p className="text-sm text-foreground-muted">
+        Pre-fill the application email when creating new jobs
+      </p>
+      <div className="flex gap-2">
+        <Input
+          id="default-apply-email"
+          type="email"
+          placeholder="hr@company.com"
+          value={email}
+          onChange={(e) => {
+            setEmail(e.target.value)
+            if (emailError) validateEmail(e.target.value)
+            if (saved) setSaved(false)
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && hasChanges) handleSave()
+          }}
+          className={emailError ? 'border-destructive' : ''}
+        />
+        <Button
+          size="sm"
+          onClick={handleSave}
+          disabled={!hasChanges || isSaving}
+          className={saved ? 'bg-emerald-600 hover:bg-emerald-600 text-white' : ''}
+        >
+          {isSaving ? 'Saving...' : saved ? 'Saved' : 'Save'}
+        </Button>
+      </div>
+      {emailError && (
+        <p className="text-sm text-destructive">{emailError}</p>
+      )}
+    </div>
+  )
+}
 
 /**
  * Company Settings
- * Profile, Job Defaults, Notifications, and Internal Settings
+ * Account security, job defaults, notifications, and team.
+ * Company profile editing is handled at /company/profile.
  */
 
 export default function CompanySettingsPage() {
-  const [isEditing, setIsEditing] = useState(false)
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-[400px]"><div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" /></div>}>
+      <CompanySettingsContent />
+    </Suspense>
+  )
+}
+
+function CompanySettingsContent() {
+  const searchParams = useSearchParams()
+  const defaultTab = searchParams.get("tab") || "account"
+  const { hasTeamManagement } = useCompanyContext()
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Settings state
+  const [settings, setSettings] = useState<CompanySettings | null>(null)
+  const [notificationPrefs, setNotificationPrefs] = useState<CompanyNotificationPreferences | null>(null)
+  const [savedField, setSavedField] = useState<string | null>(null)
+
+  // Fetch data on mount
+  const fetchData = useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const [settingsData, notifPrefs] = await Promise.all([
+        getCompanySettings(),
+        getCompanyNotificationPreferences(),
+      ])
+      setSettings(settingsData)
+      setNotificationPrefs(notifPrefs)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load settings')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  // Brief "Saved" flash for auto-save fields
+  const flashSaved = (field: string) => {
+    setSavedField(field)
+    setTimeout(() => setSavedField(null), 2000)
+  }
+
+  // Job defaults handlers
+  const handleJobDefaultChange = async (key: keyof CompanyJobDefaults, value: CompanyJobDefaults[keyof CompanyJobDefaults]) => {
+    if (!settings) return
+    try {
+      const updated = await updateJobDefaults({ [key]: value })
+      setSettings(prev => prev ? { ...prev, job_defaults: updated } : null)
+      flashSaved(key)
+    } catch (err) {
+      console.error('Failed to update job default:', err)
+    }
+  }
+
+  // Notification handlers — uses shared /api/notifications/preferences/
+  const handleNotificationChange = async (key: keyof CompanyNotificationPreferences, value: boolean) => {
+    if (!notificationPrefs) return
+    const oldValue = notificationPrefs[key]
+    setNotificationPrefs({ ...notificationPrefs, [key]: value })
+    try {
+      await updateCompanyNotifications({ [key]: value })
+      flashSaved(key)
+    } catch (err) {
+      setNotificationPrefs({ ...notificationPrefs, [key]: oldValue })
+      console.error('Failed to update notification setting:', err)
+    }
+  }
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8">
+        <div className="mb-6">
+          <div className="h-8 w-32 bg-background-secondary rounded animate-pulse" />
+          <div className="h-4 w-48 bg-background-secondary rounded animate-pulse mt-2" />
+        </div>
+        <div className="space-y-6">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-48 bg-background-secondary rounded-lg animate-pulse" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8">
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <p className="text-destructive mb-4">{error}</p>
+          <Button onClick={fetchData}>Try Again</Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="max-w-[1000px] mx-auto px-4 md:px-6 lg:px-8">
+    <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8">
       {/* Header */}
       <MotionWrapper delay={0}>
         <div className="mb-6">
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Settings</h1>
-          <p className="text-sm text-foreground-muted mt-1">Manage your company profile and preferences</p>
+          <p className="text-sm text-foreground-muted mt-1">Manage account security, job posting defaults, notifications, and team</p>
         </div>
       </MotionWrapper>
 
-      <Tabs defaultValue="profile" className="space-y-6">
+      <Tabs defaultValue={defaultTab} className="space-y-6">
         <MotionWrapper delay={50}>
           <TabsList className="w-full justify-start bg-background-secondary/50 p-1">
-            <TabsTrigger value="profile">Profile</TabsTrigger>
+            <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="job-defaults">Job Defaults</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            <TabsTrigger value="social">Social</TabsTrigger>
+            <TabsTrigger value="team">Team</TabsTrigger>
           </TabsList>
         </MotionWrapper>
 
-        {/* Company Profile */}
-        <TabsContent value="profile" className="space-y-6">
-          <MotionWrapper delay={100}>
-            <Card className="border-border/50 shadow-sm">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg font-semibold">Company Profile</CardTitle>
-                    <CardDescription>This information is displayed publicly</CardDescription>
-                  </div>
-                  <Button 
-                    variant={isEditing ? "default" : "outline"} 
-                    onClick={() => setIsEditing(!isEditing)}
-                    className={isEditing ? "bg-primary hover:bg-primary-hover text-primary-foreground" : "bg-transparent"}
-                  >
-                    {isEditing ? "Save Changes" : "Edit Profile"}
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Logo */}
-                <div className="flex items-center gap-6">
-                  <div className="w-20 h-20 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <span className="text-2xl font-bold text-primary">A</span>
-                  </div>
-                  {isEditing && (
-                    <div>
-                      <Button variant="outline" size="sm" className="bg-transparent">
-                        Upload Logo
-                      </Button>
-                      <p className="text-xs text-foreground-muted mt-1">PNG, JPG up to 2MB</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Form Fields */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Company Name</Label>
-                    <Input defaultValue="Acme Corporation" disabled={!isEditing} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Website</Label>
-                    <Input defaultValue="https://acme.com" disabled={!isEditing} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Industry</Label>
-                    <Select defaultValue="technology" disabled={!isEditing}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="technology">Technology</SelectItem>
-                        <SelectItem value="finance">Finance</SelectItem>
-                        <SelectItem value="healthcare">Healthcare</SelectItem>
-                        <SelectItem value="retail">Retail</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Company Size</Label>
-                    <Select defaultValue="51-200" disabled={!isEditing}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1-10">1-10 employees</SelectItem>
-                        <SelectItem value="11-50">11-50 employees</SelectItem>
-                        <SelectItem value="51-200">51-200 employees</SelectItem>
-                        <SelectItem value="201-500">201-500 employees</SelectItem>
-                        <SelectItem value="500+">500+ employees</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Description</Label>
-                  <Textarea 
-                    defaultValue="Acme Corporation is a leading technology company focused on building innovative solutions for modern businesses."
-                    disabled={!isEditing}
-                    rows={4}
-                  />
-                  <p className="text-xs text-foreground-muted">Brief description shown on job listings</p>
-                </div>
-              </CardContent>
-            </Card>
-          </MotionWrapper>
-
-          {/* Verification Status */}
-          <MotionWrapper delay={150}>
-            <Card className="border-border/50 shadow-sm">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-semibold">Verification Status</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                      <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <p className="font-medium text-emerald-600">Verified Company</p>
-                      <p className="text-sm text-emerald-600/80">Email domain verified on Jan 1, 2025</p>
-                    </div>
-                  </div>
-                  <Badge className="bg-emerald-500/20 text-emerald-600 border-emerald-500/30">
-                    Verified
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-          </MotionWrapper>
+        {/* Account Security */}
+        <TabsContent value="account" className="space-y-6">
+          <AccountSecurity />
         </TabsContent>
 
         {/* Job Defaults */}
@@ -179,94 +260,38 @@ export default function CompanySettingsPage() {
                 <CardDescription>Default settings for new job postings</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Default Job Duration</Label>
-                    <Select defaultValue="30">
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="14">14 days</SelectItem>
-                        <SelectItem value="30">30 days</SelectItem>
-                        <SelectItem value="60">60 days</SelectItem>
-                        <SelectItem value="90">90 days</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
+                <div className="space-y-2 max-w-sm">
+                  <div className="flex items-center gap-2">
                     <Label>Default Apply Method</Label>
-                    <Select defaultValue="internal">
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="internal">Internal Application</SelectItem>
-                        <SelectItem value="email">Email Application</SelectItem>
-                        <SelectItem value="external">External URL</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    {savedField === 'default_apply_method' && (
+                      <span className="text-xs text-emerald-600 font-medium animate-in fade-in">Saved</span>
+                    )}
                   </div>
+                  <Select
+                    value={settings?.job_defaults.default_apply_method || 'internal'}
+                    onValueChange={(value) => handleJobDefaultChange('default_apply_method', value as 'internal' | 'email' | 'external')}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="internal">Internal Application</SelectItem>
+                      <SelectItem value="email">Email Application</SelectItem>
+                      <SelectItem value="external">External URL</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label className="text-foreground">Require Salary Information</Label>
-                      <p className="text-sm text-foreground-muted">Always include salary range on job posts</p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label className="text-foreground">Allow Remote Applications</Label>
-                      <p className="text-sm text-foreground-muted">Default to accepting remote candidates</p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-                </div>
-
-                <Button className="bg-primary hover:bg-primary-hover text-primary-foreground">
-                  Save Defaults
-                </Button>
+                <ApplyEmailField
+                  currentEmail={settings?.job_defaults.default_apply_email || ''}
+                  onSave={async (email) => {
+                    await handleJobDefaultChange('default_apply_email', email)
+                  }}
+                />
               </CardContent>
             </Card>
           </MotionWrapper>
 
-          <MotionWrapper delay={150}>
-            <Card className="border-border/50 shadow-sm">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-semibold">Default Visibility</CardTitle>
-                <CardDescription>Control how your jobs appear by default</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-foreground">Featured Listing</Label>
-                    <p className="text-sm text-foreground-muted">Highlight jobs in search results</p>
-                  </div>
-                  <Switch />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-foreground">Show Company Logo</Label>
-                    <p className="text-sm text-foreground-muted">Display logo on job cards</p>
-                  </div>
-                  <Switch defaultChecked />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-foreground">Highlight Card</Label>
-                    <p className="text-sm text-foreground-muted">Add visual emphasis to job cards</p>
-                  </div>
-                  <Switch />
-                </div>
-              </CardContent>
-            </Card>
-          </MotionWrapper>
         </TabsContent>
 
         {/* Notifications */}
@@ -280,134 +305,159 @@ export default function CompanySettingsPage() {
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label className="text-foreground">New Applications</Label>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-foreground">New Applications</Label>
+                      {savedField === 'email_application_received' && <span className="text-xs text-emerald-600 font-medium animate-in fade-in">Saved</span>}
+                    </div>
                     <p className="text-sm text-foreground-muted">Get notified when candidates apply</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch
+                    checked={notificationPrefs?.email_application_received ?? true}
+                    onCheckedChange={(checked) => handleNotificationChange('email_application_received', checked)}
+                  />
                 </div>
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label className="text-foreground">Job Published</Label>
-                    <p className="text-sm text-foreground-muted">Confirmation when jobs go live</p>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-foreground">Job Status Updates</Label>
+                      {savedField === 'email_job_status' && <span className="text-xs text-emerald-600 font-medium animate-in fade-in">Saved</span>}
+                    </div>
+                    <p className="text-sm text-foreground-muted">Approved, rejected, and pending review notifications</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch
+                    checked={notificationPrefs?.email_job_status ?? true}
+                    onCheckedChange={(checked) => handleNotificationChange('email_job_status', checked)}
+                  />
                 </div>
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label className="text-foreground">Job Expiring Soon</Label>
-                    <p className="text-sm text-foreground-muted">Reminder 7 days before expiration</p>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-foreground">Job Expiring Soon</Label>
+                      {savedField === 'email_job_expired' && <span className="text-xs text-emerald-600 font-medium animate-in fade-in">Saved</span>}
+                    </div>
+                    <p className="text-sm text-foreground-muted">Reminder before jobs expire</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch
+                    checked={notificationPrefs?.email_job_expired ?? true}
+                    onCheckedChange={(checked) => handleNotificationChange('email_job_expired', checked)}
+                  />
                 </div>
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label className="text-foreground">Low Credits Warning</Label>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-foreground">Low Credits Warning</Label>
+                      {savedField === 'email_credits_low' && <span className="text-xs text-emerald-600 font-medium animate-in fade-in">Saved</span>}
+                    </div>
                     <p className="text-sm text-foreground-muted">Alert when credits are running low</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch
+                    checked={notificationPrefs?.email_credits_low ?? true}
+                    onCheckedChange={(checked) => handleNotificationChange('email_credits_low', checked)}
+                  />
                 </div>
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label className="text-foreground">Billing & Receipts</Label>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-foreground">Billing & Receipts</Label>
+                      {savedField === 'email_billing' && <span className="text-xs text-emerald-600 font-medium animate-in fade-in">Saved</span>}
+                    </div>
                     <p className="text-sm text-foreground-muted">Payment confirmations and invoices</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch
+                    checked={notificationPrefs?.email_billing ?? true}
+                    onCheckedChange={(checked) => handleNotificationChange('email_billing', checked)}
+                  />
                 </div>
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label className="text-foreground">Weekly Performance Digest</Label>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-foreground">Weekly Performance Digest</Label>
+                      {savedField === 'email_weekly_digest' && <span className="text-xs text-emerald-600 font-medium animate-in fade-in">Saved</span>}
+                    </div>
                     <p className="text-sm text-foreground-muted">Summary of job performance metrics</p>
                   </div>
-                  <Switch />
+                  <Switch
+                    checked={notificationPrefs?.email_weekly_digest ?? false}
+                    onCheckedChange={(checked) => handleNotificationChange('email_weekly_digest', checked)}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-foreground">Marketing Emails</Label>
+                      {savedField === 'email_marketing' && <span className="text-xs text-emerald-600 font-medium animate-in fade-in">Saved</span>}
+                    </div>
+                    <p className="text-sm text-foreground-muted">News, tips, and feature updates</p>
+                  </div>
+                  <Switch
+                    checked={notificationPrefs?.email_marketing ?? false}
+                    onCheckedChange={(checked) => handleNotificationChange('email_marketing', checked)}
+                  />
                 </div>
               </CardContent>
             </Card>
           </MotionWrapper>
-        </TabsContent>
 
-        {/* Social Distribution */}
-        <TabsContent value="social" className="space-y-6">
-          <MotionWrapper delay={100}>
+          <MotionWrapper delay={150}>
             <Card className="border-border/50 shadow-sm">
               <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-semibold">Default Social Distribution</CardTitle>
-                <CardDescription>Choose which platforms to post jobs by default</CardDescription>
+                <CardTitle className="text-lg font-semibold">In-App Notifications</CardTitle>
+                <CardDescription>Control in-app notification bell alerts</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-4 rounded-lg border border-border/50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded bg-[#0077B5]/10 flex items-center justify-center">
-                      <span className="text-sm font-bold text-[#0077B5]">in</span>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-foreground">Push Notifications</Label>
+                      {savedField === 'push_enabled' && <span className="text-xs text-emerald-600 font-medium animate-in fade-in">Saved</span>}
                     </div>
-                    <div>
-                      <p className="font-medium text-foreground">LinkedIn</p>
-                      <p className="text-sm text-foreground-muted">Connected as Acme Corporation</p>
-                    </div>
+                    <p className="text-sm text-foreground-muted">Show in-app notification alerts</p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
-                      Connected
-                    </Badge>
-                    <Switch defaultChecked />
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between p-4 rounded-lg border border-border/50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded bg-foreground/10 flex items-center justify-center">
-                      <span className="text-sm font-bold">X</span>
-                    </div>
-                    <div>
-                      <p className="font-medium text-foreground">X (Twitter)</p>
-                      <p className="text-sm text-foreground-muted">Connected as @acmecorp</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
-                      Connected
-                    </Badge>
-                    <Switch />
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between p-4 rounded-lg border border-dashed border-border/50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded bg-[#1877F2]/10 flex items-center justify-center">
-                      <span className="text-sm font-bold text-[#1877F2]">f</span>
-                    </div>
-                    <div>
-                      <p className="font-medium text-foreground">Facebook</p>
-                      <p className="text-sm text-foreground-muted">Not connected</p>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm" className="bg-transparent">
-                    Connect
-                  </Button>
-                </div>
-
-                <div className="flex items-center justify-between p-4 rounded-lg border border-dashed border-border/50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded bg-gradient-to-br from-purple-500/10 to-pink-500/10 flex items-center justify-center">
-                      <span className="text-sm font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">ig</span>
-                    </div>
-                    <div>
-                      <p className="font-medium text-foreground">Instagram</p>
-                      <p className="text-sm text-foreground-muted">Not connected</p>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm" className="bg-transparent">
-                    Connect
-                  </Button>
+                  <Switch
+                    checked={notificationPrefs?.push_enabled ?? true}
+                    onCheckedChange={(checked) => handleNotificationChange('push_enabled', checked)}
+                  />
                 </div>
               </CardContent>
             </Card>
           </MotionWrapper>
         </TabsContent>
+
+        {/* Team */}
+        <TabsContent value="team" className="space-y-6">
+          {hasTeamManagement ? (
+            <CompanyTeamManagement />
+          ) : (
+            <MotionWrapper delay={100}>
+              <Card className="border-border/50 shadow-sm">
+                <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                    <svg className="w-8 h-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">Team Management</h3>
+                  <p className="text-sm text-foreground-muted mb-6 max-w-md">
+                    Invite team members, assign roles, and collaborate on job postings.
+                    Upgrade to a plan with team management to unlock this feature.
+                  </p>
+                  <Link href="/company/billing">
+                    <Button className="bg-primary hover:bg-primary-hover text-primary-foreground">
+                      View Plans
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            </MotionWrapper>
+          )}
+        </TabsContent>
+
       </Tabs>
     </div>
   )

@@ -1,14 +1,27 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
+import { toast } from "sonner"
 import Link from "next/link"
-import { cn } from "@/lib/utils"
+import { Info } from "lucide-react"
+import { cn, getCompanyInitials } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { MotionWrapper } from "@/components/motion-wrapper"
+import { useAgencyContext } from "@/hooks/use-agency"
+import {
+  getAgencyJobs,
+  getAgencyJobStats,
+  publishAgencyJob,
+  pauseAgencyJob,
+  deleteAgencyJob,
+} from "@/lib/api/agencies"
+import type { AgencyJobStats } from "@/lib/api/agencies"
+import type { AgencyJob, AgencyJobStatus } from "@/lib/agency/types"
+import { JOB_STATUS_STYLES } from "@/lib/constants/status-styles"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,27 +51,35 @@ import {
  * Multi-company job management with company filtering, grouping, and bulk actions
  */
 
-// Mock companies
-const clientCompanies = [
-  { id: 1, name: "Acme Corporation", initials: "AC", color: "#3B5BDB" },
-  { id: 2, name: "TechStart Inc", initials: "TS", color: "#10B981" },
-  { id: 3, name: "Global Dynamics", initials: "GD", color: "#F59E0B" },
-  { id: 4, name: "Innovate Labs", initials: "IL", color: "#8B5CF6" },
-]
+// Colors for client companies
+const clientColors = ['#3B5BDB', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4']
 
-// Mock jobs data with company association
-const allJobs = [
-  { id: 1, title: "Senior Frontend Engineer", company: clientCompanies[0], location: "Remote", type: "Full-time", status: "published", views: 342, applies: 28, posted: "Jan 28", daysLeft: 22, salary: "$140k-$180k" },
-  { id: 2, title: "Backend Developer", company: clientCompanies[0], location: "New York, NY", type: "Full-time", status: "published", views: 215, applies: 18, posted: "Jan 25", daysLeft: 19, salary: "$130k-$170k" },
-  { id: 3, title: "DevOps Engineer", company: clientCompanies[0], location: "Remote", type: "Full-time", status: "pending", views: 0, applies: 0, posted: "Feb 1", daysLeft: 30, salary: "$150k-$190k" },
-  { id: 4, title: "Product Designer", company: clientCompanies[1], location: "San Francisco", type: "Full-time", status: "published", views: 189, applies: 15, posted: "Jan 22", daysLeft: 16, salary: "$120k-$160k" },
-  { id: 5, title: "UX Researcher", company: clientCompanies[1], location: "Remote", type: "Contract", status: "published", views: 156, applies: 12, posted: "Jan 20", daysLeft: 14, salary: "$80-$100/hr" },
-  { id: 6, title: "Data Analyst", company: clientCompanies[1], location: "Austin, TX", type: "Full-time", status: "draft", views: 0, applies: 0, posted: "-", daysLeft: null, salary: "$100k-$130k" },
-  { id: 7, title: "Financial Analyst", company: clientCompanies[2], location: "Chicago, IL", type: "Full-time", status: "published", views: 234, applies: 19, posted: "Jan 18", daysLeft: 12, salary: "$90k-$120k" },
-  { id: 8, title: "Risk Manager", company: clientCompanies[2], location: "Remote", type: "Full-time", status: "paused", views: 81, applies: 9, posted: "Jan 10", daysLeft: 4, salary: "$130k-$160k" },
-]
+function getClientColor(index: number): string {
+  return clientColors[index % clientColors.length]
+}
 
-const statusFilters = [
+// Display type for jobs with additional computed fields
+interface JobDisplay {
+  id: number
+  job_id: string
+  title: string
+  company: {
+    id: number
+    name: string
+    initials: string
+    color: string
+  }
+  location: string
+  type: string
+  status: string
+  views: number
+  applies: number
+  posted: string
+  daysLeft: number | null
+  salary: string | null
+}
+
+const statusFilters: { value: string; label: string }[] = [
   { value: "all", label: "All Jobs" },
   { value: "published", label: "Published" },
   { value: "pending", label: "Pending" },
@@ -68,33 +89,149 @@ const statusFilters = [
 ]
 
 export default function AgencyJobsPage() {
+  const { clients, isLoading: contextLoading } = useAgencyContext()
+
+  // Local state
+  const [jobs, setJobs] = useState<JobDisplay[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [selectedStatus, setSelectedStatus] = useState("all")
   const [selectedCompany, setSelectedCompany] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedJobs, setSelectedJobs] = useState<number[]>([])
+  const [selectedJobs, setSelectedJobs] = useState<string[]>([])
   const [showPublishDialog, setShowPublishDialog] = useState(false)
-  const [jobToPublish, setJobToPublish] = useState<typeof allJobs[0] | null>(null)
+  const [jobToPublish, setJobToPublish] = useState<JobDisplay | null>(null)
   const [groupBy, setGroupBy] = useState<"none" | "company">("none")
+  const [isPublishing, setIsPublishing] = useState(false)
+  const [jobStats, setJobStats] = useState<AgencyJobStats | null>(null)
 
-  const filteredJobs = allJobs.filter((job) => {
-    const matchesStatus = selectedStatus === "all" || job.status === selectedStatus
-    const matchesCompany = selectedCompany === "all" || job.company.id.toString() === selectedCompany
-    const matchesSearch = job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         job.company.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         job.location.toLowerCase().includes(searchQuery.toLowerCase())
-    return matchesStatus && matchesCompany && matchesSearch
+  // Fetch job stats (for retention info)
+  useEffect(() => {
+    getAgencyJobStats()
+      .then(setJobStats)
+      .catch(() => { /* non-critical */ })
+  }, [])
+
+  // Transform clients for display (memoized to prevent infinite re-render loops)
+  const clientCompanies = useMemo(() => clients.map((client, index) => ({
+    id: client.company,
+    name: client.company_name,
+    initials: getCompanyInitials(client.company_name),
+    color: getClientColor(index),
+  })), [clients])
+
+  // Fetch jobs
+  const fetchJobs = useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const filters: { status?: AgencyJobStatus; company_id?: number; search?: string } = {}
+      if (selectedStatus !== "all") {
+        filters.status = selectedStatus as AgencyJobStatus
+      }
+      if (selectedCompany !== "all") {
+        filters.company_id = parseInt(selectedCompany)
+      }
+      if (searchQuery) {
+        filters.search = searchQuery
+      }
+
+      const response = await getAgencyJobs({ ...filters, page_size: 100 })
+
+      // Transform jobs for display
+      const jobDisplays: JobDisplay[] = response.results.map((job: AgencyJob) => {
+        const clientIndex = clientCompanies.findIndex(c => c.id === job.company.id)
+        const color = clientIndex >= 0 ? clientCompanies[clientIndex].color : getClientColor(0)
+
+        // Calculate days left
+        let daysLeft: number | null = null
+        if (job.expires_at) {
+          const expiresDate = new Date(job.expires_at)
+          const today = new Date()
+          daysLeft = Math.ceil((expiresDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+          if (daysLeft < 0) daysLeft = 0
+        }
+
+        // Format location
+        const locationParts = []
+        if (job.city) locationParts.push(job.city)
+        if (job.state) locationParts.push(job.state)
+        if (job.country) locationParts.push(job.country)
+        const location = locationParts.length > 0 ? locationParts.join(', ') : job.location_type === 'remote' ? 'Remote' : 'Not specified'
+
+        // Format salary
+        let salary: string | null = null
+        if (job.salary_min || job.salary_max) {
+          const formatSalary = (val: number) => {
+            if (val >= 1000) return `$${(val / 1000).toFixed(0)}k`
+            return `$${val}`
+          }
+          if (job.salary_min && job.salary_max) {
+            salary = `${formatSalary(job.salary_min)}-${formatSalary(job.salary_max)}`
+          } else if (job.salary_min) {
+            salary = `${formatSalary(job.salary_min)}+`
+          } else if (job.salary_max) {
+            salary = `Up to ${formatSalary(job.salary_max)}`
+          }
+        }
+
+        return {
+          id: job.id,
+          job_id: job.job_id,
+          title: job.title,
+          company: {
+            id: job.company.id,
+            name: job.company.name,
+            initials: getCompanyInitials(job.company.name),
+            color,
+          },
+          location,
+          type: job.employment_type.replace('_', '-'),
+          status: job.status,
+          views: job.views ?? 0,
+          applies: job.applications_count ?? 0,
+          posted: job.posted_at
+            ? new Date(job.posted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            : '-',
+          daysLeft,
+          salary,
+        }
+      })
+
+      setJobs(jobDisplays)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load jobs')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [selectedStatus, selectedCompany, searchQuery, clientCompanies])
+
+  useEffect(() => {
+    if (!contextLoading) {
+      fetchJobs()
+    }
+  }, [fetchJobs, contextLoading])
+
+  // Filter jobs client-side for instant feedback
+  const filteredJobs = jobs.filter((job) => {
+    const matchesSearch = searchQuery === "" ||
+      job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      job.company.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      job.location.toLowerCase().includes(searchQuery.toLowerCase())
+    return matchesSearch
   })
 
   // Group jobs by company if grouping is enabled
-  const groupedJobs = groupBy === "company" 
+  const groupedJobs = groupBy === "company"
     ? clientCompanies.map(company => ({
         company,
         jobs: filteredJobs.filter(job => job.company.id === company.id)
       })).filter(group => group.jobs.length > 0)
     : null
 
-  const toggleSelectJob = (jobId: number) => {
-    setSelectedJobs(prev => 
+  const toggleSelectJob = (jobId: string) => {
+    setSelectedJobs(prev =>
       prev.includes(jobId) ? prev.filter(id => id !== jobId) : [...prev, jobId]
     )
   }
@@ -103,16 +240,103 @@ export default function AgencyJobsPage() {
     if (selectedJobs.length === filteredJobs.length) {
       setSelectedJobs([])
     } else {
-      setSelectedJobs(filteredJobs.map(j => j.id))
+      setSelectedJobs(filteredJobs.map(j => j.job_id))
     }
   }
 
   // Get status counts
   const getStatusCount = (status: string) => {
-    const jobs = selectedCompany === "all" 
-      ? allJobs 
-      : allJobs.filter(j => j.company.id.toString() === selectedCompany)
-    return status === "all" ? jobs.length : jobs.filter(j => j.status === status).length
+    const jobsToCount = selectedCompany === "all"
+      ? jobs
+      : jobs.filter(j => j.company.id.toString() === selectedCompany)
+    return status === "all" ? jobsToCount.length : jobsToCount.filter(j => j.status === status).length
+  }
+
+  // Handle publish
+  const handlePublish = async () => {
+    if (!jobToPublish) return
+
+    setIsPublishing(true)
+    try {
+      await publishAgencyJob(jobToPublish.job_id)
+      setShowPublishDialog(false)
+      setJobToPublish(null)
+      fetchJobs() // Refresh jobs
+    } catch (err) {
+      console.error('Failed to publish job:', err)
+      toast.error("Failed to publish job. Please try again.")
+    } finally {
+      setIsPublishing(false)
+    }
+  }
+
+  // Handle pause
+  const handlePause = async (jobId: string) => {
+    try {
+      await pauseAgencyJob(jobId)
+      fetchJobs()
+    } catch (err) {
+      console.error('Failed to pause job:', err)
+    }
+  }
+
+  // Handle delete
+  const handleDelete = async (jobId: string) => {
+    if (!confirm('Are you sure you want to delete this job?')) return
+
+    try {
+      await deleteAgencyJob(jobId)
+      fetchJobs()
+    } catch (err) {
+      console.error('Failed to delete job:', err)
+    }
+  }
+
+  // Handle bulk delete
+  const handleBulkDelete = async () => {
+    if (!confirm(`Are you sure you want to delete ${selectedJobs.length} jobs?`)) return
+
+    try {
+      await Promise.all(selectedJobs.map(jobId => deleteAgencyJob(jobId)))
+      setSelectedJobs([])
+      fetchJobs()
+    } catch (err) {
+      console.error('Failed to delete jobs:', err)
+    }
+  }
+
+  // Handle bulk pause
+  const handleBulkPause = async () => {
+    try {
+      await Promise.all(selectedJobs.map(jobId => pauseAgencyJob(jobId)))
+      setSelectedJobs([])
+      fetchJobs()
+    } catch (err) {
+      console.error('Failed to pause jobs:', err)
+    }
+  }
+
+  // Loading state
+  if (contextLoading || isLoading) {
+    return (
+      <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8">
+        <div className="flex items-center justify-center h-96">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8">
+        <div className="flex flex-col items-center justify-center h-96 gap-4">
+          <p className="text-destructive">{error}</p>
+          <Button onClick={fetchJobs}>Try Again</Button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -156,7 +380,7 @@ export default function AgencyJobsPage() {
                       {clientCompanies.map((company) => (
                         <SelectItem key={company.id} value={company.id.toString()}>
                           <div className="flex items-center gap-2">
-                            <div 
+                            <div
                               className="w-5 h-5 rounded flex items-center justify-center"
                               style={{ backgroundColor: `${company.color}20` }}
                             >
@@ -247,10 +471,10 @@ export default function AgencyJobsPage() {
                     {selectedJobs.length} selected
                   </span>
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" className="bg-transparent">
+                    <Button variant="outline" size="sm" className="bg-transparent" onClick={handleBulkPause}>
                       Pause Selected
                     </Button>
-                    <Button variant="outline" size="sm" className="bg-transparent text-destructive hover:bg-destructive/10">
+                    <Button variant="outline" size="sm" className="bg-transparent text-destructive hover:bg-destructive/10" onClick={handleBulkDelete}>
                       Delete Selected
                     </Button>
                   </div>
@@ -261,6 +485,19 @@ export default function AgencyJobsPage() {
         </Card>
       </MotionWrapper>
 
+      {/* Expired retention info banner */}
+      {selectedStatus === "expired" && jobs.some(j => j.status === "expired") && (
+        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/5 dark:text-amber-200">
+          <Info className="h-4 w-4 mt-0.5 shrink-0" />
+          <p>
+            Expired jobs are hidden from public search but remain accessible here.{" "}
+            {jobStats?.expired_retention_days && jobStats.expired_retention_days > 0
+              ? `They will be permanently deleted after ${jobStats.expired_retention_days} day${jobStats.expired_retention_days !== 1 ? "s" : ""}. Use "Re-post as New" to create a fresh listing before then.`
+              : "They are kept indefinitely until you delete them. Use \"Re-post as New\" to create a fresh listing at any time."}
+          </p>
+        </div>
+      )}
+
       {/* Jobs List */}
       <MotionWrapper delay={200}>
         {groupBy === "company" && groupedJobs ? (
@@ -269,12 +506,12 @@ export default function AgencyJobsPage() {
             {groupedJobs.map((group) => (
               <Card key={group.company.id} className="border-border/50 shadow-sm overflow-hidden">
                 {/* Company Header */}
-                <div 
+                <div
                   className="flex items-center justify-between px-4 py-3 border-b border-border/50"
                   style={{ backgroundColor: `${group.company.color}08` }}
                 >
                   <div className="flex items-center gap-3">
-                    <div 
+                    <div
                       className="w-8 h-8 rounded-lg flex items-center justify-center"
                       style={{ backgroundColor: `${group.company.color}20` }}
                     >
@@ -296,7 +533,7 @@ export default function AgencyJobsPage() {
                     </Button>
                   </Link>
                 </div>
-                
+
                 {/* Jobs Table */}
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -315,13 +552,15 @@ export default function AgencyJobsPage() {
                     </thead>
                     <tbody className="divide-y divide-border/50">
                       {group.jobs.map((job) => (
-                        <JobRow 
-                          key={job.id} 
-                          job={job} 
+                        <JobRow
+                          key={job.id}
+                          job={job}
                           showCompany={false}
-                          isSelected={selectedJobs.includes(job.id)}
-                          onSelect={() => toggleSelectJob(job.id)}
+                          isSelected={selectedJobs.includes(job.job_id)}
+                          onSelect={() => toggleSelectJob(job.job_id)}
                           onPublish={() => { setJobToPublish(job); setShowPublishDialog(true); }}
+                          onPause={() => handlePause(job.job_id)}
+                          onDelete={() => handleDelete(job.job_id)}
                         />
                       ))}
                     </tbody>
@@ -354,13 +593,15 @@ export default function AgencyJobsPage() {
                 </thead>
                 <tbody className="divide-y divide-border/50">
                   {filteredJobs.map((job) => (
-                    <JobRow 
-                      key={job.id} 
-                      job={job} 
+                    <JobRow
+                      key={job.id}
+                      job={job}
                       showCompany={true}
-                      isSelected={selectedJobs.includes(job.id)}
-                      onSelect={() => toggleSelectJob(job.id)}
+                      isSelected={selectedJobs.includes(job.job_id)}
+                      onSelect={() => toggleSelectJob(job.job_id)}
                       onPublish={() => { setJobToPublish(job); setShowPublishDialog(true); }}
+                      onPause={() => handlePause(job.job_id)}
+                      onDelete={() => handleDelete(job.job_id)}
                     />
                   ))}
                 </tbody>
@@ -400,7 +641,7 @@ export default function AgencyJobsPage() {
             <div className="p-4 rounded-lg bg-background-secondary/50">
               <p className="font-medium text-foreground">{jobToPublish?.title}</p>
               <div className="flex items-center gap-2 mt-1">
-                <div 
+                <div
                   className="w-5 h-5 rounded flex items-center justify-center"
                   style={{ backgroundColor: `${jobToPublish?.company.color}20` }}
                 >
@@ -411,14 +652,14 @@ export default function AgencyJobsPage() {
                 <span className="text-sm text-foreground-muted">{jobToPublish?.company.name}</span>
               </div>
             </div>
-            
+
             <div className="space-y-3">
               <label className="text-sm font-medium text-foreground">Social Distribution</label>
               <div className="space-y-2">
                 <div className="flex items-center justify-between p-3 rounded-lg border border-border/50">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded bg-[#0077B5]/10 flex items-center justify-center">
-                      <span className="text-xs font-bold text-[#0077B5]">in</span>
+                    <div className="w-8 h-8 rounded bg-social-linkedin/10 flex items-center justify-center">
+                      <span className="text-xs font-bold text-social-linkedin">in</span>
                     </div>
                     <span className="text-sm">LinkedIn</span>
                   </div>
@@ -449,8 +690,12 @@ export default function AgencyJobsPage() {
             <Button variant="outline" onClick={() => setShowPublishDialog(false)} className="bg-transparent">
               Cancel
             </Button>
-            <Button className="bg-primary hover:bg-primary-hover text-primary-foreground">
-              Publish (1 Credit)
+            <Button
+              className="bg-primary hover:bg-primary-hover text-primary-foreground"
+              onClick={handlePublish}
+              disabled={isPublishing}
+            >
+              {isPublishing ? "Publishing..." : "Publish (1 Credit)"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -460,18 +705,22 @@ export default function AgencyJobsPage() {
 }
 
 // Job Row Component
-function JobRow({ 
-  job, 
+function JobRow({
+  job,
   showCompany,
   isSelected,
   onSelect,
-  onPublish
-}: { 
-  job: typeof allJobs[0]
+  onPublish,
+  onPause,
+  onDelete,
+}: {
+  job: JobDisplay
   showCompany: boolean
   isSelected: boolean
   onSelect: () => void
   onPublish: () => void
+  onPause: () => void
+  onDelete: () => void
 }) {
   return (
     <tr className="hover:bg-background-secondary/30 transition-colors group">
@@ -479,9 +728,9 @@ function JobRow({
         <Checkbox checked={isSelected} onCheckedChange={onSelect} />
       </td>
       <td className="px-4 py-4">
-        <div className="flex items-center gap-3">
+        <Link href={`/agency/jobs/${job.job_id}`} className="flex items-center gap-3">
           {showCompany && (
-            <div 
+            <div
               className="w-8 h-8 rounded flex items-center justify-center flex-shrink-0"
               style={{ backgroundColor: `${job.company.color}15` }}
             >
@@ -498,7 +747,7 @@ function JobRow({
               <p className="text-xs text-foreground-muted">{job.company.name}</p>
             )}
           </div>
-        </div>
+        </Link>
       </td>
       <td className="px-4 py-4 hidden md:table-cell">
         <span className="text-sm text-foreground-muted">{job.location}</span>
@@ -507,7 +756,7 @@ function JobRow({
         <JobStatusBadge status={job.status} />
       </td>
       <td className="px-4 py-4 text-right text-sm text-foreground-muted hidden sm:table-cell">
-        {job.views.toLocaleString()}
+        {(job.views ?? 0).toLocaleString()}
       </td>
       <td className="px-4 py-4 text-right text-sm text-foreground-muted hidden sm:table-cell">
         {job.applies}
@@ -541,10 +790,10 @@ function JobRow({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href={`/agency/jobs/${job.id}`}>View Details</Link>
+              <Link href={`/agency/jobs/${job.job_id}`}>View Details</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href={`/agency/jobs/${job.id}/edit`}>Edit Job</Link>
+              <Link href={`/agency/jobs/${job.job_id}/edit`}>Edit Job</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             {job.status === "draft" && (
@@ -553,10 +802,10 @@ function JobRow({
               </DropdownMenuItem>
             )}
             {job.status === "published" && (
-              <DropdownMenuItem>Pause Job</DropdownMenuItem>
+              <DropdownMenuItem onClick={onPause}>Pause Job</DropdownMenuItem>
             )}
             {job.status === "paused" && (
-              <DropdownMenuItem>Resume Job</DropdownMenuItem>
+              <DropdownMenuItem onClick={onPublish}>Resume Job</DropdownMenuItem>
             )}
             {job.status === "pending" && (
               <DropdownMenuItem className="text-foreground-muted" disabled>
@@ -568,7 +817,7 @@ function JobRow({
             <DropdownMenuItem>Share</DropdownMenuItem>
             <DropdownMenuItem>View Analytics</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive" onClick={onDelete}>Delete</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </td>
@@ -577,25 +826,10 @@ function JobRow({
 }
 
 function JobStatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    published: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-    pending: "bg-amber-500/10 text-amber-600 border-amber-500/20",
-    draft: "bg-slate-500/10 text-slate-600 border-slate-500/20",
-    paused: "bg-orange-500/10 text-orange-600 border-orange-500/20",
-    expired: "bg-red-500/10 text-red-600 border-red-500/20",
-  }
-
-  const labels: Record<string, string> = {
-    published: "Published",
-    pending: "Pending",
-    draft: "Draft",
-    paused: "Paused",
-    expired: "Expired",
-  }
-
+  const style = JOB_STATUS_STYLES[status] || JOB_STATUS_STYLES.draft
   return (
-    <Badge variant="outline" className={cn("text-xs", styles[status])}>
-      {labels[status]}
+    <Badge variant="outline" className={cn("text-xs", style.className)}>
+      {style.label}
     </Badge>
   )
 }

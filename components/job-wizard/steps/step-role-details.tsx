@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import { useState } from "react"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -12,6 +12,8 @@ import { type JobWizardData } from "@/lib/job-wizard-schema"
 interface StepRoleDetailsProps {
   data: JobWizardData
   updateData: (updates: Partial<JobWizardData>) => void
+  errors?: Record<string, string>
+  onBlur?: (field: keyof JobWizardData) => void
 }
 
 const suggestedSkills = [
@@ -24,6 +26,7 @@ const suggestedSkills = [
 export function StepRoleDetails({ data, updateData }: StepRoleDetailsProps) {
   const [newResponsibility, setNewResponsibility] = useState("")
   const [newRequirement, setNewRequirement] = useState("")
+  const [newNiceToHave, setNewNiceToHave] = useState("")
   const [skillInput, setSkillInput] = useState("")
 
   const addResponsibility = () => {
@@ -46,6 +49,17 @@ export function StepRoleDetails({ data, updateData }: StepRoleDetailsProps) {
 
   const removeRequirement = (index: number) => {
     updateData({ requirements: data.requirements.filter((_, i) => i !== index) })
+  }
+
+  const addNiceToHave = () => {
+    if (newNiceToHave.trim()) {
+      updateData({ niceToHave: [...data.niceToHave, newNiceToHave.trim()] })
+      setNewNiceToHave("")
+    }
+  }
+
+  const removeNiceToHave = (index: number) => {
+    updateData({ niceToHave: data.niceToHave.filter((_, i) => i !== index) })
   }
 
   const addSkill = (skill: string) => {
@@ -76,7 +90,7 @@ export function StepRoleDetails({ data, updateData }: StepRoleDetailsProps) {
           placeholder="Describe the role, your team, and what makes this opportunity exciting..."
           value={data.description}
           onChange={(e) => updateData({ description: e.target.value })}
-          rows={6}
+          rows={8}
         />
         <p className="text-xs text-foreground-muted">
           {data.description.length} characters (minimum 50 recommended)
@@ -159,6 +173,51 @@ export function StepRoleDetails({ data, updateData }: StepRoleDetailsProps) {
                 <button
                   type="button"
                   onClick={() => removeRequirement(index)}
+                  className="opacity-0 group-hover:opacity-100 text-foreground-muted hover:text-destructive transition-all"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Nice to Have */}
+      <div className="space-y-3">
+        <Label>Nice to Have</Label>
+        <div className="flex gap-2">
+          <Input
+            placeholder="Add a nice-to-have qualification..."
+            value={newNiceToHave}
+            onChange={(e) => setNewNiceToHave(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addNiceToHave())}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={addNiceToHave}
+            className="bg-transparent shrink-0"
+          >
+            Add
+          </Button>
+        </div>
+        {data.niceToHave.length > 0 && (
+          <ul className="space-y-2">
+            {data.niceToHave.map((item, index) => (
+              <li
+                key={index}
+                className="flex items-start gap-3 p-3 rounded-lg bg-foreground/[0.02] border border-border/50 group"
+              >
+                <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                </svg>
+                <span className="flex-1 text-sm text-foreground">{item}</span>
+                <button
+                  type="button"
+                  onClick={() => removeNiceToHave(index)}
                   className="opacity-0 group-hover:opacity-100 text-foreground-muted hover:text-destructive transition-all"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -1,24 +1,49 @@
 "use client"
 
-import React from "react"
-
-import { useState } from "react"
+import { Suspense, useState, type FormEvent } from "react"
 import Link from "next/link"
+import { useRouter, useSearchParams } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { AuthInput } from "@/components/auth-input"
 import { MotionWrapper } from "@/components/motion-wrapper"
+import { TurnstileGuard, useTurnstileToken } from "@/components/turnstile"
+import { useAuth } from "@/hooks/use-auth"
+import { ROLE_REDIRECTS } from "@/lib/auth/types"
+import type { ApiError } from "@/lib/auth/types"
 
-export default function LoginPage() {
+function LoginContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { login } = useAuth()
+
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const { turnstileToken, setTurnstileToken } = useTurnstileToken()
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const sessionExpired = searchParams.get("session_expired") === "true"
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
+    setError("")
     setIsLoading(true)
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    setIsLoading(false)
+
+    try {
+      const user = await login({ email, password, turnstile_token: turnstileToken || undefined })
+      // Redirect to the intended destination or role-based dashboard
+      let rawRedirect = ""
+      try { rawRedirect = decodeURIComponent(searchParams.get("redirect") || "") } catch { /* malformed URI */ }
+      const redirect = rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") && !rawRedirect.includes("\\") && !rawRedirect.includes(":")
+        ? rawRedirect
+        : ROLE_REDIRECTS[user.role]
+      router.push(redirect)
+    } catch (err) {
+      const apiError = err as ApiError
+      setError(apiError.message || "Invalid email or password")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -29,13 +54,13 @@ export default function LoginPage() {
         <div 
           className="absolute inset-0"
           style={{
-            background: "radial-gradient(ellipse 80% 80% at 20% 80%, rgba(59, 91, 219, 0.3) 0%, transparent 50%)"
+            background: "radial-gradient(ellipse 80% 80% at 20% 80%, rgba(var(--primary-rgb), 0.3) 0%, transparent 50%)"
           }}
         />
         <div 
           className="absolute inset-0"
           style={{
-            background: "radial-gradient(ellipse 60% 60% at 80% 20%, rgba(59, 91, 219, 0.2) 0%, transparent 50%)"
+            background: "radial-gradient(ellipse 60% 60% at 80% 20%, rgba(var(--primary-rgb), 0.2) 0%, transparent 50%)"
           }}
         />
         
@@ -81,6 +106,16 @@ export default function LoginPage() {
             </Link>
           </MotionWrapper>
 
+          {sessionExpired && (
+            <MotionWrapper delay={50}>
+              <div className="mb-6 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <p className="text-sm text-amber-700">
+                  Your session has expired. Please sign in again.
+                </p>
+              </div>
+            </MotionWrapper>
+          )}
+
           <MotionWrapper delay={100}>
             <h1 className="text-3xl md:text-4xl font-medium tracking-tight text-foreground">
               Welcome back
@@ -107,24 +142,27 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
+                error={error}
                 required
               />
 
               <div className="flex items-center justify-between pt-1">
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20"
                   />
                   <span className="text-sm text-foreground-muted">Remember me</span>
                 </label>
-                <Link 
+                <Link
                   href="/forgot-password"
                   className="text-sm text-primary hover:text-primary-hover transition-colors"
                 >
                   Forgot password?
                 </Link>
               </div>
+
+              <TurnstileGuard feature="auth" onToken={setTurnstileToken} />
 
               <button
                 type="submit"
@@ -188,25 +226,35 @@ export default function LoginPage() {
   )
 }
 
-function SocialButton({ 
-  provider, 
-  children 
-}: { 
-  provider: "google" | "github"
-  children: React.ReactNode 
-}) {
-  const [isHovered, setIsHovered] = useState(false)
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
+  )
+}
 
+function SocialButton({
+  provider,
+  children
+}: {
+  provider: "google" | "github"
+  children: React.ReactNode
+}) {
   return (
     <button
       type="button"
+      disabled
+      title="Coming soon"
       className={cn(
         "flex items-center justify-center gap-3 py-3 px-4 rounded-lg border border-border",
         "text-sm font-medium text-foreground transition-all duration-300",
-        "hover:border-foreground-muted/50 hover:shadow-sm"
+        "opacity-50 cursor-not-allowed"
       )}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
       {provider === "google" && (
         <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -233,12 +281,7 @@ function SocialButton({
           <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
         </svg>
       )}
-      <span className={cn(
-        "transition-transform duration-300",
-        isHovered && "translate-x-0.5"
-      )}>
-        {children}
-      </span>
+      <span>{children}</span>
     </button>
   )
 }

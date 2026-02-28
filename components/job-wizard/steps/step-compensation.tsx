@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import { useState } from "react"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -19,6 +19,8 @@ import { type JobWizardData } from "@/lib/job-wizard-schema"
 interface StepCompensationProps {
   data: JobWizardData
   updateData: (updates: Partial<JobWizardData>) => void
+  errors?: Record<string, string>
+  onBlur?: (field: keyof JobWizardData) => void
 }
 
 const currencies = [
@@ -92,9 +94,9 @@ export function StepCompensation({ data, updateData }: StepCompensationProps) {
         </p>
       </div>
 
-      {/* Salary Range */}
+      {/* Salary */}
       <div className="space-y-4">
-        <Label>Salary Range <span className="text-destructive">*</span></Label>
+        <Label>Salary <span className="text-destructive">*</span></Label>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="space-y-2">
@@ -117,15 +119,15 @@ export function StepCompensation({ data, updateData }: StepCompensationProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="salaryMin" className="text-xs text-foreground-muted">Minimum</Label>
+            <Label htmlFor="salaryMin" className="text-xs text-foreground-muted">Amount <span className="text-destructive">*</span></Label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-muted">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-foreground-muted pointer-events-none">
                 {getCurrencySymbol()}
               </span>
               <Input
                 id="salaryMin"
                 type="number"
-                className="pl-7"
+                className={cn(getCurrencySymbol().length > 1 ? "pl-10" : "pl-7")}
                 placeholder="50,000"
                 value={data.salaryMin || ""}
                 onChange={(e) => updateData({ salaryMin: parseInt(e.target.value) || 0 })}
@@ -134,15 +136,15 @@ export function StepCompensation({ data, updateData }: StepCompensationProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="salaryMax" className="text-xs text-foreground-muted">Maximum</Label>
+            <Label htmlFor="salaryMax" className="text-xs text-foreground-muted">Maximum (optional)</Label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-muted">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-foreground-muted pointer-events-none">
                 {getCurrencySymbol()}
               </span>
               <Input
                 id="salaryMax"
                 type="number"
-                className="pl-7"
+                className={cn(getCurrencySymbol().length > 1 ? "pl-10" : "pl-7")}
                 placeholder="80,000"
                 value={data.salaryMax || ""}
                 onChange={(e) => updateData({ salaryMax: parseInt(e.target.value) || 0 })}
@@ -171,11 +173,14 @@ export function StepCompensation({ data, updateData }: StepCompensationProps) {
         </div>
 
         {/* Salary Preview */}
-        {data.salaryMin > 0 && data.salaryMax > 0 && (
+        {data.salaryMin > 0 && (
           <div className="p-4 rounded-xl bg-foreground/[0.02] border border-border/50">
             <p className="text-sm text-foreground-muted mb-1">Salary will appear as:</p>
             <p className="text-lg font-semibold text-foreground">
-              {getCurrencySymbol()}{formatSalary(data.salaryMin)} - {getCurrencySymbol()}{formatSalary(data.salaryMax)}
+              {getCurrencySymbol()}{formatSalary(data.salaryMin)}
+              {data.salaryMax > 0 && data.salaryMax > data.salaryMin && (
+                <> - {getCurrencySymbol()}{formatSalary(data.salaryMax)}</>
+              )}
               <span className="text-sm font-normal text-foreground-muted ml-1">
                 / {data.period}
               </span>

@@ -39,6 +39,7 @@ export default function CartPage() {
     items,
     promoCode,
     isHydrated,
+    isValidatingPromo,
     updateQuantity,
     removeItem,
     applyPromoCode,
@@ -53,15 +54,15 @@ export default function CartPage() {
   const [promoInput, setPromoInput] = useState("")
   const [promoError, setPromoError] = useState("")
 
-  const handleApplyPromo = () => {
+  const handleApplyPromo = async () => {
     setPromoError("")
     if (!promoInput.trim()) return
 
-    const success = applyPromoCode(promoInput)
-    if (success) {
+    const result = await applyPromoCode(promoInput)
+    if (result.success) {
       setPromoInput("")
     } else {
-      setPromoError("Invalid promo code")
+      setPromoError(result.error || "Invalid promo code")
     }
   }
 
@@ -226,9 +227,10 @@ export default function CartPage() {
                           <Button
                             variant="outline"
                             onClick={handleApplyPromo}
+                            disabled={isValidatingPromo}
                             className="shrink-0"
                           >
-                            Apply
+                            {isValidatingPromo ? "Validating..." : "Apply"}
                           </Button>
                         </div>
                         {promoError && (

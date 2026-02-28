@@ -1,0 +1,56 @@
+{% extends "email/base.html" %}
+{% block title %}Account Suspended{% endblock %}
+{% block preheader %}<span style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Your Orion account has been suspended.</span>{% endblock %}
+{% block accent_color %}#EF4444{% endblock %}
+
+{% block hero_icon %}
+<tr>
+  <td align="center" style="padding:32px 40px 0 40px;">
+    <div style="display:inline-block;width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,#FEF2F2,#FEE2E2);text-align:center;line-height:56px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>
+    </div>
+  </td>
+</tr>
+{% endblock %}
+
+{% block content %}
+<h1 style="margin:0 0 8px;font-size:28px;font-weight:700;color:#0F172A;letter-spacing:-0.02em;line-height:1.2;" class="email-heading email-hero-heading">Account Suspended</h1>
+
+<!-- Status Badge -->
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+  <tr>
+    <td style="background:#FEE2E2;color:#991B1B;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:600;">Suspended</td>
+  </tr>
+</table>
+
+<p style="margin:0 0 16px;font-size:16px;color:#374151;line-height:1.6;" class="email-text">Hi {{ name }},</p>
+
+<p style="margin:0 0 24px;font-size:16px;color:#374151;line-height:1.6;" class="email-text">
+  Your account has been suspended. During this time, you won't be able to access most platform features.
+</p>
+
+<!-- Info Card -->
+<div class="email-info-card" style="background:#FEF2F2;border:1px solid #FECACA;border-left:4px solid #EF4444;border-radius:10px;padding:20px;margin-bottom:24px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td>
+        <p style="margin:0;font-size:14px;color:#374151;line-height:1.5;" class="email-text"><strong>Reason:</strong> {{ reason }}</p>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<p style="margin:0 0 28px;font-size:16px;color:#374151;line-height:1.6;" class="email-text">
+  If you believe this was done in error, please contact our support team.
+</p>
+
+<!-- CTA -->
+<table role="presentation" cellpadding="0" cellspacing="0" border="0">
+  <tr>
+    <td align="center" style="border-radius:10px;background:#3B5BDB;">
+      <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{{ support_url }}" style="height:48px;v-text-anchor:middle;width:220px;" arcsize="21%" fillcolor="#3B5BDB" stroke="f"><w:anchorlock/><center style="color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;font-weight:600;">Contact Support</center></v:roundrect><![endif]-->
+      <!--[if !mso]><!--><a href="{{ support_url }}" class="email-cta" style="display:inline-block;padding:14px 32px;background:#3B5BDB;color:#ffffff;text-decoration:none;border-radius:10px;font-size:16px;font-weight:600;line-height:1;">Contact Support</a><!--<![endif]-->
+    </td>
+  </tr>
+</table>
+{% endblock %}

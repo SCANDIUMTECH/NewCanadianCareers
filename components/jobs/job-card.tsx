@@ -1,10 +1,11 @@
 "use client"
 
-import React, { useState } from "react"
+import { useState, useEffect, useMemo, type MouseEvent } from "react"
 import Link from "next/link"
+import { BadgeCheck, Bookmark, MapPin } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { CompanyAvatar } from "@/components/company-avatar"
 
 export interface JobCardProps {
   id: string
@@ -25,11 +26,12 @@ export interface JobCardProps {
     min: number
     max: number
     currency: string
+    period?: string
   }
   skills: string[]
   postedDate: string
   featured?: boolean
-  onSave?: (id: string) => void
+  onSave?: (id: string) => void | Promise<void>
   isSaved?: boolean
 }
 
@@ -48,15 +50,21 @@ export function JobCard({
 }: JobCardProps) {
   const [saved, setSaved] = useState(isSaved)
 
-  const formatSalary = () => {
+  // Sync saved state when isSaved prop changes (e.g. after async load)
+  useEffect(() => {
+    setSaved(isSaved)
+  }, [isSaved])
+
+  const formattedSalary = useMemo(() => {
     if (!salary) return null
-    const formatter = new Intl.NumberFormat("en-US", {
+    const locale = salary.currency === "CAD" ? "en-CA" : "en-US"
+    const formatter = new Intl.NumberFormat(locale, {
       style: "currency",
       currency: salary.currency,
       maximumFractionDigits: 0,
     })
     return `${formatter.format(salary.min)} - ${formatter.format(salary.max)}`
-  }
+  }, [salary])
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
@@ -70,22 +78,16 @@ export function JobCard({
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric" })
   }
 
-  const getRemoteLabel = () => {
-    switch (location.remote) {
-      case "hybrid":
-        return "Hybrid"
-      case "remote":
-        return "Remote"
-      default:
-        return null
-    }
-  }
-
-  const handleSave = (e: React.MouseEvent) => {
+  const handleSave = async (e: MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setSaved(!saved)
-    onSave?.(id)
+    const prev = saved
+    setSaved(!prev)
+    try {
+      await onSave?.(id)
+    } catch {
+      setSaved(prev)
+    }
   }
 
   return (
@@ -110,23 +112,13 @@ export function JobCard({
 
         {/* Company Info */}
         <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-            {company.logo ? (
-              <img src={company.logo} alt={company.name} className="w-full h-full rounded-xl object-cover" />
-            ) : (
-              <span className="text-lg font-bold text-primary">
-                {company.name.charAt(0)}
-              </span>
-            )}
-          </div>
+          <CompanyAvatar name={company.name} logo={company.logo} size="sm" />
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-sm text-foreground-muted">{company.name}</span>
               {company.verified && (
-                <svg className="w-4 h-4 text-primary" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
+                <BadgeCheck className="w-4 h-4 text-primary" />
               )}
             </div>
             <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors mt-1 truncate">
@@ -137,6 +129,7 @@ export function JobCard({
           {/* Save Button */}
           <button
             onClick={handleSave}
+            aria-label={saved ? "Unsave job" : "Save job"}
             className={cn(
               "p-2 rounded-lg transition-colors shrink-0",
               saved
@@ -144,29 +137,18 @@ export function JobCard({
                 : "text-foreground-muted hover:text-foreground hover:bg-foreground/5"
             )}
           >
-            <svg
-              className="w-5 h-5"
-              fill={saved ? "currentColor" : "none"}
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-            </svg>
+            <Bookmark className="w-5 h-5" fill={saved ? "currentColor" : "none"} />
           </button>
         </div>
 
         {/* Details */}
         <div className="flex flex-wrap items-center gap-2 mt-4">
           <Badge variant="secondary" className="bg-foreground/5 text-foreground-muted">
-            <svg className="w-3.5 h-3.5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
+            <MapPin className="w-3.5 h-3.5 mr-1.5" />
             {location.remote === "remote"
               ? "Remote"
               : `${location.city}${location.state ? `, ${location.state}` : ""}`}
-            {getRemoteLabel() && location.remote !== "remote" && ` · ${getRemoteLabel()}`}
+            {location.remote === "hybrid" && " · Hybrid"}
           </Badge>
           <Badge variant="secondary" className="bg-foreground/5 text-foreground-muted">
             {type}
@@ -176,8 +158,8 @@ export function JobCard({
         {/* Salary */}
         {salary && (
           <p className="text-base font-semibold text-foreground mt-3">
-            {formatSalary()}
-            <span className="text-sm font-normal text-foreground-muted ml-1">/ year</span>
+            {formattedSalary}
+            <span className="text-sm font-normal text-foreground-muted ml-1">/ {salary?.period || "year"}</span>
           </p>
         )}
 
