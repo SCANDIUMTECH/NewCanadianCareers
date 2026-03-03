@@ -54,10 +54,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearSessionCookie()
       if (typeof window !== 'undefined') {
         const currentPath = window.location.pathname
-        const protectedPrefixes = ['/admin', '/company', '/candidate', '/agency']
-        if (protectedPrefixes.some(prefix => currentPath.startsWith(prefix))) {
-          window.location.href = `/login?session_expired=true&redirect=${encodeURIComponent(currentPath)}`
-        }
+        // Don't redirect if already on an auth page
+        const authPages = ['/login', '/signup', '/forgot-password', '/reset-password', '/verify-email']
+        if (authPages.some(page => currentPath.startsWith(page))) return
+
+        window.location.href = `/login?session_expired=true&redirect=${encodeURIComponent(currentPath)}`
       }
     }
 

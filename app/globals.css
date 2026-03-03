@@ -368,6 +368,45 @@ code, pre, kbd, samp {
   animation: confetti 3s ease-out forwards;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   ARTICLE FIGURE & CAPTION STYLES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.article-figure {
+  margin: 1.5rem 0;
+}
+
+.article-figure img {
+  border-radius: 0.75rem;
+  max-width: 100%;
+  display: block;
+  margin: 0 auto;
+}
+
+.article-figure figcaption {
+  margin-top: 0.75rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.article-figure .caption-text {
+  display: block;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--foreground-muted);
+}
+
+.article-figure .caption-credit {
+  display: block;
+  font-size: 0.6875rem;
+  font-style: normal;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--foreground-muted);
+  opacity: 0.6;
+  margin-top: 0.25rem;
+}
+
 /* Premium text selection — uses brand color */
 ::selection {
   background: rgba(var(--primary-rgb), 0.2);

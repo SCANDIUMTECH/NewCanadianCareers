@@ -15,6 +15,7 @@ from apps.companies.views import AdminCompanyViewSet, AdminAgencyViewSet
 from apps.jobs.views import AdminJobViewSet, AdminJobReportViewSet
 from apps.applications.views import AdminApplicationViewSet
 from apps.billing.views import AdminEntitlementViewSet, AdminInvoiceViewSet, AdminPaymentViewSet, AdminCreditPaymentMethodsView
+from apps.articles.views import AdminArticleViewSet, AdminArticleCategoryViewSet
 from apps.search import urls as search_urls
 from . import views
 from . import support_views
@@ -36,6 +37,8 @@ router.register(r'affiliates', views.AffiliateViewSet, basename='admin-affiliate
 router.register(r'fraud/alerts', views.AdminFraudAlertViewSet, basename='admin-fraud-alerts')
 router.register(r'fraud/rules', views.AdminFraudRuleViewSet, basename='admin-fraud-rules')
 router.register(r'compliance/requests', views.AdminComplianceRequestViewSet, basename='admin-compliance-requests')
+router.register(r'compliance/retention-rules', views.AdminRetentionRuleViewSet, basename='admin-retention-rules')
+router.register(r'compliance/legal-documents', views.AdminLegalDocumentViewSet, basename='admin-legal-documents')
 router.register(r'payments', AdminPaymentViewSet, basename='admin-payments')
 router.register(r'social/templates', views.AdminSocialTemplateViewSet, basename='admin-social-templates')
 router.register(r'email/triggers', email_views.EmailTriggerViewSet, basename='admin-email-triggers')
@@ -47,6 +50,8 @@ router.register(r'feature-flags', views.AdminFeatureFlagViewSet, basename='admin
 router.register(r'job-packages', views.AdminPackageViewSet, basename='admin-job-packages')
 router.register(r'categories', views.AdminCategoryViewSet, basename='admin-categories')
 router.register(r'industries', views.AdminIndustryViewSet, basename='admin-industries')
+router.register(r'articles', AdminArticleViewSet, basename='admin-articles')
+router.register(r'article-categories', AdminArticleCategoryViewSet, basename='admin-article-categories')
 
 urlpatterns = [
     # Platform settings (singleton) — must come before router to avoid

@@ -73,6 +73,7 @@ import {
   MessageSquare,
   AlertCircle,
   Clock,
+  Newspaper,
 } from "lucide-react"
 import { getNotifications, markAsRead, markAllAsRead } from "@/lib/api/notifications"
 import type { Notification } from "@/lib/company/types"
@@ -90,6 +91,8 @@ const navigation = {
     { name: "Taxonomies", href: "/admin/taxonomies", icon: Tags, gradient: "from-teal-500 to-emerald-600" },
   ],
   distribution: [
+    { name: "Articles", href: "/admin/articles", icon: Newspaper, gradient: "from-violet-500 to-purple-600" },
+    { name: "Article Categories", href: "/admin/articles/categories", icon: Tags, gradient: "from-purple-500 to-violet-600" },
     { name: "Social", href: "/admin/social", icon: Share2, gradient: "from-pink-500 to-rose-600" },
     { name: "Search & SEO", href: "/admin/search", icon: Globe, gradient: "from-cyan-500 to-blue-600" },
     { name: "AI Services", href: "/admin/ai", icon: Sparkles, gradient: "from-violet-500 to-purple-600" },

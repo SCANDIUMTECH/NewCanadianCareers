@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react"
 import { cn } from "@/lib/utils"
 import { MotionWrapper } from "./motion-wrapper"
+import { AffiliateSlot } from "@/components/affiliates/affiliate-slot"
 
 const footerLinks = [
   { label: "About", href: "#" },
@@ -32,6 +33,10 @@ export function Footer() {
             </nav>
 
           </div>
+        </MotionWrapper>
+
+        <MotionWrapper delay={50}>
+          <AffiliateSlot placement="footer" variant="footer" className="mt-8" />
         </MotionWrapper>
 
         <MotionWrapper delay={100}>

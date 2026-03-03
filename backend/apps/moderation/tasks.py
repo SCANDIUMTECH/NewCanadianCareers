@@ -3,6 +3,8 @@ Celery tasks for fraud detection and monitoring.
 """
 import logging
 
+from datetime import timedelta
+
 from celery import shared_task
 from django.utils import timezone
 
@@ -227,3 +229,26 @@ def run_fraud_check_for_event(event_type, event_data):
 
     logger.info(f"Event-triggered fraud check complete: {total_alerts} alerts from {event_type}")
     return {'event': event_type, 'alerts_created': total_alerts}
+
+
+@shared_task
+def purge_old_tracking_records():
+    """Purge banner/affiliate tracking records older than 90 days.
+
+    GDPR compliance: IP addresses are PII and must not be retained
+    indefinitely. Matches the existing 90-day login attempt retention
+    policy. Aggregate counters on parent models are preserved.
+    """
+    from .models import BannerImpression, BannerClick, AffiliateLinkClick
+
+    cutoff = timezone.now() - timedelta(days=90)
+
+    counts = {}
+    for model in (BannerImpression, BannerClick, AffiliateLinkClick):
+        deleted, _ = model.objects.filter(created_at__lt=cutoff).delete()
+        counts[model.__name__] = deleted
+
+    total = sum(counts.values())
+    if total > 0:
+        logger.info("Purged %d old tracking records: %s", total, counts)
+    return counts

@@ -1,8 +1,13 @@
+const path = require('path');
+
+// Trust Traefik's self-signed cert for server-side fetches in dev
+// Must be set before Next.js boots — .env.local loads too late for this
+process.env.NODE_EXTRA_CA_CERTS = path.join(__dirname, 'certs', 'local.crt');
+
 const { createServer } = require('https');
 const { parse } = require('url');
 const next = require('next');
 const fs = require('fs');
-const path = require('path');
 
 const dev = process.env.NODE_ENV !== 'production';
 

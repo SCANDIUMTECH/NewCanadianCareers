@@ -1087,6 +1087,92 @@ export interface ProcessComplianceRequestData {
 }
 
 // =============================================================================
+// Admin Retention Rule Types
+// =============================================================================
+
+export type RetentionEnforcement = 'manual' | 'automated' | 'legal_hold'
+
+export interface RetentionRule {
+  id: number
+  category: string
+  description: string
+  retention_days: number
+  is_deletable: boolean
+  is_active: boolean
+  enforcement: RetentionEnforcement
+  legal_basis: string
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateRetentionRuleData {
+  category: string
+  description: string
+  retention_days: number
+  is_deletable?: boolean
+  is_active?: boolean
+  enforcement?: RetentionEnforcement
+  legal_basis?: string
+  sort_order?: number
+}
+
+export interface UpdateRetentionRuleData {
+  category?: string
+  description?: string
+  retention_days?: number
+  is_deletable?: boolean
+  is_active?: boolean
+  enforcement?: RetentionEnforcement
+  legal_basis?: string
+  sort_order?: number
+}
+
+// =============================================================================
+// Admin Legal Document Types
+// =============================================================================
+
+export type LegalDocumentType = 'privacy_policy' | 'terms_of_service' | 'cookie_policy' | 'dpa' | 'acceptable_use' | 'other'
+export type LegalDocumentStatus = 'draft' | 'published' | 'archived'
+
+export interface LegalDocument {
+  id: number
+  title: string
+  slug: string
+  document_type: LegalDocumentType
+  content: string
+  status: LegalDocumentStatus
+  version: string
+  published_at: string | null
+  effective_date: string | null
+  last_reviewed_at: string | null
+  reviewed_by: number | null
+  reviewed_by_name: string | null
+  public_url: string
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateLegalDocumentData {
+  title: string
+  document_type: LegalDocumentType
+  content?: string
+  status?: LegalDocumentStatus
+  version?: string
+  effective_date?: string | null
+  public_url?: string
+}
+
+export interface UpdateLegalDocumentData {
+  title?: string
+  document_type?: LegalDocumentType
+  content?: string
+  version?: string
+  effective_date?: string | null
+  public_url?: string
+}
+
+// =============================================================================
 // Admin Audit Log Types
 // =============================================================================
 
@@ -1187,4 +1273,158 @@ export interface CreateEntitlementData {
   social_credits_total?: number
   post_duration_days?: number
   expires_at?: string | null
+}
+
+// =============================================================================
+// Admin Article Types
+// =============================================================================
+
+export type ArticleStatus = 'draft' | 'scheduled' | 'published' | 'archived'
+
+export type ArticleTemplate =
+  | 'editorial_hero'
+  | 'split_magazine'
+  | 'minimal_luxury'
+  | 'bold_typography'
+  | 'image_led'
+  | 'modern_grid'
+
+export interface AdminArticle {
+  id: number
+  article_id: string
+  title: string
+  slug: string
+  excerpt: string
+  cover_image: string | null
+  author_name: string | null
+  author_email: string | null
+  category_name: string | null
+  category_slug: string | null
+  tags: string[]
+  status: ArticleStatus
+  featured: boolean
+  selected_template: ArticleTemplate
+  published_at: string | null
+  scheduled_publish_at: string | null
+  reading_time: number
+  views: number
+  unique_views: number
+  created_at: string
+  deleted_at: string | null
+}
+
+export interface AdminArticleDetail extends AdminArticle {
+  content: string
+  og_image: string | null
+  meta_title: string
+  meta_description: string
+  canonical_url: string
+  allow_inline_banners: boolean
+  affiliate_disclosure: 'auto' | 'manual' | 'none'
+  sponsored_by: string
+  preview_token: string
+  preview_expires_at: string | null
+  updated_at: string
+  category: AdminArticleCategory | null
+}
+
+export interface AdminArticleCategory {
+  id: number
+  name: string
+  slug: string
+  description: string
+  sort_order: number
+  is_active: boolean
+  article_count: number
+}
+
+export interface AdminArticleStats {
+  total: number
+  draft: number
+  scheduled: number
+  published: number
+  archived: number
+  total_views: number
+}
+
+export interface AdminArticleFilters {
+  search?: string
+  status?: ArticleStatus | 'all'
+  category?: number
+  featured?: boolean
+  page?: number
+  page_size?: number
+  ordering?: string
+}
+
+export interface CreateArticleData {
+  title: string
+  slug?: string
+  excerpt?: string
+  content?: string
+  category?: number | null
+  tags?: string[]
+  featured?: boolean
+  selected_template?: ArticleTemplate
+  scheduled_publish_at?: string | null
+  meta_title?: string
+  meta_description?: string
+  canonical_url?: string
+  allow_inline_banners?: boolean
+  affiliate_disclosure?: 'auto' | 'manual' | 'none'
+  sponsored_by?: string
+}
+
+export interface UpdateArticleData {
+  title?: string
+  slug?: string
+  excerpt?: string
+  content?: string
+  category?: number | null
+  tags?: string[]
+  featured?: boolean
+  selected_template?: ArticleTemplate
+  scheduled_publish_at?: string | null
+  meta_title?: string
+  meta_description?: string
+  canonical_url?: string
+  allow_inline_banners?: boolean
+  affiliate_disclosure?: 'auto' | 'manual' | 'none'
+  sponsored_by?: string
+}
+
+// =============================================================================
+// Public Article Types
+// =============================================================================
+
+export interface PublicArticle {
+  id: number
+  article_id: string
+  title: string
+  slug: string
+  excerpt: string
+  cover_image: string | null
+  author_name: string | null
+  category_name: string | null
+  category_slug: string | null
+  tags: string[]
+  status: ArticleStatus
+  published_at: string | null
+  reading_time: number
+  views: number
+  selected_template: ArticleTemplate
+  featured: boolean
+}
+
+export interface PublicArticleDetail extends PublicArticle {
+  content: string
+  category: AdminArticleCategory | null
+  og_image: string | null
+  meta_title: string
+  meta_description: string
+  canonical_url: string
+  allow_inline_banners: boolean
+  affiliate_disclosure: 'auto' | 'manual' | 'none'
+  sponsored_by: string
+  updated_at: string
 }

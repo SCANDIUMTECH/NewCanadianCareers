@@ -44,8 +44,16 @@ CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'https://orion.job
 SESSION_COOKIE_SECURE = True
 SESSION_COOKIE_DOMAIN = os.environ.get('SESSION_COOKIE_DOMAIN', '.orion.jobs')
 
-# Storage - MinIO (S3-compatible)
-DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+# Storage — MinIO (S3-compatible).
+# Django 5.x requires STORAGES dict (DEFAULT_FILE_STORAGE is deprecated).
+STORAGES = {
+    'default': {
+        'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
+    },
+    'staticfiles': {
+        'BACKEND': 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage',
+    },
+}
 AWS_ACCESS_KEY_ID = os.environ.get('MINIO_ACCESS_KEY')
 AWS_SECRET_ACCESS_KEY = os.environ.get('MINIO_SECRET_KEY')
 AWS_STORAGE_BUCKET_NAME = os.environ.get('MINIO_BUCKET_NAME', 'orion-media')
@@ -53,12 +61,14 @@ AWS_S3_ENDPOINT_URL = f"http://{os.environ.get('MINIO_ENDPOINT', 'minio:9000')}"
 AWS_S3_USE_SSL = os.environ.get('MINIO_USE_SSL', 'False').lower() == 'true'
 AWS_S3_FILE_OVERWRITE = False
 AWS_DEFAULT_ACL = None
-AWS_QUERYSTRING_AUTH = True
 AWS_S3_SIGNATURE_VERSION = 's3v4'
 AWS_S3_REGION_NAME = 'us-east-1'
 
-# Static files
-STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+# Public media URL — Traefik (or CDN) proxies /media/* to MinIO/S3.
+# Bucket has public-read policy. Override MEDIA_DOMAIN for CDN (e.g. cdn.orion.jobs/media).
+AWS_S3_CUSTOM_DOMAIN = os.environ.get('MEDIA_DOMAIN', 'orion.jobs/media')
+AWS_S3_URL_PROTOCOL = 'https:'
+AWS_QUERYSTRING_AUTH = False
 
 # Logging
 LOGGING['handlers']['file'] = {

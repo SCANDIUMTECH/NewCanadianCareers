@@ -1,5 +1,7 @@
 from django.middleware.csrf import CsrfViewMiddleware
 
+from core.cookies import clear_auth_cookies
+
 
 class ApiCsrfExemptMiddleware(CsrfViewMiddleware):
     """Skip CSRF checks for API paths.
@@ -19,3 +21,25 @@ class ApiCsrfExemptMiddleware(CsrfViewMiddleware):
         if any(request.path_info.startswith(p) for p in self.CSRF_EXEMPT_PREFIXES):
             return None
         return super().process_view(request, callback, callback_args, callback_kwargs)
+
+
+class ClearStaleAuthCookiesMiddleware:
+    """Clear invalid JWT cookies from the browser.
+
+    When CookieJWTAuthentication detects a stale/expired access cookie it
+    flags the request with ``_orion_stale_cookie = True`` and returns None
+    (unauthenticated) instead of raising.  This middleware picks up that
+    flag and adds Set-Cookie headers to delete the bad cookies, so the
+    browser stops sending them on subsequent requests.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+
+        if getattr(request, '_orion_stale_cookie', False):
+            clear_auth_cookies(response)
+
+        return response

@@ -8,7 +8,8 @@ from .models import (
     PlatformSetting, Banner, Announcement, Affiliate, AffiliateReferral,
     SystemAlert, AdminActivity, FraudAlert, ComplianceRequest, FraudRule,
     SponsoredBanner, AffiliateLink, FeatureFlag, JobPackage, PlatformSettings,
-    Category, Industry
+    Category, Industry, BannerImpression, BannerClick, AffiliateLinkClick,
+    RetentionRule, LegalDocument
 )
 
 
@@ -30,7 +31,11 @@ class BannerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Banner
-        fields = '__all__'
+        fields = [
+            'id', 'title', 'content', 'image', 'link', 'position',
+            'target_role', 'is_active', 'starts_at', 'ends_at',
+            'impressions', 'clicks', 'ctr', 'created_at', 'updated_at',
+        ]
         read_only_fields = ['impressions', 'clicks', 'created_at', 'updated_at']
 
     def get_ctr(self, obj):
@@ -45,7 +50,10 @@ class AnnouncementSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Announcement
-        fields = '__all__'
+        fields = [
+            'id', 'title', 'content', 'announcement_type', 'target_role',
+            'is_active', 'starts_at', 'ends_at', 'created_at', 'updated_at',
+        ]
         read_only_fields = ['created_at', 'updated_at']
 
 
@@ -57,10 +65,15 @@ class AffiliateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Affiliate
-        fields = '__all__'
-        read_only_fields = [
-            'total_referrals', 'total_conversions', 'total_earnings',
+        fields = [
+            'id', 'name', 'code', 'user', 'user_email', 'commission_rate',
+            'total_referrals', 'total_conversions', 'total_revenue',
+            'total_commission', 'is_active', 'conversion_rate',
             'created_at', 'updated_at',
+        ]
+        read_only_fields = [
+            'total_referrals', 'total_conversions', 'total_revenue',
+            'total_commission', 'created_at', 'updated_at',
         ]
 
     def get_conversion_rate(self, obj):
@@ -76,7 +89,12 @@ class AffiliateReferralSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AffiliateReferral
-        fields = '__all__'
+        fields = [
+            'id', 'affiliate', 'affiliate_code', 'referred_user',
+            'referred_company', 'ip_address', 'user_agent', 'landing_page',
+            'converted', 'converted_at', 'revenue', 'commission',
+            'created_at', 'updated_at',
+        ]
         read_only_fields = ['created_at', 'updated_at']
 
 
@@ -276,6 +294,10 @@ class ComplianceRequestSerializer(serializers.ModelSerializer):
     """Compliance request serializer."""
 
     requester = serializers.SerializerMethodField()
+    requester_name = serializers.SerializerMethodField()
+    requester_email = serializers.CharField(source='requester.email', read_only=True)
+    requester_type = serializers.CharField(source='requester.role', read_only=True)
+    created_at = serializers.DateTimeField(source='submitted_at', read_only=True)
     processed_by = serializers.CharField(
         source='processed_by.get_full_name', read_only=True, allow_null=True
     )
@@ -284,10 +306,11 @@ class ComplianceRequestSerializer(serializers.ModelSerializer):
         model = ComplianceRequest
         fields = [
             'id', 'type', 'status', 'requester', 'reason',
-            'submitted_at', 'due_at', 'completed_at',
+            'requester_name', 'requester_email', 'requester_type',
+            'submitted_at', 'created_at', 'due_at', 'completed_at',
             'processed_by', 'notes', 'verified_at'
         ]
-        read_only_fields = ['submitted_at', 'due_at', 'completed_at', 'processed_by']
+        read_only_fields = ['submitted_at', 'created_at', 'due_at', 'completed_at', 'processed_by']
 
     def get_requester(self, obj):
         return {
@@ -295,6 +318,9 @@ class ComplianceRequestSerializer(serializers.ModelSerializer):
             'email': obj.requester.email,
             'full_name': obj.requester.get_full_name(),
         }
+
+    def get_requester_name(self, obj):
+        return obj.requester.get_full_name()
 
 
 class ComplianceStatsSerializer(serializers.Serializer):
@@ -304,6 +330,10 @@ class ComplianceStatsSerializer(serializers.Serializer):
     due_soon = serializers.IntegerField()
     completed_this_month = serializers.IntegerField()
     average_completion_days = serializers.FloatField()
+    pending_count = serializers.IntegerField()
+    processing_count = serializers.IntegerField()
+    completed_count = serializers.IntegerField()
+    total_count = serializers.IntegerField()
 
 
 class PlatformSettingsSerializer(serializers.ModelSerializer):
@@ -417,6 +447,22 @@ class AffiliateLinkSerializer(serializers.ModelSerializer):
         return 0.0
 
 
+class PublicBannerSerializer(serializers.ModelSerializer):
+    """Public banner serializer — minimal fields, no admin data."""
+
+    class Meta:
+        model = SponsoredBanner
+        fields = ['id', 'title', 'image_url', 'target_url', 'placement', 'sponsor']
+
+
+class PublicAffiliateLinkSerializer(serializers.ModelSerializer):
+    """Public affiliate link serializer — minimal fields, no admin data."""
+
+    class Meta:
+        model = AffiliateLink
+        fields = ['id', 'name', 'company', 'url', 'placement', 'disclosure_label']
+
+
 class FeatureFlagSerializer(serializers.ModelSerializer):
     """Feature flag serializer."""
 
@@ -486,3 +532,34 @@ class IndustrySerializer(serializers.ModelSerializer):
     def get_company_count(self, obj):
         from apps.companies.models import Company
         return Company.objects.filter(industry=obj.name).count()
+
+
+class RetentionRuleSerializer(serializers.ModelSerializer):
+    """Retention rule serializer."""
+
+    class Meta:
+        model = RetentionRule
+        fields = [
+            'id', 'category', 'description', 'retention_days',
+            'is_deletable', 'is_active', 'enforcement', 'legal_basis',
+            'sort_order', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['created_at', 'updated_at']
+
+
+class LegalDocumentSerializer(serializers.ModelSerializer):
+    """Legal document serializer."""
+
+    reviewed_by_name = serializers.CharField(
+        source='reviewed_by.get_full_name', read_only=True, allow_null=True
+    )
+
+    class Meta:
+        model = LegalDocument
+        fields = [
+            'id', 'title', 'slug', 'document_type', 'content', 'status',
+            'version', 'published_at', 'effective_date', 'last_reviewed_at',
+            'reviewed_by', 'reviewed_by_name', 'public_url',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['slug', 'published_at', 'last_reviewed_at', 'created_at', 'updated_at']

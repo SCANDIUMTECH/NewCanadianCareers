@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
+import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { motion } from "framer-motion"
 import {
@@ -14,7 +15,6 @@ import {
   Calendar,
   Eye,
   MousePointer,
-  Upload,
   ImageIcon,
   Layout,
   Zap,
@@ -26,17 +26,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
 import { Skeleton } from "@/components/ui/skeleton"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,17 +51,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 import { CHART, STATUS } from "@/lib/constants/colors"
 import {
   getAdminBanners,
-  createBanner,
-  updateBanner,
   deleteBanner,
   toggleBannerStatus,
 } from "@/lib/api/admin-banners"
-import type { SponsoredBanner, BannerPlacement, CreateBannerData } from "@/lib/api/admin-banners"
+import type { SponsoredBanner, BannerPlacement } from "@/lib/api/admin-banners"
+import { searchJobs } from "@/lib/api/public"
 
 const SparklineChart = dynamic(() => import("@/components/charts/sparkline-chart"), { ssr: false })
 
@@ -90,6 +78,29 @@ const itemVariants = {
 }
 
 // ── Placement Config ────────────────────────────────────────────────────
+/** Open the public page where a banner's placement is visible. */
+async function openPlacementPreview(placement: BannerPlacement) {
+  if (placement === "homepage") {
+    window.open("/", "_blank", "noopener,noreferrer")
+    return
+  }
+  if (placement === "search_top" || placement === "search_sidebar") {
+    window.open("/jobs", "_blank", "noopener,noreferrer")
+    return
+  }
+  // job_detail — fetch a real job to preview on
+  try {
+    const { results } = await searchJobs({ page_size: 1 })
+    if (results.length > 0) {
+      window.open(`/jobs/${results[0].job_id}`, "_blank", "noopener,noreferrer")
+    } else {
+      window.open("/jobs", "_blank", "noopener,noreferrer")
+    }
+  } catch {
+    window.open("/jobs", "_blank", "noopener,noreferrer")
+  }
+}
+
 const placementLabels: Record<BannerPlacement, string> = {
   search_top: "Search Top",
   search_sidebar: "Search Sidebar",
@@ -123,35 +134,17 @@ const statusColors: Record<BannerStatus, string> = {
   inactive: "bg-red-100 text-red-700",
 }
 
-const ACCEPTED_FILE_TYPES = ["image/svg+xml", "image/png", "image/jpeg"]
-const MAX_FILE_SIZE = 5 * 1024 * 1024
-
 // ═════════════════════════════════════════════════════════════════════════
 // Main Page Component
 // ═════════════════════════════════════════════════════════════════════════
 export default function BannersPage() {
+  const router = useRouter()
   const [banners, setBanners] = useState<SponsoredBanner[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [placementFilter, setPlacementFilter] = useState<BannerPlacement | "all">("all")
   const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [editingBanner, setEditingBanner] = useState<SponsoredBanner | null>(null)
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [deletingBanner, setDeletingBanner] = useState<SponsoredBanner | null>(null)
-  const [saving, setSaving] = useState(false)
-
-  // Form state
-  const [formTitle, setFormTitle] = useState("")
-  const [formImageUrl, setFormImageUrl] = useState("")
-  const [formTargetUrl, setFormTargetUrl] = useState("")
-  const [formPlacement, setFormPlacement] = useState<BannerPlacement>("homepage")
-  const [formSponsor, setFormSponsor] = useState("")
-  const [formActive, setFormActive] = useState(true)
-  const [formStartDate, setFormStartDate] = useState("")
-  const [formEndDate, setFormEndDate] = useState("")
-  const [uploadMode, setUploadMode] = useState<"file" | "url">("url")
-  const [uploadError, setUploadError] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const fetchBanners = useCallback(async () => {
     setLoading(true)
@@ -206,73 +199,7 @@ export default function BannersPage() {
       setBanners((prev) => prev.map((b) => (b.id === updated.id ? updated : b)))
     } catch (error) {
       console.error("Failed to toggle banner status:", error)
-    }
-  }
-
-  const openEditDialog = (banner: SponsoredBanner) => {
-    setEditingBanner(banner)
-    setFormTitle(banner.title)
-    setFormImageUrl(banner.image_url)
-    setFormTargetUrl(banner.target_url)
-    setFormPlacement(banner.placement)
-    setFormSponsor(banner.sponsor)
-    setFormActive(banner.is_active)
-    setFormStartDate(banner.start_date || "")
-    setFormEndDate(banner.end_date || "")
-    setUploadMode("url")
-    setUploadError(null)
-  }
-
-  const openCreateDialog = () => {
-    setIsCreateDialogOpen(true)
-    setFormTitle("")
-    setFormImageUrl("")
-    setFormTargetUrl("")
-    setFormPlacement("homepage")
-    setFormSponsor("")
-    setFormActive(true)
-    setFormStartDate("")
-    setFormEndDate("")
-    setUploadMode("url")
-    setUploadError(null)
-  }
-
-  const closeDialog = () => {
-    // Revoke blob URL to prevent memory leak
-    if (uploadMode === "file" && formImageUrl?.startsWith("blob:")) {
-      URL.revokeObjectURL(formImageUrl)
-    }
-    setEditingBanner(null)
-    setIsCreateDialogOpen(false)
-  }
-
-  const handleSave = async () => {
-    setSaving(true)
-    try {
-      const data: CreateBannerData = {
-        title: formTitle,
-        image_url: formImageUrl,
-        target_url: formTargetUrl,
-        placement: formPlacement,
-        sponsor: formSponsor,
-        is_active: formActive,
-        start_date: formStartDate || undefined,
-        end_date: formEndDate || undefined,
-      }
-
-      if (editingBanner) {
-        const updated = await updateBanner(editingBanner.id, data)
-        setBanners((prev) => prev.map((b) => (b.id === updated.id ? updated : b)))
-      } else {
-        const created = await createBanner(data)
-        setBanners((prev) => [...prev, created])
-      }
-      closeDialog()
-    } catch (error) {
-      console.error("Failed to save banner:", error)
-      toast.error("Failed to save banner. Please try again.")
-    } finally {
-      setSaving(false)
+      toast.error("Failed to toggle banner status")
     }
   }
 
@@ -282,29 +209,11 @@ export default function BannersPage() {
       await deleteBanner(deletingBanner.id)
       setBanners((prev) => prev.filter((b) => b.id !== deletingBanner.id))
       setDeletingBanner(null)
+      toast.success("Banner deleted")
     } catch (error) {
       console.error("Failed to delete banner:", error)
+      toast.error("Failed to delete banner")
     }
-  }
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
-      setUploadError("Invalid file type. Please upload SVG, PNG, or JPEG.")
-      return
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      setUploadError("File too large. Maximum size is 5MB.")
-      return
-    }
-    // Revoke any previous blob URL before creating a new one
-    if (formImageUrl?.startsWith("blob:")) {
-      URL.revokeObjectURL(formImageUrl)
-    }
-    setUploadError(null)
-    const url = URL.createObjectURL(file)
-    setFormImageUrl(url)
   }
 
   return (
@@ -335,9 +244,9 @@ export default function BannersPage() {
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
             Refresh
           </Button>
-          <Button onClick={openCreateDialog} className="gap-1.5 shadow-sm">
+          <Button onClick={() => router.push("/admin/banners/new")} className="gap-1.5 shadow-sm">
             <Plus className="h-4 w-4" />
-            Add Banner
+            Create Banner
           </Button>
         </div>
       </motion.div>
@@ -504,7 +413,7 @@ export default function BannersPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEditDialog(banner)}>
+                        <DropdownMenuItem onClick={() => router.push(`/admin/banners/${banner.id}/edit`)}>
                           <Pencil className="mr-2 h-4 w-4" />
                           Edit
                         </DropdownMenuItem>
@@ -512,11 +421,15 @@ export default function BannersPage() {
                           <Power className="mr-2 h-4 w-4" />
                           {banner.is_active ? "Deactivate" : "Activate"}
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openPlacementPreview(banner.placement)}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          Preview on Site
+                        </DropdownMenuItem>
                         {banner.target_url && (
                           <DropdownMenuItem asChild>
                             <a href={banner.target_url} target="_blank" rel="noopener noreferrer">
                               <ExternalLink className="mr-2 h-4 w-4" />
-                              Preview
+                              Visit Target URL
                             </a>
                           </DropdownMenuItem>
                         )}
@@ -559,168 +472,6 @@ export default function BannersPage() {
           })
         )}
       </motion.div>
-
-      {/* Edit/Create Dialog */}
-      <Dialog open={!!editingBanner || isCreateDialogOpen} onOpenChange={(open) => { if (!open) closeDialog() }}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{editingBanner ? "Edit Banner" : "Create Banner"}</DialogTitle>
-            <DialogDescription>
-              {editingBanner ? "Update banner details and settings" : "Configure the new banner placement"}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-6 py-4">
-            {/* Image Section */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label>Banner Image</Label>
-                <Tabs value={uploadMode} onValueChange={(v) => setUploadMode(v as "file" | "url")}>
-                  <TabsList className="h-8">
-                    <TabsTrigger value="url" className="text-xs px-3">Enter URL</TabsTrigger>
-                    <TabsTrigger value="file" className="text-xs px-3">Upload File</TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </div>
-
-              {uploadMode === "url" ? (
-                <div className="space-y-3">
-                  <Input
-                    value={formImageUrl}
-                    onChange={(e) => setFormImageUrl(e.target.value)}
-                    placeholder="https://example.com/banner.png"
-                  />
-                  {formImageUrl && (
-                    <div className="relative aspect-[4/1] bg-muted rounded-lg overflow-hidden">
-                      <img src={formImageUrl} alt="Preview" className="w-full h-full object-cover" onError={() => {}} />
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".svg,.png,.jpg,.jpeg"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
-                  <div
-                    className={cn(
-                      "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors hover:border-muted-foreground/50",
-                      uploadError ? "border-destructive" : "border-muted-foreground/25"
-                    )}
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm font-medium">Click to upload</p>
-                    <p className="text-xs text-muted-foreground mt-1">SVG, PNG, JPEG &bull; Max 5MB</p>
-                    {uploadError && <p className="text-xs text-destructive mt-2">{uploadError}</p>}
-                  </div>
-                  {formImageUrl && (
-                    <div className="relative aspect-[4/1] bg-muted rounded-lg overflow-hidden mt-3">
-                      <img src={formImageUrl} alt="Preview" className="w-full h-full object-cover" />
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                value={formTitle}
-                onChange={(e) => setFormTitle(e.target.value)}
-                placeholder="Banner title"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="target_url">Target URL</Label>
-              <Input
-                id="target_url"
-                value={formTargetUrl}
-                onChange={(e) => setFormTargetUrl(e.target.value)}
-                placeholder="https://example.com"
-              />
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Placement</Label>
-                <Select value={formPlacement} onValueChange={(v) => setFormPlacement(v as BannerPlacement)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="homepage">Homepage</SelectItem>
-                    <SelectItem value="search_top">Search Top</SelectItem>
-                    <SelectItem value="search_sidebar">Search Sidebar</SelectItem>
-                    <SelectItem value="job_detail">Job Detail</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="sponsor">Sponsor</Label>
-                <Input
-                  id="sponsor"
-                  value={formSponsor}
-                  onChange={(e) => setFormSponsor(e.target.value)}
-                  placeholder="Company name"
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="start_date">Start Date</Label>
-                <Input id="start_date" type="date" value={formStartDate} onChange={(e) => setFormStartDate(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="end_date">End Date</Label>
-                <Input id="end_date" type="date" value={formEndDate} onChange={(e) => setFormEndDate(e.target.value)} />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Switch checked={formActive} onCheckedChange={setFormActive} />
-              <Label>Active</Label>
-            </div>
-
-            {editingBanner && (
-              <div className="pt-4 border-t">
-                <Label className="mb-3 block">Performance</Label>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="p-3 bg-muted rounded-lg">
-                    <p className="text-xs text-muted-foreground">Impressions</p>
-                    <p className="text-lg font-semibold">{editingBanner.impressions.toLocaleString()}</p>
-                  </div>
-                  <div className="p-3 bg-muted rounded-lg">
-                    <p className="text-xs text-muted-foreground">Clicks</p>
-                    <p className="text-lg font-semibold">{editingBanner.clicks.toLocaleString()}</p>
-                  </div>
-                  <div className="p-3 bg-muted rounded-lg">
-                    <p className="text-xs text-muted-foreground">CTR</p>
-                    <p className="text-lg font-semibold">
-                      {editingBanner.impressions > 0
-                        ? ((editingBanner.clicks / editingBanner.impressions) * 100).toFixed(2)
-                        : "0.00"}%
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={closeDialog}>Cancel</Button>
-            <Button onClick={handleSave} disabled={saving || !formTitle || !formTargetUrl || !formImageUrl}>
-              {saving ? "Saving..." : editingBanner ? "Save Changes" : "Create Banner"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Confirmation */}
       <AlertDialog open={!!deletingBanner} onOpenChange={(open) => !open && setDeletingBanner(null)}>

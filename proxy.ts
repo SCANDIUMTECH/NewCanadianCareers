@@ -20,8 +20,10 @@ export function proxy(request: NextRequest) {
   }
 
   // Redirect authenticated users away from auth pages (login, signup, etc.)
-  // Role-based routing is handled client-side after API validates the token
-  if (isAuthPage && hasToken) {
+  // Role-based routing is handled client-side after API validates the token.
+  // Skip redirect if session_expired flag is set — the user is here because
+  // their token was invalidated and they need to re-authenticate.
+  if (isAuthPage && hasToken && !request.nextUrl.searchParams.has('session_expired')) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 

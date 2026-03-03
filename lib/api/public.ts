@@ -179,7 +179,9 @@ export interface PaginatedPublicResponse<T> {
 // API Base URL
 // =============================================================================
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || ''
+const API_BASE_URL = typeof window !== 'undefined'
+  ? (process.env.NEXT_PUBLIC_API_URL ?? '')
+  : (process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || '')
 
 // =============================================================================
 // Public API Client (no auth headers)

@@ -1,11 +1,15 @@
 """
 Core views for health checks and system endpoints.
 """
-from django.db import connection
+import logging
+
 from django.core.cache import cache
-from rest_framework.views import APIView
-from rest_framework.response import Response
+from django.db import connection
 from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+logger = logging.getLogger('core.views')
 
 
 class HealthCheckView(APIView):
@@ -24,8 +28,9 @@ class HealthCheckView(APIView):
         try:
             with connection.cursor() as cursor:
                 cursor.execute('SELECT 1')
-        except Exception as e:
-            health_status['database'] = str(e)
+        except Exception:
+            logger.exception('Health check: database unavailable')
+            health_status['database'] = 'unavailable'
             health_status['status'] = 'unhealthy'
 
         # Check cache
@@ -33,8 +38,9 @@ class HealthCheckView(APIView):
             cache.set('health_check', 'ok', 10)
             if cache.get('health_check') != 'ok':
                 raise Exception('Cache read failed')
-        except Exception as e:
-            health_status['cache'] = str(e)
+        except Exception:
+            logger.exception('Health check: cache unavailable')
+            health_status['cache'] = 'unavailable'
             health_status['status'] = 'unhealthy'
 
         status_code = 200 if health_status['status'] == 'healthy' else 503

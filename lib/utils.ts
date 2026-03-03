@@ -1,6 +1,5 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
-import DOMPurify from 'isomorphic-dompurify'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -90,43 +89,6 @@ export function formatCents(
 export function getCurrencySymbol(currency: string): string {
   const found = CURRENCY_OPTIONS.find((c) => c.value === currency)
   return found?.symbol ?? "$"
-}
-
-// ---------------------------------------------------------------------------
-// HTML sanitization
-// ---------------------------------------------------------------------------
-
-/**
- * HTML sanitizer for rich text previews.
- * Uses DOMPurify (DOM-parser-based) for robust XSS prevention.
- * Allows safe formatting tags; strips scripts, iframes, forms, event handlers,
- * style attributes, and dangerous URI schemes.
- */
-export function sanitizeHtml(html: string): string {
-  // Enforce rel="noopener noreferrer" on all links to prevent tabnapping
-  DOMPurify.addHook('afterSanitizeAttributes', (node) => {
-    if (node.tagName === 'A') {
-      node.setAttribute('rel', 'noopener noreferrer')
-      if (!node.getAttribute('target')) {
-        node.setAttribute('target', '_blank')
-      }
-    }
-  })
-
-  try {
-    return DOMPurify.sanitize(html, {
-      ALLOWED_TAGS: [
-        'p', 'br', 'b', 'i', 'em', 'strong', 'u', 's', 'a',
-        'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-        'blockquote', 'pre', 'code', 'span', 'div', 'hr', 'table',
-        'thead', 'tbody', 'tr', 'th', 'td', 'sub', 'sup',
-      ],
-      ALLOWED_ATTR: ['href', 'target', 'rel', 'class'],
-      ALLOW_DATA_ATTR: false,
-    })
-  } finally {
-    DOMPurify.removeHook('afterSanitizeAttributes')
-  }
 }
 
 // ---------------------------------------------------------------------------

@@ -33,9 +33,13 @@ urlpatterns = [
     path('api/search/', include('apps.search.urls')),
     path('api/social/', include('apps.social.urls')),
     path('api/candidates/', include('apps.candidates.urls')),
+    path('api/articles/', include('apps.articles.urls')),
 
     # Job-specific social posts endpoint
     path('api/jobs/<int:job_id>/social-posts/', JobSocialPostsView.as_view(), name='job-social-posts'),
+
+    # Public banners & affiliate links (no auth — rendered on public pages)
+    path('api/', include('apps.moderation.public_urls')),
 
     # AI services (authenticated users: SEO + social generation)
     path('api/ai/', include('apps.ai.urls')),

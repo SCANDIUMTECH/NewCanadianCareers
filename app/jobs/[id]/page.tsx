@@ -15,7 +15,8 @@ const getJob = cache(async (id: string): Promise<PublicJobDetail | null> => {
   try {
     const job = await getPublicJob(id)
     return job
-  } catch {
+  } catch (error) {
+    console.error("Error fetching job:", error)
     return null
   }
 })

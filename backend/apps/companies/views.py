@@ -3,8 +3,11 @@ Company views for Orion API.
 """
 import logging
 
+from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.http import HttpResponse
+
+from core.validators import UploadRateThrottle
 from rest_framework import viewsets, generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -84,11 +87,14 @@ class CompanyProfileView(generics.RetrieveUpdateAPIView):
 
 
 class CompanyLogoUploadView(APIView):
-    """Upload company logo. Accepts PNG, JPG, SVG, WebP."""
+    """Upload company logo. Accepts PNG, JPG, WebP."""
 
     permission_classes = [IsAuthenticated, IsEmployer]
+    throttle_classes = [UploadRateThrottle]
 
     def post(self, request):
+        from core.validators import validate_upload, sanitize_filename, convert_to_webp, LOGO_PROFILE
+
         company = request.user.company
         logo_file = request.FILES.get('logo')
 
@@ -98,8 +104,17 @@ class CompanyLogoUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        try:
+            validate_upload(logo_file, LOGO_PROFILE)
+        except ValidationError as e:
+            return Response({'error': e.message}, status=status.HTTP_400_BAD_REQUEST)
+
+        sanitize_filename(logo_file)
+        logo_file = convert_to_webp(logo_file)
+
+        if company.logo:
+            company.logo.delete(save=False)
         company.logo = logo_file
-        company.full_clean()  # Triggers file extension validator
         company.save(update_fields=['logo'])
 
         serializer = CompanyDetailSerializer(company)
@@ -107,11 +122,14 @@ class CompanyLogoUploadView(APIView):
 
 
 class CompanyBannerUploadView(APIView):
-    """Upload company banner. Accepts PNG, JPG, SVG, WebP."""
+    """Upload company banner. Accepts PNG, JPG, WebP."""
 
     permission_classes = [IsAuthenticated, IsEmployer]
+    throttle_classes = [UploadRateThrottle]
 
     def post(self, request):
+        from core.validators import validate_upload, sanitize_filename, convert_to_webp, BANNER_PROFILE
+
         company = request.user.company
         banner_file = request.FILES.get('banner')
 
@@ -121,8 +139,17 @@ class CompanyBannerUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        try:
+            validate_upload(banner_file, BANNER_PROFILE)
+        except ValidationError as e:
+            return Response({'error': e.message}, status=status.HTTP_400_BAD_REQUEST)
+
+        sanitize_filename(banner_file)
+        banner_file = convert_to_webp(banner_file)
+
+        if company.banner:
+            company.banner.delete(save=False)
         company.banner = banner_file
-        company.full_clean()
         company.save(update_fields=['banner'])
 
         serializer = CompanyDetailSerializer(company)
@@ -1698,8 +1725,11 @@ class AgencyLogoUploadView(APIView):
     """Upload agency logo."""
 
     permission_classes = [IsAuthenticated, IsAgency]
+    throttle_classes = [UploadRateThrottle]
 
     def post(self, request):
+        from core.validators import validate_upload, sanitize_filename, convert_to_webp, LOGO_PROFILE
+
         agency = request.user.agency
         if not agency:
             return Response({'error': 'No agency associated with user'}, status=status.HTTP_400_BAD_REQUEST)
@@ -1708,6 +1738,16 @@ class AgencyLogoUploadView(APIView):
         if not logo_file:
             return Response({'error': 'No logo file provided'}, status=status.HTTP_400_BAD_REQUEST)
 
+        try:
+            validate_upload(logo_file, LOGO_PROFILE)
+        except ValidationError as e:
+            return Response({'error': e.message}, status=status.HTTP_400_BAD_REQUEST)
+
+        sanitize_filename(logo_file)
+        logo_file = convert_to_webp(logo_file)
+
+        if agency.logo:
+            agency.logo.delete(save=False)
         agency.logo = logo_file
         agency.save(update_fields=['logo'])
         return Response({'message': 'Logo uploaded successfully'})

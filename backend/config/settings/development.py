@@ -6,7 +6,7 @@ from .base import *
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', 'web']
 
 # Database - PostgreSQL (same as production for dev/prod parity)
 DATABASES = {
@@ -45,8 +45,16 @@ INTERNAL_IPS = ['127.0.0.1']
 # Email - Console backend for development
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-# Storage - MinIO (S3-compatible), same as production for dev/prod parity
-DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+# Storage — MinIO (S3-compatible), same as production for dev/prod parity.
+# Django 5.x requires STORAGES dict (DEFAULT_FILE_STORAGE is deprecated).
+STORAGES = {
+    'default': {
+        'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
+    },
+    'staticfiles': {
+        'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+    },
+}
 AWS_ACCESS_KEY_ID = os.environ.get('MINIO_ACCESS_KEY')
 AWS_SECRET_ACCESS_KEY = os.environ.get('MINIO_SECRET_KEY')
 AWS_STORAGE_BUCKET_NAME = os.environ.get('MINIO_BUCKET_NAME', 'orion-media')
@@ -54,9 +62,14 @@ AWS_S3_ENDPOINT_URL = f"http://{os.environ.get('MINIO_ENDPOINT', 'minio:9000')}"
 AWS_S3_USE_SSL = False
 AWS_S3_FILE_OVERWRITE = False
 AWS_DEFAULT_ACL = None
-AWS_QUERYSTRING_AUTH = True
 AWS_S3_SIGNATURE_VERSION = 's3v4'
 AWS_S3_REGION_NAME = 'us-east-1'
+
+# Public media URL — Traefik proxies /media/* to MinIO with path rewriting.
+# Bucket has public-read policy (set by minio-init container).
+AWS_S3_CUSTOM_DOMAIN = os.environ.get('MEDIA_DOMAIN', 'localhost/media')
+AWS_S3_URL_PROTOCOL = 'https:'
+AWS_QUERYSTRING_AUTH = False
 
 # Celery — run tasks synchronously in dev (no Redis/worker needed)
 CELERY_TASK_ALWAYS_EAGER = True

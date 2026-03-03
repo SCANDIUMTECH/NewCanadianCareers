@@ -517,6 +517,58 @@ class AffiliateLink(TimestampMixin, models.Model):
         return self.name
 
 
+class BannerImpression(models.Model):
+    """Tracks individual banner impressions for analytics."""
+
+    banner = models.ForeignKey(SponsoredBanner, on_delete=models.CASCADE, related_name='impression_records')
+    visitor_id = models.CharField(max_length=100, db_index=True)
+    user = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, blank=True)
+    ip_address = models.GenericIPAddressField()
+    user_agent = models.TextField(blank=True)
+    referrer = models.URLField(blank=True)
+    placement = models.CharField(max_length=50, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'banner_impressions'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['banner', 'visitor_id', 'created_at']),
+        ]
+
+
+class BannerClick(models.Model):
+    """Tracks individual banner clicks for analytics."""
+
+    banner = models.ForeignKey(SponsoredBanner, on_delete=models.CASCADE, related_name='click_records')
+    visitor_id = models.CharField(max_length=100, db_index=True)
+    user = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, blank=True)
+    ip_address = models.GenericIPAddressField()
+    user_agent = models.TextField(blank=True)
+    referrer = models.URLField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'banner_clicks'
+        ordering = ['-created_at']
+
+
+class AffiliateLinkClick(models.Model):
+    """Tracks individual affiliate link clicks for analytics."""
+
+    link = models.ForeignKey(AffiliateLink, on_delete=models.CASCADE, related_name='click_records')
+    visitor_id = models.CharField(max_length=100, db_index=True)
+    user = models.ForeignKey('users.User', on_delete=models.SET_NULL, null=True, blank=True)
+    ip_address = models.GenericIPAddressField()
+    user_agent = models.TextField(blank=True)
+    referrer = models.URLField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'affiliate_link_clicks'
+        ordering = ['-created_at']
+
+
 class FeatureFlag(TimestampMixin, models.Model):
     """Feature flags for platform configuration."""
 
@@ -727,4 +779,93 @@ class Industry(TimestampMixin, models.Model):
         if not self.slug:
             from django.utils.text import slugify
             self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+
+class RetentionRule(TimestampMixin, models.Model):
+    """Data retention rules for compliance management."""
+
+    ENFORCEMENT_CHOICES = [
+        ('manual', 'Manual'),
+        ('automated', 'Automated'),
+        ('legal_hold', 'Legal Hold'),
+    ]
+
+    category = models.CharField(max_length=100)
+    description = models.TextField()
+    retention_days = models.PositiveIntegerField(
+        help_text='Number of days to retain data (e.g., 1095 for 3 years)'
+    )
+    is_deletable = models.BooleanField(
+        default=False,
+        help_text='Whether users can request deletion of this data category'
+    )
+    is_active = models.BooleanField(default=True)
+    enforcement = models.CharField(
+        max_length=20, choices=ENFORCEMENT_CHOICES, default='manual'
+    )
+    legal_basis = models.CharField(max_length=200, blank=True)
+    sort_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = 'retention_rules'
+        ordering = ['sort_order', 'category']
+
+    def __str__(self):
+        return self.category
+
+
+class LegalDocument(TimestampMixin, models.Model):
+    """Legal documents (privacy policy, terms of service, etc.)."""
+
+    DOCUMENT_TYPE_CHOICES = [
+        ('privacy_policy', 'Privacy Policy'),
+        ('terms_of_service', 'Terms of Service'),
+        ('cookie_policy', 'Cookie Policy'),
+        ('dpa', 'Data Processing Agreement'),
+        ('acceptable_use', 'Acceptable Use Policy'),
+        ('other', 'Other'),
+    ]
+
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('published', 'Published'),
+        ('archived', 'Archived'),
+    ]
+
+    title = models.CharField(max_length=200)
+    slug = models.SlugField(unique=True)
+    document_type = models.CharField(max_length=30, choices=DOCUMENT_TYPE_CHOICES)
+    content = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    version = models.CharField(max_length=20, default='1.0')
+    published_at = models.DateTimeField(null=True, blank=True)
+    effective_date = models.DateField(null=True, blank=True)
+    last_reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reviewed_legal_documents'
+    )
+    public_url = models.URLField(blank=True)
+
+    class Meta:
+        db_table = 'legal_documents'
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        return f'{self.title} v{self.version}'
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            from django.utils.text import slugify
+            base_slug = slugify(self.title)
+            slug = base_slug
+            counter = 1
+            while LegalDocument.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f'{base_slug}-{counter}'
+                counter += 1
+            self.slug = slug
         super().save(*args, **kwargs)

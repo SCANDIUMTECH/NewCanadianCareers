@@ -25,6 +25,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { BannerSlot } from "@/components/banners/banner-slot"
+import { AffiliateSlot } from "@/components/affiliates/affiliate-slot"
 import {
   Tooltip,
   TooltipContent,
@@ -146,6 +148,7 @@ export function JobDetailClient({ job }: JobDetailClientProps) {
       month: "long",
       day: "numeric",
       year: "numeric",
+      timeZone: "UTC",
     })
   }
 
@@ -807,6 +810,12 @@ export function JobDetailClient({ job }: JobDetailClientProps) {
                   View more jobs
                 </Button>
               </div>
+
+              {/* Banner Slot */}
+              <BannerSlot placement="job_detail" />
+
+              {/* Affiliate Links */}
+              <AffiliateSlot placement="job_detail" variant="card" />
             </div>
           </div>
 

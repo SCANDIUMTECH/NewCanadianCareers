@@ -244,7 +244,14 @@ class AdminSocialPostSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SocialPost
-        fields = '__all__'
+        fields = [
+            'id', 'job', 'job_title', 'job_company', 'platform',
+            'platform_display', 'status_display', 'content', 'image',
+            'scheduled_at', 'posted_at', 'status', 'error_message',
+            'external_id', 'external_url', 'impressions', 'clicks',
+            'likes', 'shares', 'created_by', 'created_by_name',
+            'created_at', 'updated_at',
+        ]
         read_only_fields = [
             'external_id', 'external_url', 'posted_at',
             'impressions', 'clicks', 'likes', 'shares',
@@ -272,7 +279,12 @@ class AdminSocialAccountSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SocialAccount
-        fields = '__all__'
+        fields = [
+            'id', 'company', 'company_name', 'agency', 'agency_name',
+            'platform', 'platform_display', 'account_name', 'account_id',
+            'access_token', 'refresh_token', 'token_expires_at',
+            'is_active', 'last_used_at', 'created_at', 'updated_at',
+        ]
         extra_kwargs = {
             'access_token': {'write_only': True},
             'refresh_token': {'write_only': True},

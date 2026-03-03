@@ -8,7 +8,7 @@ from django.utils.text import slugify
 from core.mixins import TimestampMixin
 from core.utils import generate_entity_id
 
-LOGO_EXTENSIONS = ['svg', 'png', 'jpg', 'jpeg', 'webp']
+LOGO_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp']  # No SVG — XSS vector
 
 
 class Company(TimestampMixin, models.Model):

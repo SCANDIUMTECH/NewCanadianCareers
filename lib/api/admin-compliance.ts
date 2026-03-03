@@ -11,6 +11,12 @@ import type {
   ProcessComplianceRequestData,
   PaginatedResponse,
   MessageResponse,
+  RetentionRule,
+  CreateRetentionRuleData,
+  UpdateRetentionRuleData,
+  LegalDocument,
+  CreateLegalDocumentData,
+  UpdateLegalDocumentData,
 } from '@/lib/admin/types'
 
 // =============================================================================
@@ -187,4 +193,76 @@ export async function exportComplianceRequests(
   if (filters?.end_date) params.set('end_date', filters.end_date)
 
   return apiClientBlob(`/api/admin/compliance/export/?${params.toString()}`)
+}
+
+// =============================================================================
+// Retention Rules CRUD
+// =============================================================================
+
+export async function getRetentionRules(): Promise<RetentionRule[]> {
+  return apiClient<RetentionRule[]>('/api/admin/compliance/retention-rules/')
+}
+
+export async function createRetentionRule(data: CreateRetentionRuleData): Promise<RetentionRule> {
+  return apiClient<RetentionRule>('/api/admin/compliance/retention-rules/', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateRetentionRule(id: number, data: UpdateRetentionRuleData): Promise<RetentionRule> {
+  return apiClient<RetentionRule>(`/api/admin/compliance/retention-rules/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteRetentionRule(id: number): Promise<void> {
+  await apiClient(`/api/admin/compliance/retention-rules/${id}/`, {
+    method: 'DELETE',
+  })
+}
+
+// =============================================================================
+// Legal Documents CRUD
+// =============================================================================
+
+export async function getLegalDocuments(): Promise<LegalDocument[]> {
+  return apiClient<LegalDocument[]>('/api/admin/compliance/legal-documents/')
+}
+
+export async function getLegalDocument(id: number | string): Promise<LegalDocument> {
+  return apiClient<LegalDocument>(`/api/admin/compliance/legal-documents/${id}/`)
+}
+
+export async function createLegalDocument(data: CreateLegalDocumentData): Promise<LegalDocument> {
+  return apiClient<LegalDocument>('/api/admin/compliance/legal-documents/', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateLegalDocument(id: number, data: UpdateLegalDocumentData): Promise<LegalDocument> {
+  return apiClient<LegalDocument>(`/api/admin/compliance/legal-documents/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteLegalDocument(id: number): Promise<void> {
+  await apiClient(`/api/admin/compliance/legal-documents/${id}/`, {
+    method: 'DELETE',
+  })
+}
+
+export async function publishLegalDocument(id: number): Promise<LegalDocument> {
+  return apiClient<LegalDocument>(`/api/admin/compliance/legal-documents/${id}/publish/`, {
+    method: 'POST',
+  })
+}
+
+export async function archiveLegalDocument(id: number): Promise<LegalDocument> {
+  return apiClient<LegalDocument>(`/api/admin/compliance/legal-documents/${id}/archive/`, {
+    method: 'POST',
+  })
 }

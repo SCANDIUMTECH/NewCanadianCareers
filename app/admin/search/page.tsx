@@ -2044,10 +2044,13 @@ Disallow: /`}
                 <div className="space-y-2">
                   <Label>Select Company</Label>
                   <Combobox
-                    items={companyList.map(c => c.name)}
-                    value={companyList.find(c => c.id === selectedCompanyId)?.name ?? null}
-                    onValueChange={(name) => {
-                      const match = companyList.find(c => c.name === name)
+                    items={companyList.map(c => `${c.name} (#${c.id})`)}
+                    value={(() => {
+                      const company = companyList.find(c => c.id === selectedCompanyId)
+                      return company ? `${company.name} (#${company.id})` : null
+                    })()}
+                    onValueChange={(label) => {
+                      const match = companyList.find(c => `${c.name} (#${c.id})` === label)
                       setSelectedCompanyId(match?.id)
                     }}
                   >

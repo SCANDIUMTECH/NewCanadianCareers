@@ -6,6 +6,7 @@ import secrets
 from datetime import timedelta
 
 from django.conf import settings as django_settings
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 from django.contrib.auth import login, logout
@@ -17,6 +18,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from apps.moderation.turnstile import verify_turnstile_token
+from core.validators import UploadRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.permissions import IsAdmin
@@ -958,11 +960,11 @@ class ResumeUploadView(APIView):
     """Upload resume for current user."""
 
     permission_classes = [IsAuthenticated]
-
-    ALLOWED_EXTENSIONS = {'.pdf', '.doc', '.docx', '.rtf', '.txt', '.odt'}
-    MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+    throttle_classes = [UploadRateThrottle]
 
     def post(self, request):
+        from core.validators import validate_upload, sanitize_filename, DOCUMENT_PROFILE
+
         user = request.user
         resume_file = request.FILES.get('file')
 
@@ -972,32 +974,21 @@ class ResumeUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Validate file size
-        if resume_file.size > self.MAX_FILE_SIZE:
-            return Response(
-                {'error': 'File too large. Maximum size is 10 MB.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        try:
+            validate_upload(resume_file, DOCUMENT_PROFILE)
+        except ValidationError as e:
+            return Response({'error': e.message}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Validate file extension
-        import os
-        ext = os.path.splitext(resume_file.name)[1].lower()
-        if ext not in self.ALLOWED_EXTENSIONS:
-            return Response(
-                {'error': f'Invalid file type. Allowed: {", ".join(sorted(self.ALLOWED_EXTENSIONS))}'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        # Preserve original filename for display before sanitizing storage name
+        original_name = resume_file.name
+        sanitize_filename(resume_file)
 
         # Delete old resume if exists
         if user.resume:
             user.resume.delete(save=False)
 
-        # Sanitize filename to prevent path traversal
-        resume_file.name = os.path.basename(resume_file.name)
-
-        # Save new resume
         user.resume = resume_file
-        user.resume_filename = resume_file.name
+        user.resume_filename = original_name
         user.save(update_fields=['resume', 'resume_filename'])
 
         serializer = ResumeSerializer(user, context={'request': request})
@@ -1030,11 +1021,11 @@ class AvatarUploadView(APIView):
     """Upload avatar for current user."""
 
     permission_classes = [IsAuthenticated]
-
-    ALLOWED_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.webp', '.gif'}
-    MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
+    throttle_classes = [UploadRateThrottle]
 
     def post(self, request):
+        from core.validators import validate_upload, sanitize_filename, convert_to_webp, AVATAR_PROFILE
+
         user = request.user
         avatar_file = request.FILES.get('file')
 
@@ -1044,30 +1035,17 @@ class AvatarUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Validate file size
-        if avatar_file.size > self.MAX_FILE_SIZE:
-            return Response(
-                {'error': 'File too large. Maximum size is 5 MB.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        try:
+            validate_upload(avatar_file, AVATAR_PROFILE)
+        except ValidationError as e:
+            return Response({'error': e.message}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Validate file extension
-        import os
-        ext = os.path.splitext(avatar_file.name)[1].lower()
-        if ext not in self.ALLOWED_EXTENSIONS:
-            return Response(
-                {'error': f'Invalid file type. Allowed: {", ".join(sorted(self.ALLOWED_EXTENSIONS))}'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        sanitize_filename(avatar_file)
+        avatar_file = convert_to_webp(avatar_file)
 
-        # Sanitize filename to prevent path traversal
-        avatar_file.name = os.path.basename(avatar_file.name)
-
-        # Delete old avatar if exists
         if user.avatar:
             user.avatar.delete(save=False)
 
-        # Save new avatar
         user.avatar = avatar_file
         user.save(update_fields=['avatar'])
 

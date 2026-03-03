@@ -18,6 +18,11 @@ import {
   MoreHorizontal,
   RefreshCw,
   Loader2,
+  Plus,
+  Pencil,
+  Archive,
+  Globe,
+  Send,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -62,30 +67,80 @@ import {
   executeDeletion,
   exportComplianceRequests,
   generateComplianceReport,
+  getRetentionRules,
+  createRetentionRule,
+  updateRetentionRule,
+  deleteRetentionRule,
+  getLegalDocuments,
+  createLegalDocument,
+  updateLegalDocument,
+  deleteLegalDocument,
+  publishLegalDocument,
+  archiveLegalDocument,
 } from "@/lib/api/admin-compliance"
 import type {
   ComplianceRequest,
   ComplianceStats,
   ComplianceFilters,
   PaginatedResponse,
+  RetentionRule,
+  RetentionEnforcement,
+  CreateRetentionRuleData,
+  LegalDocument,
+  LegalDocumentType,
+  CreateLegalDocumentData,
 } from "@/lib/admin/types"
 
-// Retention rules (static config)
-const retentionRules = [
-  { category: "Candidate Profiles", retention: "3 years after last activity", deletable: true },
-  { category: "Job Applications", retention: "2 years after application", deletable: true },
-  { category: "Employer Accounts", retention: "5 years after account closure", deletable: true },
-  { category: "Payment Records", retention: "7 years (legal requirement)", deletable: false },
-  { category: "Audit Logs", retention: "Permanent (anonymized after 5 years)", deletable: false },
-  { category: "Email Communications", retention: "1 year", deletable: true },
-]
+const enforcementConfig: Record<string, { label: string; color: string }> = {
+  manual: { label: "Manual", color: "bg-gray-100 text-gray-700" },
+  automated: { label: "Automated", color: "bg-blue-100 text-blue-700" },
+  legal_hold: { label: "Legal Hold", color: "bg-amber-100 text-amber-700" },
+}
+
+const docTypeLabels: Record<string, string> = {
+  privacy_policy: "Privacy Policy",
+  terms_of_service: "Terms of Service",
+  cookie_policy: "Cookie Policy",
+  dpa: "Data Processing Agreement",
+  acceptable_use: "Acceptable Use Policy",
+  other: "Other",
+}
+
+const docStatusConfig: Record<string, { label: string; color: string }> = {
+  draft: { label: "Draft", color: "bg-gray-100 text-gray-700" },
+  published: { label: "Published", color: "bg-emerald-100 text-emerald-700" },
+  archived: { label: "Archived", color: "bg-amber-100 text-amber-700" },
+}
+
+const formatRetention = (days: number) => {
+  if (days >= 365) {
+    const years = Math.round(days / 365)
+    return `${years} year${years > 1 ? "s" : ""}`
+  }
+  if (days >= 30) {
+    const months = Math.round(days / 30)
+    return `${months} month${months > 1 ? "s" : ""}`
+  }
+  return `${days} day${days > 1 ? "s" : ""}`
+}
 
 const statusConfig: Record<string, { label: string; color: string; icon: typeof Clock }> = {
   pending: { label: "Pending", color: "bg-amber-100 text-amber-700", icon: Clock },
-  processing: { label: "Processing", color: "bg-blue-100 text-blue-700", icon: RefreshCw },
+  in_progress: { label: "Processing", color: "bg-blue-100 text-blue-700", icon: RefreshCw },
   completed: { label: "Completed", color: "bg-emerald-100 text-emerald-700", icon: Check },
   rejected: { label: "Rejected", color: "bg-red-100 text-red-700", icon: AlertTriangle },
 }
+
+const typeLabels: Record<string, string> = {
+  gdpr_access: "GDPR Access",
+  gdpr_delete: "GDPR Deletion",
+  gdpr_portability: "GDPR Portability",
+  ccpa_access: "CCPA Access",
+  ccpa_delete: "CCPA Deletion",
+  ccpa_opt_out: "CCPA Opt-Out",
+}
+
+const isDeletionType = (type: string) => ["gdpr_delete", "ccpa_delete"].includes(type)
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -153,6 +208,23 @@ export default function CompliancePage() {
   const [verificationMessage, setVerificationMessage] = useState("")
   const [processResolution, setProcessResolution] = useState("")
 
+  // Retention rules state
+  const [retentionRules, setRetentionRules] = useState<RetentionRule[]>([])
+  const [isRetentionLoading, setIsRetentionLoading] = useState(false)
+  const [retentionDialog, setRetentionDialog] = useState<{ open: boolean; rule: RetentionRule | null }>({ open: false, rule: null })
+  const [retentionForm, setRetentionForm] = useState<CreateRetentionRuleData>({
+    category: "", description: "", retention_days: 365, is_deletable: false, is_active: true,
+    enforcement: "manual", legal_basis: "", sort_order: 0,
+  })
+  const [isRetentionSaving, setIsRetentionSaving] = useState(false)
+  const [retentionDeleteDialog, setRetentionDeleteDialog] = useState<{ open: boolean; rule: RetentionRule | null }>({ open: false, rule: null })
+
+  // Legal documents state
+  const [legalDocs, setLegalDocs] = useState<LegalDocument[]>([])
+  const [isDocsLoading, setIsDocsLoading] = useState(false)
+  const [docDeleteDialog, setDocDeleteDialog] = useState<{ open: boolean; doc: LegalDocument | null }>({ open: false, doc: null })
+  const [docViewDialog, setDocViewDialog] = useState<{ open: boolean; doc: LegalDocument | null }>({ open: false, doc: null })
+
   // ==========================================================================
   // Data Fetching
   // ==========================================================================
@@ -188,6 +260,30 @@ export default function CompliancePage() {
     }
   }, [])
 
+  const fetchRetentionRules = useCallback(async () => {
+    setIsRetentionLoading(true)
+    try {
+      const data = await getRetentionRules()
+      setRetentionRules(data)
+    } catch (err) {
+      console.error("Failed to fetch retention rules:", err)
+    } finally {
+      setIsRetentionLoading(false)
+    }
+  }, [])
+
+  const fetchLegalDocs = useCallback(async () => {
+    setIsDocsLoading(true)
+    try {
+      const data = await getLegalDocuments()
+      setLegalDocs(data)
+    } catch (err) {
+      console.error("Failed to fetch legal documents:", err)
+    } finally {
+      setIsDocsLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     fetchRequests()
   }, [fetchRequests])
@@ -195,6 +291,16 @@ export default function CompliancePage() {
   useEffect(() => {
     fetchStats()
   }, [fetchStats])
+
+  // Lazy-load retention rules and legal docs when tabs are activated
+  useEffect(() => {
+    if (activeTab === "retention" && retentionRules.length === 0 && !isRetentionLoading) {
+      fetchRetentionRules()
+    }
+    if (activeTab === "policies" && legalDocs.length === 0 && !isDocsLoading) {
+      fetchLegalDocs()
+    }
+  }, [activeTab, retentionRules.length, legalDocs.length, isRetentionLoading, isDocsLoading, fetchRetentionRules, fetchLegalDocs])
 
   // ==========================================================================
   // Action Handlers
@@ -325,6 +431,102 @@ export default function CompliancePage() {
       toast.error("Failed to generate compliance report. Please try again.")
     } finally {
       setIsGeneratingReport(false)
+    }
+  }
+
+  // Retention rule handlers
+  const openRetentionDialog = (rule?: RetentionRule) => {
+    if (rule) {
+      setRetentionForm({
+        category: rule.category,
+        description: rule.description,
+        retention_days: rule.retention_days,
+        is_deletable: rule.is_deletable,
+        is_active: rule.is_active,
+        enforcement: rule.enforcement,
+        legal_basis: rule.legal_basis,
+        sort_order: rule.sort_order,
+      })
+      setRetentionDialog({ open: true, rule })
+    } else {
+      setRetentionForm({
+        category: "", description: "", retention_days: 365, is_deletable: false, is_active: true,
+        enforcement: "manual", legal_basis: "", sort_order: retentionRules.length,
+      })
+      setRetentionDialog({ open: true, rule: null })
+    }
+  }
+
+  const handleSaveRetentionRule = async () => {
+    if (!retentionForm.category.trim() || !retentionForm.description.trim()) return
+    setIsRetentionSaving(true)
+    try {
+      if (retentionDialog.rule) {
+        await updateRetentionRule(retentionDialog.rule.id, retentionForm)
+        toast.success("Retention rule updated")
+      } else {
+        await createRetentionRule(retentionForm)
+        toast.success("Retention rule created")
+      }
+      setRetentionDialog({ open: false, rule: null })
+      fetchRetentionRules()
+    } catch (err) {
+      console.error("Failed to save retention rule:", err)
+      toast.error("Failed to save retention rule")
+    } finally {
+      setIsRetentionSaving(false)
+    }
+  }
+
+  const handleDeleteRetentionRule = async () => {
+    if (!retentionDeleteDialog.rule) return
+    setIsRetentionSaving(true)
+    try {
+      await deleteRetentionRule(retentionDeleteDialog.rule.id)
+      toast.success("Retention rule deleted")
+      setRetentionDeleteDialog({ open: false, rule: null })
+      fetchRetentionRules()
+    } catch (err) {
+      console.error("Failed to delete retention rule:", err)
+      toast.error("Failed to delete retention rule")
+    } finally {
+      setIsRetentionSaving(false)
+    }
+  }
+
+  // Legal document handlers
+  const handleDeleteDoc = async () => {
+    if (!docDeleteDialog.doc) return
+    try {
+      await deleteLegalDocument(docDeleteDialog.doc.id)
+      toast.success("Document deleted")
+      setDocDeleteDialog({ open: false, doc: null })
+      fetchLegalDocs()
+    } catch (err) {
+      console.error("Failed to delete document:", err)
+      toast.error("Failed to delete document")
+    }
+  }
+
+  const handlePublishDoc = async (doc: LegalDocument) => {
+    try {
+      await publishLegalDocument(doc.id)
+      toast.success("Document published")
+      fetchLegalDocs()
+    } catch (err) {
+      console.error("Failed to publish document:", err)
+      toast.error("Failed to publish document")
+    }
+  }
+
+  const handleArchiveDoc = async (doc: LegalDocument) => {
+    try {
+      await archiveLegalDocument(doc.id)
+      toast.success("Document archived")
+      fetchLegalDocs()
+    } catch (err) {
+      console.error("Failed to archive document:", err)
+      toast.error("Failed to archive document")
     }
   }
 
@@ -510,19 +712,23 @@ export default function CompliancePage() {
                   <SelectContent>
                     <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="processing">Processing</SelectItem>
+                    <SelectItem value="in_progress">Processing</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                     <SelectItem value="rejected">Rejected</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={filters.type || "all"} onValueChange={handleTypeFilter}>
-                  <SelectTrigger className="w-[140px] h-9">
+                  <SelectTrigger className="w-[180px] h-9">
                     <SelectValue placeholder="Type" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="export">Data Export</SelectItem>
-                    <SelectItem value="deletion">Data Deletion</SelectItem>
+                    <SelectItem value="gdpr_access">GDPR Access</SelectItem>
+                    <SelectItem value="gdpr_delete">GDPR Deletion</SelectItem>
+                    <SelectItem value="gdpr_portability">GDPR Portability</SelectItem>
+                    <SelectItem value="ccpa_access">CCPA Access</SelectItem>
+                    <SelectItem value="ccpa_delete">CCPA Deletion</SelectItem>
+                    <SelectItem value="ccpa_opt_out">CCPA Opt-Out</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -558,13 +764,13 @@ export default function CompliancePage() {
                       <div
                         className={cn(
                           "w-10 h-10 rounded-lg flex items-center justify-center",
-                          request.type === "export" ? "bg-blue-100" : "bg-red-100"
+                          isDeletionType(request.type) ? "bg-red-100" : "bg-blue-100"
                         )}
                       >
-                        {request.type === "export" ? (
-                          <Download className="w-5 h-5 text-blue-600" />
-                        ) : (
+                        {isDeletionType(request.type) ? (
                           <Trash2 className="w-5 h-5 text-red-600" />
+                        ) : (
+                          <Download className="w-5 h-5 text-blue-600" />
                         )}
                       </div>
 
@@ -595,7 +801,7 @@ export default function CompliancePage() {
                           {status.label}
                         </Badge>
                         <Badge variant="outline" className="text-xs">
-                          {request.type === "export" ? "Export" : "Deletion"}
+                          {typeLabels[request.type] || request.type}
                         </Badge>
 
                         <DropdownMenu>
@@ -633,15 +839,15 @@ export default function CompliancePage() {
                                 </DropdownMenuItem>
                               </>
                             )}
-                            {request.status === "processing" && (
+                            {request.status === "in_progress" && (
                               <>
-                                {request.type === "export" && (
+                                {!isDeletionType(request.type) && (
                                   <DropdownMenuItem onClick={() => handleExportData(request)}>
                                     <Download className="w-4 h-4 mr-2" />
                                     Generate Export
                                   </DropdownMenuItem>
                                 )}
-                                {request.type === "deletion" && (
+                                {isDeletionType(request.type) && (
                                   <DropdownMenuItem onClick={() => handlePreviewDeletion(request)}>
                                     <Trash2 className="w-4 h-4 mr-2" />
                                     Preview Deletion
@@ -694,34 +900,86 @@ export default function CompliancePage() {
         {/* Retention Rules Tab */}
         <TabsContent value="retention" className="space-y-4">
           <Card>
-            <div className="px-4 py-3 border-b border-border">
-              <h3 className="font-medium">Data Retention Policies</h3>
-              <p className="text-sm text-muted-foreground">
-                Defines how long data is kept before automatic deletion
-              </p>
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+              <div>
+                <h3 className="font-medium">Data Retention Policies</h3>
+                <p className="text-sm text-muted-foreground">
+                  Defines how long data is kept before automatic deletion
+                </p>
+              </div>
+              <Button size="sm" className="gap-1.5" onClick={() => openRetentionDialog()}>
+                <Plus className="w-4 h-4" />
+                Add Rule
+              </Button>
             </div>
             <div className="divide-y divide-border">
-              {retentionRules.map((rule, i) => (
-                <motion.div
-                  key={rule.category}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: i * 0.03 }}
-                  className="px-4 py-4 flex items-center justify-between"
-                >
-                  <div>
-                    <p className="font-medium">{rule.category}</p>
-                    <p className="text-sm text-muted-foreground">{rule.retention}</p>
+              {isRetentionLoading ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="px-4 py-4 flex items-center justify-between">
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-48" />
+                    </div>
+                    <Skeleton className="h-6 w-20" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    {rule.deletable ? (
-                      <Badge className="bg-emerald-100 text-emerald-700">User Deletable</Badge>
-                    ) : (
-                      <Badge variant="secondary">Protected</Badge>
-                    )}
-                  </div>
-                </motion.div>
-              ))}
+                ))
+              ) : retentionRules.length === 0 ? (
+                <div className="px-4 py-8 text-center text-muted-foreground">
+                  No retention rules defined yet.
+                </div>
+              ) : (
+                retentionRules.map((rule, i) => (
+                  <motion.div
+                    key={rule.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: i * 0.03 }}
+                    className="px-4 py-4 flex items-center justify-between"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{rule.category}</p>
+                        {!rule.is_active && <Badge variant="secondary" className="text-xs">Inactive</Badge>}
+                      </div>
+                      <p className="text-sm text-muted-foreground">{rule.description}</p>
+                      {rule.legal_basis && (
+                        <p className="text-xs text-muted-foreground mt-1">{rule.legal_basis}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+                      <Badge variant="outline">{formatRetention(rule.retention_days)}</Badge>
+                      <Badge className={enforcementConfig[rule.enforcement]?.color || ""}>
+                        {enforcementConfig[rule.enforcement]?.label || rule.enforcement}
+                      </Badge>
+                      {rule.is_deletable ? (
+                        <Badge className="bg-emerald-100 text-emerald-700">User Deletable</Badge>
+                      ) : (
+                        <Badge variant="secondary">Protected</Badge>
+                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openRetentionDialog(rule)}>
+                            <Pencil className="w-4 h-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => setRetentionDeleteDialog({ open: true, rule })}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </motion.div>
+                ))
+              )}
             </div>
           </Card>
 
@@ -743,42 +1001,123 @@ export default function CompliancePage() {
 
         {/* Policies Tab */}
         <TabsContent value="policies" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[
-              { title: "Privacy Policy", lastUpdated: "2026-01-15", url: "/privacy" },
-              { title: "Terms of Service", lastUpdated: "2026-01-15", url: "/terms" },
-              { title: "Cookie Policy", lastUpdated: "2025-12-01", url: "/cookies" },
-              { title: "Data Processing Agreement", lastUpdated: "2025-11-20", url: "/dpa" },
-            ].map((policy, i) => (
-              <Card
-                key={policy.title}
-                className="relative overflow-hidden group"
-              >
-                <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-indigo-500 opacity-[0.06] transition-opacity duration-300 group-hover:opacity-[0.10]" />
-                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-indigo-500 to-violet-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                <CardContent className="p-6 relative">
-                  <div className="flex items-start justify-between">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-sm">
-                      <FileText className="w-5 h-5" />
-                    </div>
-                    <Badge variant="secondary" className="text-xs">
-                      Updated {formatDate(policy.lastUpdated)}
-                    </Badge>
-                  </div>
-                  <h3 className="font-medium mt-4">{policy.title}</h3>
-                  <div className="flex items-center gap-2 mt-4">
-                    <Button variant="outline" size="sm" className="gap-1.5">
-                      <Eye className="w-4 h-4" />
-                      View
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      Edit
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-medium">Legal Documents</h3>
+              <p className="text-sm text-muted-foreground">Manage privacy policies, terms, and legal agreements</p>
+            </div>
+            <Button size="sm" className="gap-1.5" asChild>
+              <a href="/admin/compliance/documents/new">
+                <Plus className="w-4 h-4" />
+                New Document
+              </a>
+            </Button>
           </div>
+          {isDocsLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Card key={i} className="p-6">
+                  <div className="flex items-start justify-between">
+                    <Skeleton className="h-10 w-10 rounded-lg" />
+                    <Skeleton className="h-5 w-20" />
+                  </div>
+                  <Skeleton className="h-4 w-32 mt-4" />
+                  <Skeleton className="h-4 w-48 mt-2" />
+                  <div className="flex gap-2 mt-4">
+                    <Skeleton className="h-8 w-16" />
+                    <Skeleton className="h-8 w-16" />
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : legalDocs.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                No legal documents yet. Create your first document to get started.
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {legalDocs.map((doc) => (
+                <Card key={doc.id} className="relative overflow-hidden group">
+                  <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-indigo-500 opacity-[0.06] transition-opacity duration-300 group-hover:opacity-[0.10]" />
+                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-indigo-500 to-violet-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <CardContent className="p-6 relative">
+                    <div className="flex items-start justify-between">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-sm">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className={docStatusConfig[doc.status]?.color || ""}>
+                          {docStatusConfig[doc.status]?.label || doc.status}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">v{doc.version}</Badge>
+                      </div>
+                    </div>
+                    <h3 className="font-medium mt-4">{doc.title}</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {docTypeLabels[doc.document_type] || doc.document_type}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Updated {formatDate(doc.updated_at)}
+                      {doc.effective_date && ` \u00b7 Effective ${formatDate(doc.effective_date)}`}
+                    </p>
+                    <div className="flex items-center gap-2 mt-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={() => setDocViewDialog({ open: true, doc })}
+                      >
+                        <Eye className="w-4 h-4" />
+                        View
+                      </Button>
+                      <Button variant="outline" size="sm" className="gap-1.5" asChild>
+                        <a href={`/admin/compliance/documents/${doc.id}/edit`}>
+                          <Pencil className="w-4 h-4" />
+                          Edit
+                        </a>
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 ml-auto">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {doc.status === "draft" && (
+                            <DropdownMenuItem onClick={() => handlePublishDoc(doc)}>
+                              <Send className="w-4 h-4 mr-2" />
+                              Publish
+                            </DropdownMenuItem>
+                          )}
+                          {doc.status === "published" && (
+                            <DropdownMenuItem onClick={() => handleArchiveDoc(doc)}>
+                              <Archive className="w-4 h-4 mr-2" />
+                              Archive
+                            </DropdownMenuItem>
+                          )}
+                          {doc.public_url && (
+                            <DropdownMenuItem onClick={() => window.open(doc.public_url, "_blank")}>
+                              <Globe className="w-4 h-4 mr-2" />
+                              View Public URL
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => setDocDeleteDialog({ open: true, doc })}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
       </motion.div>
@@ -789,7 +1128,7 @@ export default function CompliancePage() {
           <DialogHeader>
             <DialogTitle>Request Details</DialogTitle>
             <DialogDescription>
-              {selectedRequest?.type === "export" ? "Data Export Request" : "Data Deletion Request"}
+              {isDeletionType(selectedRequest?.type || "") ? "Data Deletion Request" : "Data Access/Export Request"}
             </DialogDescription>
           </DialogHeader>
           {selectedRequest && (
@@ -1055,6 +1394,192 @@ export default function CompliancePage() {
             <Button onClick={handleGenerateReport} disabled={isGeneratingReport}>
               {isGeneratingReport && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Generate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Retention Rule Create/Edit Dialog */}
+      <Dialog open={retentionDialog.open} onOpenChange={(open) => !open && setRetentionDialog({ open: false, rule: null })}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{retentionDialog.rule ? "Edit Retention Rule" : "Add Retention Rule"}</DialogTitle>
+            <DialogDescription>
+              {retentionDialog.rule ? "Update the data retention rule." : "Define a new data retention rule."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Category *</Label>
+              <Input
+                placeholder="e.g., Candidate Profiles"
+                value={retentionForm.category}
+                onChange={(e) => setRetentionForm((f) => ({ ...f, category: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Description *</Label>
+              <Textarea
+                placeholder="e.g., Retained for 3 years after last activity"
+                value={retentionForm.description}
+                onChange={(e) => setRetentionForm((f) => ({ ...f, description: e.target.value }))}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Retention (days)</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={retentionForm.retention_days}
+                  onChange={(e) => setRetentionForm((f) => ({ ...f, retention_days: parseInt(e.target.value) || 0 }))}
+                />
+                <p className="text-xs text-muted-foreground">{formatRetention(retentionForm.retention_days || 0)}</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Enforcement</Label>
+                <Select
+                  value={retentionForm.enforcement}
+                  onValueChange={(v) => setRetentionForm((f) => ({ ...f, enforcement: v as RetentionEnforcement }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manual">Manual</SelectItem>
+                    <SelectItem value="automated">Automated</SelectItem>
+                    <SelectItem value="legal_hold">Legal Hold</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Legal Basis</Label>
+              <Input
+                placeholder="e.g., GDPR Article 5(1)(e)"
+                value={retentionForm.legal_basis}
+                onChange={(e) => setRetentionForm((f) => ({ ...f, legal_basis: e.target.value }))}
+              />
+            </div>
+            <div className="flex items-center gap-6">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={retentionForm.is_deletable}
+                  onChange={(e) => setRetentionForm((f) => ({ ...f, is_deletable: e.target.checked }))}
+                  className="rounded border-input"
+                />
+                User Deletable
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={retentionForm.is_active}
+                  onChange={(e) => setRetentionForm((f) => ({ ...f, is_active: e.target.checked }))}
+                  className="rounded border-input"
+                />
+                Active
+              </label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRetentionDialog({ open: false, rule: null })} disabled={isRetentionSaving}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveRetentionRule}
+              disabled={!retentionForm.category.trim() || !retentionForm.description.trim() || isRetentionSaving}
+            >
+              {isRetentionSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {retentionDialog.rule ? "Update Rule" : "Create Rule"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Retention Rule Delete Dialog */}
+      <Dialog open={retentionDeleteDialog.open} onOpenChange={(open) => !open && setRetentionDeleteDialog({ open: false, rule: null })}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Retention Rule</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete the &quot;{retentionDeleteDialog.rule?.category}&quot; retention rule? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRetentionDeleteDialog({ open: false, rule: null })} disabled={isRetentionSaving}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteRetentionRule} disabled={isRetentionSaving}>
+              {isRetentionSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Delete Rule
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Legal Document View Dialog */}
+      <Dialog open={docViewDialog.open} onOpenChange={(open) => !open && setDocViewDialog({ open: false, doc: null })}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{docViewDialog.doc?.title}</DialogTitle>
+            <DialogDescription>
+              {docTypeLabels[docViewDialog.doc?.document_type || ""] || docViewDialog.doc?.document_type} &middot; v{docViewDialog.doc?.version} &middot; {docStatusConfig[docViewDialog.doc?.status || ""]?.label || docViewDialog.doc?.status}
+            </DialogDescription>
+          </DialogHeader>
+          {docViewDialog.doc && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                {docViewDialog.doc.effective_date && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Effective Date</Label>
+                    <p>{formatDate(docViewDialog.doc.effective_date)}</p>
+                  </div>
+                )}
+                {docViewDialog.doc.published_at && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Published</Label>
+                    <p>{formatDate(docViewDialog.doc.published_at)}</p>
+                  </div>
+                )}
+                {docViewDialog.doc.reviewed_by_name && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Reviewed By</Label>
+                    <p>{docViewDialog.doc.reviewed_by_name}</p>
+                  </div>
+                )}
+              </div>
+              <div className="border rounded-lg p-4 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: docViewDialog.doc.content || "<p class='text-muted-foreground'>No content yet.</p>" }} />
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDocViewDialog({ open: false, doc: null })}>
+              Close
+            </Button>
+            {docViewDialog.doc && (
+              <Button asChild>
+                <a href={`/admin/compliance/documents/${docViewDialog.doc.id}/edit`}>Edit Document</a>
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Legal Document Delete Dialog */}
+      <Dialog open={docDeleteDialog.open} onOpenChange={(open) => !open && setDocDeleteDialog({ open: false, doc: null })}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Document</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete &quot;{docDeleteDialog.doc?.title}&quot;? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDocDeleteDialog({ open: false, doc: null })}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteDoc}>
+              Delete Document
             </Button>
           </DialogFooter>
         </DialogContent>

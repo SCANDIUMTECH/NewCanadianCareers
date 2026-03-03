@@ -81,6 +81,14 @@ services:
       rabbitmq:
         condition: service_healthy
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '2.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
     networks:
       - frontend_net   # Traefik routes traffic here
       - backend_net    # Reaches Redis, Kafka, OTel, MinIO
@@ -115,7 +123,7 @@ services:
       - frontend_net
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.static.rule=(Host(`localhost`) || Host(`api.orion.jobs`)) && (PathPrefix(`/static`) || PathPrefix(`/media`))"
+      - "traefik.http.routers.static.rule=(Host(`localhost`) || Host(`api.orion.jobs`)) && PathPrefix(`/static`)"
       - "traefik.http.routers.static.entrypoints=websecure"
       - "traefik.http.routers.static.tls=true"
       - "traefik.http.services.static.loadbalancer.server.port=80"
@@ -209,6 +217,14 @@ services:
       rabbitmq:
         condition: service_healthy
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '2.0'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
     networks:
       - backend_net
       - data_net
@@ -229,6 +245,14 @@ services:
       rabbitmq:
         condition: service_healthy
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
     networks:
       - backend_net
       - data_net
@@ -363,17 +387,47 @@ services:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY must be set}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY must be set}
     expose:
-      - "9000"         # S3 API — internal only (Django connects via backend_net)
+      - "9000"         # S3 API — Django writes via backend_net, Traefik reads via frontend_net
     ports:
       - "127.0.0.1:9001:9001"  # Console — localhost only for admin access
     restart: unless-stopped
     networks:
       - backend_net    # Django/Celery reach MinIO for file uploads
+      - frontend_net   # Traefik proxies /media/* to MinIO for public read
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=backend_frontend_net"
+      # Media route: /media/* → MinIO bucket (path rewritten by middleware)
+      - "traefik.http.routers.media.rule=(Host(`localhost`) || Host(`api.orion.jobs`)) && PathPrefix(`/media/`)"
+      - "traefik.http.routers.media.entrypoints=websecure"
+      - "traefik.http.routers.media.tls=true"
+      - "traefik.http.routers.media.middlewares=media-rewrite@file,media-headers@file"
+      - "traefik.http.services.media.loadbalancer.server.port=9000"
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 30s
       timeout: 10s
       retries: 3
+
+  # ============ MinIO Init (bucket + policy) ============
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: /bin/sh
+    command: >
+      -c "
+      mc alias set local http://minio:9000 $$MINIO_ACCESS_KEY $$MINIO_SECRET_KEY &&
+      mc mb --ignore-existing local/orion-media &&
+      mc anonymous set download local/orion-media &&
+      echo '==> MinIO bucket orion-media initialized with public-read policy'
+      "
+    environment:
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY must be set}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY must be set}
+    networks:
+      - backend_net
 
 volumes:
   postgres_data:

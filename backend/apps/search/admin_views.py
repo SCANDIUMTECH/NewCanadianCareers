@@ -933,6 +933,7 @@ class AdminSEOHealthView(APIView):
                     'inp': round((100 - perf_score) / 100 * 200),
                 }
         except Exception:
+            logger.warning('CWV computation failed, using estimates from perf_score=%s', perf_score)
             cwv = {
                 'lcp': round(perf_score / 100 * 2.5, 2),
                 'cls': round((100 - perf_score) / 100 * 0.1, 3),
@@ -2636,6 +2637,7 @@ class AdminSEOAutoFixView(APIView):
                     job.save(update_fields=['meta_title', 'updated_at'])
                     fixed += 1
                 except Exception:
+                    logger.warning('Meta title generation failed for job %s', job.pk)
                     errors += 1
 
         if action in ('fill_meta_descriptions', 'fill_all_meta'):
@@ -2645,6 +2647,7 @@ class AdminSEOAutoFixView(APIView):
                     job.save(update_fields=['meta_description', 'updated_at'])
                     fixed += 1
                 except Exception:
+                    logger.warning('Meta description generation failed for job %s', job.pk)
                     errors += 1
 
         if fixed == 0 and errors == 0:

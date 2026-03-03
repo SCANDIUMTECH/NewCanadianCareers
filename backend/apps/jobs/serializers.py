@@ -479,7 +479,12 @@ class AdminJobReportSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = JobReport
-        fields = '__all__'
+        fields = [
+            'id', 'job', 'job_title', 'reporter', 'reporter_name',
+            'reporter_email', 'reason', 'details', 'status',
+            'reviewed_by', 'reviewed_at', 'review_notes',
+            'created_at', 'updated_at',
+        ]
 
     def get_reporter_name(self, obj):
         if obj.reporter:

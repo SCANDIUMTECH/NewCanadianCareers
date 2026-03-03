@@ -942,6 +942,7 @@ function AdminJobDetailContent() {
                     <span className="text-sm text-muted-foreground">Posted</span>
                     {isEditing ? (
                       <DatePicker
+                        className="w-48"
                         value={job.postedAt ? new Date(job.postedAt) : undefined}
                         onChange={(date) => {
                           if (date) setJob({ ...job, postedAt: date.toISOString() })
@@ -963,6 +964,7 @@ function AdminJobDetailContent() {
                     <span className="text-sm text-muted-foreground">Expires</span>
                     {isEditing ? (
                       <DatePicker
+                        className="w-48"
                         value={job.expiresAt ? new Date(job.expiresAt) : undefined}
                         onChange={(date) => {
                           if (date) setJob({ ...job, expiresAt: date.toISOString() })

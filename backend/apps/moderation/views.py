@@ -3,6 +3,8 @@ Moderation views for Orion API.
 """
 from decimal import Decimal
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.db import models
 from django.db.models import Count, Sum
 from django.utils import timezone
 from datetime import timedelta
@@ -17,7 +19,8 @@ from .models import (
     PlatformSetting, Banner, Announcement, Affiliate, SystemAlert,
     AdminActivity, FraudAlert, ComplianceRequest, FraudRule,
     SponsoredBanner, AffiliateLink, FeatureFlag, JobPackage, PlatformSettings,
-    Category, Industry
+    Category, Industry, BannerImpression, BannerClick, AffiliateLinkClick,
+    RetentionRule, LegalDocument
 )
 from .serializers import (
     PlatformSettingSerializer, BannerSerializer,
@@ -29,8 +32,16 @@ from .serializers import (
     ComplianceRequestSerializer, ComplianceStatsSerializer, FraudRuleSerializer,
     SponsoredBannerSerializer, AffiliateLinkSerializer, FeatureFlagSerializer,
     JobPackageSerializer, PlatformSettingsSerializer,
-    CategorySerializer, IndustrySerializer
+    CategorySerializer, IndustrySerializer,
+    PublicBannerSerializer, PublicAffiliateLinkSerializer,
+    RetentionRuleSerializer, LegalDocumentSerializer
 )
+from rest_framework.parsers import MultiPartParser
+from core.tracking import (
+    record_impression, record_click, get_visitor_id, set_visitor_cookie,
+    BannerTrackingThrottle, AffiliateTrackingThrottle,
+)
+from core.validators import validate_upload, sanitize_filename, convert_to_webp, BANNER_PROFILE, UploadRateThrottle
 
 
 class AdminDashboardView(APIView):
@@ -1332,11 +1343,20 @@ class AdminComplianceRequestViewSet(viewsets.ModelViewSet):
         if avg_duration:
             avg_days = round(avg_duration.total_seconds() / 86400, 1)
 
+        # Additional counts for stat cards
+        in_progress_count = qs.filter(status='in_progress').count()
+        completed_count = qs.filter(status='completed').count()
+        total_count = qs.count()
+
         data = {
             'pending_requests': pending,
             'due_soon': due_soon,
             'completed_this_month': completed_this_month,
             'average_completion_days': avg_days,
+            'pending_count': pending,
+            'processing_count': in_progress_count,
+            'completed_count': completed_count,
+            'total_count': total_count,
         }
 
         serializer = ComplianceStatsSerializer(data)
@@ -1361,7 +1381,15 @@ class AdminComplianceRequestViewSet(viewsets.ModelViewSet):
     def process(self, request, pk=None):
         """POST /api/admin/compliance/requests/{id}/process/ — process request."""
         compliance_request = self.get_object()
-        new_status = request.data.get('status', 'completed')
+        # Accept both 'status' (direct) and 'resolution' (frontend sends this)
+        new_status = request.data.get('status') or request.data.get('resolution', 'completed')
+        # Map frontend resolution values to backend status
+        resolution_to_status = {
+            'completed': 'completed',
+            'partial': 'completed',
+            'rejected': 'rejected',
+        }
+        new_status = resolution_to_status.get(new_status, new_status)
         notes = request.data.get('notes', '')
 
         if new_status not in ['completed', 'rejected']:
@@ -1398,8 +1426,12 @@ class AdminComplianceRequestViewSet(viewsets.ModelViewSet):
         """POST /api/admin/compliance/requests/{id}/export/ — generate data export."""
         compliance_request = self.get_object()
 
-        # TODO: Generate export file with user data
-        return Response({'message': 'Export generated', 'file_url': None})
+        # TODO: Generate actual export file with user data
+        return Response({
+            'download_url': None,
+            'expires_at': None,
+            'message': 'Export generated',
+        })
 
     @action(detail=True, methods=['get'])
     def download(self, request, pk=None):
@@ -1422,16 +1454,24 @@ class AdminComplianceRequestViewSet(viewsets.ModelViewSet):
         from apps.applications.models import Application
 
         # Count user's data that would be deleted
+        applications_count = Application.objects.filter(applicant=user).count()
+        jobs_count = Job.objects.filter(posted_by=user).count()
+        notifications_count = user.notifications.count() if hasattr(user, 'notifications') else 0
+
+        user_data = [
+            {'type': 'Applications', 'count': applications_count},
+            {'type': 'Jobs Posted', 'count': jobs_count},
+            {'type': 'Notifications', 'count': notifications_count},
+        ]
+
+        total_records = applications_count + jobs_count + notifications_count
+
         preview = {
-            'user_id': user.id,
-            'email': user.email,
-            'name': user.get_full_name(),
-            'data_summary': {
-                'applications': Application.objects.filter(applicant=user).count(),
-                'jobs_posted': Job.objects.filter(posted_by=user).count(),
-                'notifications': user.notifications.count() if hasattr(user, 'notifications') else 0,
-            },
-            'warning': 'This action is irreversible. All user data will be permanently deleted.',
+            'user_data': user_data,
+            'total_records': total_records,
+            'warnings': [
+                'This action is irreversible. All user data will be permanently deleted.',
+            ],
         }
 
         return Response(preview)
@@ -1460,11 +1500,14 @@ class AdminComplianceRequestViewSet(viewsets.ModelViewSet):
 
         return Response({'message': 'User data deletion initiated'})
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get', 'post'])
     def reports(self, request):
-        """GET /api/admin/compliance/reports/ — generate compliance report."""
-        # TODO: Generate compliance report
-        return Response({'message': 'Compliance report generated'})
+        """GET/POST /api/admin/compliance/reports/ — generate compliance report."""
+        # TODO: Generate actual compliance report
+        return Response({
+            'message': 'Compliance report generated',
+            'report_url': None,
+        })
 
     @action(detail=False, methods=['get'], url_path='export')
     def export_requests(self, request):
@@ -2042,6 +2085,34 @@ class AdminBannerViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(banner)
         return Response(serializer.data)
 
+    @action(detail=False, methods=['post'], url_path='upload-image',
+            parser_classes=[MultiPartParser], throttle_classes=[UploadRateThrottle])
+    def upload_image(self, request):
+        """POST /api/admin/sponsored-banners/upload-image/ — upload banner image to storage.
+
+        Returns the public URL so the frontend can set it as image_url.
+        """
+        image_file = request.FILES.get('image')
+        if not image_file:
+            return Response(
+                {'detail': 'No image file provided.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            validate_upload(image_file, BANNER_PROFILE)
+        except ValidationError as e:
+            return Response({'detail': e.message}, status=status.HTTP_400_BAD_REQUEST)
+
+        sanitize_filename(image_file)
+        image_file = convert_to_webp(image_file)
+
+        from django.core.files.storage import default_storage
+        path = default_storage.save(f'sponsored_banners/{image_file.name}', image_file)
+        url = default_storage.url(path)
+
+        return Response({'url': url})
+
 
 # =============================================================================
 # Admin Affiliates
@@ -2066,6 +2137,87 @@ class AdminAffiliateLinkViewSet(viewsets.ModelViewSet):
         affiliate.save(update_fields=['is_active', 'updated_at'])
         serializer = self.get_serializer(affiliate)
         return Response(serializer.data)
+
+
+# =============================================================================
+# Public Banner & Affiliate Endpoints
+# =============================================================================
+
+
+class PublicBannerViewSet(viewsets.ReadOnlyModelViewSet):
+    """Public banner listing — returns active banners filtered by placement."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    serializer_class = PublicBannerSerializer
+
+    def get_queryset(self):
+        today = timezone.now().date()
+        qs = SponsoredBanner.objects.filter(is_active=True)
+        # Filter by date range
+        qs = qs.filter(
+            models.Q(start_date__isnull=True) | models.Q(start_date__lte=today),
+            models.Q(end_date__isnull=True) | models.Q(end_date__gte=today),
+        )
+        # Filter by placement query param
+        placement = self.request.query_params.get('placement')
+        if placement:
+            qs = qs.filter(placement=placement)
+        return qs
+
+    @action(detail=True, methods=['post'], throttle_classes=[BannerTrackingThrottle])
+    def impression(self, request, pk=None):
+        """Record a banner impression. 24h dedup per visitor."""
+        banner = self.get_object()
+        is_new, visitor_id = record_impression(
+            parent_instance=banner,
+            detail_model_class=BannerImpression,
+            fk_field_name='banner',
+            request=request,
+        )
+        response = Response({'recorded': is_new}, status=status.HTTP_200_OK)
+        return set_visitor_cookie(response, visitor_id)
+
+    @action(detail=True, methods=['post'], throttle_classes=[BannerTrackingThrottle])
+    def click(self, request, pk=None):
+        """Record a banner click."""
+        banner = self.get_object()
+        visitor_id = record_click(
+            parent_instance=banner,
+            detail_model_class=BannerClick,
+            fk_field_name='banner',
+            request=request,
+        )
+        response = Response({'recorded': True}, status=status.HTTP_200_OK)
+        return set_visitor_cookie(response, visitor_id)
+
+
+class PublicAffiliateLinkViewSet(viewsets.ReadOnlyModelViewSet):
+    """Public affiliate link listing — returns active links filtered by placement."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    serializer_class = PublicAffiliateLinkSerializer
+
+    def get_queryset(self):
+        qs = AffiliateLink.objects.filter(is_active=True)
+        placement = self.request.query_params.get('placement')
+        if placement:
+            qs = qs.filter(placement=placement)
+        return qs
+
+    @action(detail=True, methods=['post'], throttle_classes=[AffiliateTrackingThrottle])
+    def click(self, request, pk=None):
+        """Record an affiliate link click."""
+        link = self.get_object()
+        visitor_id = record_click(
+            parent_instance=link,
+            detail_model_class=AffiliateLinkClick,
+            fk_field_name='link',
+            request=request,
+        )
+        response = Response({'recorded': True}, status=status.HTTP_200_OK)
+        return set_visitor_cookie(response, visitor_id)
 
 
 # =============================================================================
@@ -2241,3 +2393,69 @@ class AdminIndustryViewSet(viewsets.ModelViewSet):
         if is_active is not None:
             qs = qs.filter(is_active=is_active.lower() == 'true')
         return qs
+
+
+class AdminRetentionRuleViewSet(viewsets.ModelViewSet):
+    """Admin CRUD for data retention rules."""
+
+    permission_classes = [IsAuthenticated, IsAdmin]
+    serializer_class = RetentionRuleSerializer
+    queryset = RetentionRule.objects.all()
+    pagination_class = None
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        enforcement = self.request.query_params.get('enforcement')
+        is_active = self.request.query_params.get('is_active')
+        search = self.request.query_params.get('search')
+        if enforcement:
+            qs = qs.filter(enforcement=enforcement)
+        if is_active is not None:
+            qs = qs.filter(is_active=is_active.lower() == 'true')
+        if search:
+            qs = qs.filter(
+                models.Q(category__icontains=search) |
+                models.Q(description__icontains=search)
+            )
+        return qs
+
+
+class AdminLegalDocumentViewSet(viewsets.ModelViewSet):
+    """Admin CRUD for legal documents (privacy policy, terms, etc.)."""
+
+    permission_classes = [IsAuthenticated, IsAdmin]
+    serializer_class = LegalDocumentSerializer
+    queryset = LegalDocument.objects.all()
+    pagination_class = None
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        document_type = self.request.query_params.get('document_type')
+        doc_status = self.request.query_params.get('status')
+        search = self.request.query_params.get('search')
+        if document_type:
+            qs = qs.filter(document_type=document_type)
+        if doc_status:
+            qs = qs.filter(status=doc_status)
+        if search:
+            qs = qs.filter(title__icontains=search)
+        return qs
+
+    @action(detail=True, methods=['post'])
+    def publish(self, request, pk=None):
+        """Publish a legal document."""
+        doc = self.get_object()
+        doc.status = 'published'
+        doc.published_at = timezone.now()
+        doc.last_reviewed_at = timezone.now()
+        doc.reviewed_by = request.user
+        doc.save()
+        return Response(self.get_serializer(doc).data)
+
+    @action(detail=True, methods=['post'])
+    def archive(self, request, pk=None):
+        """Archive a legal document."""
+        doc = self.get_object()
+        doc.status = 'archived'
+        doc.save()
+        return Response(self.get_serializer(doc).data)

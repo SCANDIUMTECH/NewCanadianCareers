@@ -19,6 +19,8 @@ import { JobCard, type JobCardProps } from "@/components/jobs/job-card"
 import { JobFiltersSidebar, type JobFilters } from "@/components/jobs/job-filters-sidebar"
 import { JobFiltersSheet } from "@/components/jobs/job-filters-sheet"
 import { JobsEmptyState } from "@/components/jobs/empty-state"
+import { BannerSlot } from "@/components/banners/banner-slot"
+import { AffiliateSlot } from "@/components/affiliates/affiliate-slot"
 import { searchJobs, type PublicJobListItem, type PublicJobSearchFilters } from "@/lib/api/public"
 import { saveJob, unsaveJob, getSavedJobs } from "@/lib/api/candidates"
 import { useAuth } from "@/hooks/use-auth"
@@ -390,16 +392,18 @@ function JobsPageContent() {
 
       {/* Main Content */}
       <div className="max-w-[1400px] mx-auto px-6 md:px-12 py-8">
+        <BannerSlot placement="search_top" className="mb-6" />
         <div className="flex gap-8">
           {/* Desktop Sidebar */}
           <aside className="hidden lg:block w-72 shrink-0">
             <MotionWrapper delay={150}>
-              <div className="sticky top-24">
+              <div className="sticky top-24 space-y-6">
                 <JobFiltersSidebar
                   filters={filters}
                   onFiltersChange={setFilters}
                   onReset={handleResetFilters}
                 />
+                <BannerSlot placement="search_sidebar" />
               </div>
             </MotionWrapper>
           </aside>
@@ -518,13 +522,20 @@ function JobsPageContent() {
             {!isLoading && !error && displayJobs.length > 0 && (
               <div className="space-y-4">
                 {displayJobs.map((job, index) => (
-                  <MotionWrapper key={job.id} delay={200 + index * 50}>
-                    <JobCard
-                      {...job}
-                      onSave={handleSaveJob}
-                      isSaved={savedJobs.includes(job.id)}
-                    />
-                  </MotionWrapper>
+                  <div key={job.id}>
+                    <MotionWrapper delay={200 + index * 50}>
+                      <JobCard
+                        {...job}
+                        onSave={handleSaveJob}
+                        isSaved={savedJobs.includes(job.id)}
+                      />
+                    </MotionWrapper>
+                    {index === 4 && (
+                      <div className="mt-4">
+                        <AffiliateSlot placement="search_results" variant="inline" />
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             )}

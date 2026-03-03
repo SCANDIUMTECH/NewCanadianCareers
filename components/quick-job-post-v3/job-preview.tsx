@@ -3,7 +3,8 @@
 import { useMemo } from "react"
 import { format } from "date-fns"
 import { motion } from "framer-motion"
-import { cn, sanitizeHtml } from "@/lib/utils"
+import { cn } from "@/lib/utils"
+import { sanitizeHtml } from "@/lib/sanitize"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import {

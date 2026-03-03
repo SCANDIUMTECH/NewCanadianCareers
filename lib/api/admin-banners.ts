@@ -114,3 +114,16 @@ export async function toggleBannerStatus(id: number): Promise<SponsoredBanner> {
     method: 'PATCH',
   })
 }
+
+/**
+ * Upload a banner image to storage. Returns the hosted URL.
+ */
+export async function uploadBannerImage(file: File): Promise<string> {
+  const formData = new FormData()
+  formData.append('image', file)
+  const data = await apiClient<{ url: string }>('/api/admin/sponsored-banners/upload-image/', {
+    method: 'POST',
+    body: formData,
+  })
+  return data.url
+}

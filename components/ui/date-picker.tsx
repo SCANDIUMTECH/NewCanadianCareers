@@ -72,7 +72,7 @@ function DatePicker({
     <InputGroup className={className}>
       <InputGroupInput
         readOnly
-        value={value ? format(value, "PPP") : ""}
+        value={value ? format(value, "MMMM d, yyyy") : ""}
         placeholder={placeholder}
         onKeyDown={(e) => {
           if (e.key === "ArrowDown") {

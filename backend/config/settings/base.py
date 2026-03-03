@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'apps.social',
     'apps.search',
     'apps.audit',
+    'apps.articles',
     'apps.marketing',
     'apps.ai',
     'apps.rum',
@@ -56,6 +57,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'core.middleware.ApiCsrfExemptMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'core.middleware.ClearStaleAuthCookiesMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'apps.audit.middleware.AuditMiddleware',
@@ -119,6 +121,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # REST Framework
 REST_FRAMEWORK = {
+    'EXCEPTION_HANDLER': 'core.exceptions.custom_exception_handler',
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'core.authentication.CookieJWTAuthentication',
     ],
@@ -139,12 +142,20 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/hour',
         'user': '1000/hour',
+        'uploads': '30/hour',
         'marketing_bulk': '10/hour',
         'coupon_redemption': '20/hour',
         'resend_verification': '3/hour',
         'rum_ingest': '1000/min',
+        'banner_tracking': '500/hour',
+        'affiliate_tracking': '500/hour',
     },
 }
+
+# ── File upload limits (defense against storage exhaustion) ─────────
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024    # 10 MB — stream to disk above this
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024    # 10 MB — reject request body above this
+DATA_UPLOAD_MAX_NUMBER_FILES = 5                   # Max files per request
 
 # JWT Settings
 DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
@@ -309,6 +320,14 @@ CELERY_BEAT_SCHEDULE = {
     'slack-daily-platform-digest': {
         'task': 'apps.notifications.slack_tasks.daily_platform_digest',
         'schedule': crontab(minute=0, hour=9),  # Daily at 9 AM
+    },
+    'publish-scheduled-articles': {
+        'task': 'apps.articles.tasks.publish_due_scheduled_articles',
+        'schedule': 60 * 5,  # Every 5 minutes
+    },
+    'purge-old-tracking-records': {
+        'task': 'apps.moderation.tasks.purge_old_tracking_records',
+        'schedule': crontab(minute=0, hour=3),  # Daily at 3 AM
     },
 }
 

@@ -174,7 +174,14 @@ class AdminEntitlementSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Entitlement
-        fields = '__all__'
+        fields = [
+            'id', 'company', 'company_name', 'agency', 'agency_name',
+            'package', 'credits_total', 'credits_used',
+            'featured_credits_total', 'featured_credits_used',
+            'social_credits_total', 'social_credits_used',
+            'post_duration_days', 'expires_at', 'source', 'source_reference',
+            'created_at', 'updated_at',
+        ]
         read_only_fields = ['id', 'credits_used', 'featured_credits_used', 'social_credits_used', 'created_at', 'updated_at']
 
 
