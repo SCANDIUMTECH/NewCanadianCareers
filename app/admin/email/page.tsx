@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect, useCallback, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -22,6 +22,50 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import { CHART } from "@/lib/constants/colors"
+import dynamic from "next/dynamic"
+import {
+  AlertTriangle,
+  Bold,
+  Calendar,
+  CheckCircle,
+  Clock,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Eye,
+  FileJson,
+  FileSpreadsheet,
+  Image,
+  Info,
+  Italic,
+  Lightbulb,
+  Link,
+  Mail,
+  Monitor,
+  MoreHorizontal,
+  Plus,
+  RefreshCw,
+  Search,
+  Send,
+  Server,
+  Shield,
+  Smartphone,
+  Trash2,
+  XCircle,
+  Zap,
+} from "lucide-react"
+
+import type {
+  EmailTemplate, EmailTemplateDetail, EmailTemplateVersion,
+  TemplateFilters, TemplateType, TemplateStatus
+} from '@/lib/api/admin-email'
+import {
+  getEmailTemplatesFiltered, getEmailTemplate, getEmailTemplateVersions
+} from '@/lib/api/admin-email'
+
+const SparklineChart = dynamic(() => import("@/components/charts/sparkline-chart"), { ssr: false })
 
 // =============================================================================
 // MOCK DATA
@@ -36,12 +80,18 @@ const providers = [
     apiKey: "re_••••••••••••••••",
     status: "active",
     lastSync: "2 min ago",
+    sendingDomain: "mail.orion.com",
     spf: "verified",
     dkim: "verified",
     dmarc: "warning",
     webhookEnabled: true,
     rateLimit: "100/sec",
     region: "US East",
+    smtpHost: "",
+    smtpPort: 587,
+    smtpUsername: "",
+    smtpUseTls: true,
+    smtpUseSsl: false,
   },
   {
     id: "zeptomail",
@@ -51,12 +101,39 @@ const providers = [
     apiKey: "",
     status: "disconnected",
     lastSync: null,
+    sendingDomain: "",
     spf: "missing",
     dkim: "missing",
     dmarc: "missing",
     webhookEnabled: false,
     rateLimit: "50/sec",
     region: "EU",
+    smtpHost: "",
+    smtpPort: 587,
+    smtpUsername: "",
+    smtpUseTls: true,
+    smtpUseSsl: false,
+  },
+  {
+    id: "smtp",
+    name: "SMTP",
+    logo: "S",
+    connected: false,
+    apiKey: "",
+    status: "disconnected",
+    lastSync: null,
+    sendingDomain: "",
+    spf: "missing",
+    dkim: "missing",
+    dmarc: "missing",
+    webhookEnabled: false,
+    rateLimit: "N/A",
+    region: "Custom",
+    smtpHost: "",
+    smtpPort: 587,
+    smtpUsername: "",
+    smtpUseTls: true,
+    smtpUseSsl: false,
   },
 ]
 
@@ -96,18 +173,6 @@ const triggers = [
   { id: 20, name: "System Maintenance", category: "System", eventKey: "system.maintenance", status: true, audience: "Admin", provider: "resend", template: "system_maintenance", lastUpdated: "Mar 1, 2024", lastSent: "14 days ago", sends7d: 2, errors7d: 0 },
 ]
 
-const templates = [
-  { id: 1, name: "Welcome V3", slug: "welcome_v3", type: "Transactional", lastUpdated: "Mar 15, 2024", usedBy: 1, status: "Published" },
-  { id: 2, name: "Verify Email", slug: "verify_email", type: "Transactional", lastUpdated: "Mar 10, 2024", usedBy: 1, status: "Published" },
-  { id: 3, name: "Company Welcome", slug: "company_welcome", type: "Transactional", lastUpdated: "Mar 12, 2024", usedBy: 1, status: "Published" },
-  { id: 4, name: "Agency Welcome", slug: "agency_welcome", type: "Transactional", lastUpdated: "Mar 8, 2024", usedBy: 1, status: "Published" },
-  { id: 5, name: "Package Confirmation", slug: "package_confirmation", type: "Transactional", lastUpdated: "Mar 13, 2024", usedBy: 1, status: "Published" },
-  { id: 6, name: "Application Received", slug: "application_received", type: "Transactional", lastUpdated: "Mar 15, 2024", usedBy: 1, status: "Published" },
-  { id: 7, name: "Job Expiring", slug: "job_expiring", type: "Transactional", lastUpdated: "Mar 10, 2024", usedBy: 1, status: "Published" },
-  { id: 8, name: "Weekly Digest", slug: "weekly_digest", type: "Marketing", lastUpdated: "Mar 5, 2024", usedBy: 1, status: "Draft" },
-  { id: 9, name: "Job Match", slug: "job_match", type: "Marketing", lastUpdated: "Mar 8, 2024", usedBy: 1, status: "Draft" },
-  { id: 10, name: "Fraud Alert", slug: "fraud_alert", type: "System", lastUpdated: "Mar 15, 2024", usedBy: 1, status: "Published" },
-]
 
 const emailLogs = [
   { id: 1, timestamp: "2024-03-15 14:32:45", recipient: "john@example.com", trigger: "application.received", template: "application_received", provider: "resend", status: "Delivered", errorCode: null, traceId: "tr_abc123" },
@@ -137,7 +202,88 @@ const containerVariants = {
 
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] as const } },
+}
+
+// =============================================================================
+// SPARKLINE HELPERS (matches marketing page pattern)
+// =============================================================================
+
+function generateTrend(
+  finalValue: number,
+  points: number,
+  variance: number,
+  direction: "up" | "down" | "steady"
+): { v: number }[] {
+  const data: { v: number }[] = []
+  const raw = typeof finalValue === "number" ? finalValue : 0
+  const base = Math.max(raw, 10)
+  for (let i = 0; i < points; i++) {
+    const progress = i / (points - 1)
+    let modifier: number
+    if (direction === "up") {
+      modifier = 0.7 + 0.3 * progress
+    } else if (direction === "down") {
+      modifier = 1.3 - 0.3 * progress
+    } else {
+      modifier = 1
+    }
+    const noise = Math.sin(i * 4.7 + base * 0.01) * variance * base
+    data.push({ v: Math.max(0, base * modifier + noise) })
+  }
+  return data
+}
+
+function StatCard({
+  title,
+  value,
+  icon,
+  gradient,
+  bgAccent,
+  sparkColor,
+  sparkData,
+  chartType = "area",
+  isPercentage,
+}: {
+  title: string
+  value: number | string
+  icon: React.ReactNode
+  gradient: string
+  bgAccent: string
+  sparkColor: string
+  sparkData: { v: number }[]
+  chartType?: "area" | "bar"
+  isPercentage?: boolean
+}) {
+  const formattedValue = isPercentage
+    ? value
+    : typeof value === "number"
+      ? new Intl.NumberFormat("en-US").format(value)
+      : value
+
+  return (
+    <Card className="relative overflow-hidden group">
+      <div className={cn("absolute -top-6 -right-6 w-24 h-24 rounded-full opacity-[0.06] transition-opacity duration-300 group-hover:opacity-[0.10]", bgAccent)} />
+      <div className={cn("absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-300", gradient)} />
+      <CardContent className="p-5 relative">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">{title}</p>
+          <div className={cn("flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow-sm", gradient)}>
+            {icon}
+          </div>
+        </div>
+        <p className="mt-2 text-2xl font-bold tracking-tight tabular-nums">{formattedValue}</p>
+        <div className="mt-2 h-10 -mx-1">
+          <SparklineChart
+            data={sparkData}
+            color={sparkColor}
+            type={chartType}
+            gradientId={`spark-${title.replace(/\s/g, "")}`}
+          />
+        </div>
+      </CardContent>
+    </Card>
+  )
 }
 
 // =============================================================================
@@ -151,9 +297,17 @@ export default function EmailModulePage() {
     <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-6">
       {/* Page Header */}
       <motion.div variants={itemVariants} className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Email</h1>
-          <p className="text-muted-foreground mt-1">Manage email providers, triggers, and templates</p>
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+              <Mail className="h-6 w-6 text-white" />
+            </div>
+            <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-green-500 border-2 border-background" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Email</h1>
+            <p className="text-muted-foreground text-sm mt-0.5">Manage email providers, triggers, and templates</p>
+          </div>
         </div>
       </motion.div>
 
@@ -190,6 +344,48 @@ export default function EmailModulePage() {
 function OverviewTab() {
   return (
     <div className="space-y-6">
+      {/* KPI Stat Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Emails Sent (24h)"
+          value={1247}
+          icon={<Send className="h-4 w-4" />}
+          gradient="from-blue-500 to-indigo-600"
+          bgAccent="bg-blue-500"
+          sparkColor={CHART.primary}
+          sparkData={generateTrend(1247, 12, 0.08, "up")}
+        />
+        <StatCard
+          title="Delivery Rate"
+          value="98.2%"
+          icon={<CheckCircle className="h-4 w-4" />}
+          gradient="from-emerald-500 to-teal-600"
+          bgAccent="bg-emerald-500"
+          sparkColor={CHART.success}
+          sparkData={generateTrend(98.2, 8, 0.03, "steady")}
+          isPercentage
+        />
+        <StatCard
+          title="Bounce Rate"
+          value="1.4%"
+          icon={<AlertTriangle className="h-4 w-4" />}
+          gradient="from-amber-500 to-orange-600"
+          bgAccent="bg-amber-500"
+          sparkColor={CHART.warning}
+          sparkData={generateTrend(1.4, 8, 0.1, "down")}
+          isPercentage
+        />
+        <StatCard
+          title="Active Triggers"
+          value="18/20"
+          icon={<Zap className="h-4 w-4" />}
+          gradient="from-violet-500 to-purple-600"
+          bgAccent="bg-violet-500"
+          sparkColor={CHART.purple}
+          sparkData={generateTrend(18, 12, 0.06, "up")}
+        />
+      </div>
+
       {/* Health Dashboard Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -278,7 +474,7 @@ function OverviewTab() {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
-            <AlertTriangleIcon className="w-5 h-5 text-amber-600 mt-0.5" />
+            <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5" />
             <div className="flex-1">
               <p className="font-medium text-amber-800">DMARC Warning</p>
               <p className="text-sm text-amber-700">Your DMARC record is set to &quot;none&quot;. Consider upgrading to &quot;quarantine&quot; for better deliverability.</p>
@@ -286,7 +482,7 @@ function OverviewTab() {
             <Button size="sm" variant="outline" className="border-amber-300 text-amber-700 hover:bg-amber-100 bg-transparent">Fix</Button>
           </div>
           <div className="flex items-start gap-3 p-3 rounded-lg bg-red-50 border border-red-200">
-            <XCircleIcon className="w-5 h-5 text-red-600 mt-0.5" />
+            <XCircle className="w-5 h-5 text-red-600 mt-0.5" />
             <div className="flex-1">
               <p className="font-medium text-red-800">High Bounce Rate</p>
               <p className="text-sm text-red-700">&quot;Application Received&quot; trigger has 12 bounces in the last 7 days.</p>
@@ -296,16 +492,14 @@ function OverviewTab() {
         </CardContent>
       </Card>
 
-      {/* Mini Chart Placeholder */}
+      {/* Send Volume Chart */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base">Send Volume (7 days)</CardTitle>
           <Button variant="ghost" size="sm">View logs</Button>
         </CardHeader>
         <CardContent>
-          <div className="h-48 bg-muted/30 rounded-lg flex items-center justify-center border border-dashed">
-            <span className="text-muted-foreground text-sm">Line chart placeholder</span>
-          </div>
+          <SendVolumeChart />
         </CardContent>
       </Card>
     </div>
@@ -321,6 +515,55 @@ function ProvidersTab() {
   const [testSendOpen, setTestSendOpen] = useState(false)
   const [connectDialogOpen, setConnectDialogOpen] = useState(false)
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null)
+  const [testEmail, setTestEmail] = useState("")
+  const [testTemplate, setTestTemplate] = useState("")
+  const [testSending, setTestSending] = useState(false)
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [templateOptions, setTemplateOptions] = useState<EmailTemplate[]>([])
+
+  // Fetch templates for test-send dropdown when dialog opens
+  useEffect(() => {
+    if (!testSendOpen) return
+    let cancelled = false
+    async function load() {
+      try {
+        const res = await getEmailTemplatesFiltered({ page_size: 100, status: "Published" })
+        if (!cancelled) {
+          setTemplateOptions(res.results)
+          if (res.results.length > 0) setTestTemplate(prev => prev || res.results[0].slug)
+        }
+      } catch { /* templates will be empty */ }
+    }
+    load()
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [testSendOpen])
+
+  const providerLogoColor = (id: string) =>
+    id === "resend" ? "bg-black text-white" : id === "smtp" ? "bg-slate-600 text-white" : "bg-orange-500 text-white"
+
+  const providerLogo = (id: string, logo: string, size: "sm" | "lg") => {
+    const iconClass = size === "sm" ? "w-5 h-5" : "w-6 h-6"
+    return id === "smtp" ? <Server className={iconClass} /> : <span>{logo}</span>
+  }
+
+  const handleTestSend = async () => {
+    if (!selectedProvider || !testEmail) return
+    setTestSending(true)
+    setTestResult(null)
+    try {
+      const { testProvider } = await import("@/lib/api/admin-email")
+      const result = await testProvider(selectedProvider, {
+        templateSlug: testTemplate,
+        recipientEmail: testEmail,
+      })
+      setTestResult(result)
+    } catch (err) {
+      setTestResult({ success: false, message: err instanceof Error ? err.message : "Failed to send test email" })
+    } finally {
+      setTestSending(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -343,11 +586,8 @@ function ProvidersTab() {
                   !p.connected && "opacity-50 cursor-not-allowed"
                 )}
               >
-                <div className={cn(
-                  "w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg",
-                  p.id === "resend" ? "bg-black text-white" : "bg-orange-500 text-white"
-                )}>
-                  {p.logo}
+                <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg", providerLogoColor(p.id))}>
+                  {providerLogo(p.id, p.logo, "sm")}
                 </div>
                 <div className="text-left">
                   <p className="font-medium">{p.name}</p>
@@ -363,16 +603,13 @@ function ProvidersTab() {
       </Card>
 
       {/* Provider Cards */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {providers.map((provider) => (
-          <Card key={provider.id}>
+          <Card key={provider.id} className="flex flex-col">
             <CardHeader className="flex flex-row items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className={cn(
-                  "w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl",
-                  provider.id === "resend" ? "bg-black text-white" : "bg-orange-500 text-white"
-                )}>
-                  {provider.logo}
+                <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl", providerLogoColor(provider.id))}>
+                  {providerLogo(provider.id, provider.logo, "lg")}
                 </div>
                 <div>
                   <CardTitle className="text-lg">{provider.name}</CardTitle>
@@ -385,100 +622,147 @@ function ProvidersTab() {
                 <Badge variant="outline" className="text-muted-foreground">Disconnected</Badge>
               )}
             </CardHeader>
-            <CardContent className="space-y-4">
-              {/* API Key */}
-              <div className="space-y-2">
-                <Label>API Key</Label>
+            <CardContent className="space-y-4 flex-1 flex flex-col">
+              {provider.connected ? (
+                <>
+                  {/* Connected: show read-only summary */}
+                  {provider.id === "smtp" ? (
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Host</p>
+                        <p className="font-medium font-mono">{provider.smtpHost || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Port</p>
+                        <p className="font-medium font-mono">{provider.smtpPort}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Username</p>
+                        <p className="font-medium font-mono">{provider.smtpUsername || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Security</p>
+                        <p className="font-medium">{provider.smtpUseSsl ? "SSL" : provider.smtpUseTls ? "TLS" : "None"}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">API Key</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="password"
+                          defaultValue={provider.apiKey}
+                          className="font-mono"
+                          readOnly
+                        />
+                        <Button variant="outline" size="icon">
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sending Domain */}
+                  {provider.sendingDomain && (
+                    <div className="text-sm">
+                      <p className="text-muted-foreground">Sending Domain</p>
+                      <p className="font-medium font-mono">{provider.sendingDomain}</p>
+                    </div>
+                  )}
+
+                  {/* DNS Verification (API providers only) */}
+                  {provider.id !== "smtp" && (
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Domain Verification</Label>
+                      <div className="flex gap-2">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Badge variant={provider.spf === "verified" ? "default" : provider.spf === "warning" ? "secondary" : "destructive"} className={cn(provider.spf === "verified" && "bg-green-600")}>
+                                SPF {provider.spf === "verified" ? "✓" : provider.spf === "warning" ? "!" : "✗"}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>SPF record {provider.spf}</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Badge variant={provider.dkim === "verified" ? "default" : provider.dkim === "warning" ? "secondary" : "destructive"} className={cn(provider.dkim === "verified" && "bg-green-600")}>
+                                DKIM {provider.dkim === "verified" ? "✓" : provider.dkim === "warning" ? "!" : "✗"}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>DKIM record {provider.dkim}</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <Badge variant={provider.dmarc === "verified" ? "default" : provider.dmarc === "warning" ? "secondary" : "destructive"} className={cn(provider.dmarc === "verified" && "bg-green-600", provider.dmarc === "warning" && "bg-amber-500")}>
+                                DMARC {provider.dmarc === "verified" ? "✓" : provider.dmarc === "warning" ? "!" : "✗"}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>DMARC record {provider.dmarc}</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Connection Details */}
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    {provider.id !== "smtp" && (
+                      <div>
+                        <p className="text-muted-foreground">Webhook</p>
+                        <p className="font-medium">{provider.webhookEnabled ? "Enabled" : "Disabled"}</p>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-muted-foreground">Rate Limit</p>
+                      <p className="font-medium">{provider.rateLimit}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Region</p>
+                      <p className="font-medium">{provider.region}</p>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Disconnected: show type summary + connect prompt */}
+                  <div className="flex-1 flex flex-col items-center justify-center py-4 text-center">
+                    <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center mb-3 opacity-20", providerLogoColor(provider.id))}>
+                      {providerLogo(provider.id, provider.logo, "lg")}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {provider.id === "smtp"
+                        ? "Connect any SMTP server (Gmail, Outlook, custom)"
+                        : `Connect your ${provider.name} account to start sending`}
+                    </p>
+                  </div>
+                </>
+              )}
+
+              <div className="mt-auto pt-2">
+                <Separator className="mb-4" />
+                {/* Actions */}
                 <div className="flex gap-2">
-                  <Input 
-                    type="password" 
-                    value={provider.apiKey || ""} 
-                    placeholder="Enter API key" 
-                    className="font-mono"
-                    readOnly={provider.connected}
-                  />
-                  {provider.connected && (
-                    <Button variant="outline" size="icon">
-                      <EyeIcon className="w-4 h-4" />
+                  {provider.connected ? (
+                    <>
+                      <Button variant="outline" className="flex-1 bg-transparent" onClick={() => { setSelectedProvider(provider.id); setTestResult(null); setTestEmail(""); setTestSendOpen(true) }}>
+                        <Send className="w-4 h-4 mr-2" />
+                        Test Send
+                      </Button>
+                      <Button variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50 bg-transparent">
+                        Disconnect
+                      </Button>
+                    </>
+                  ) : (
+                    <Button className="flex-1" onClick={() => { setSelectedProvider(provider.id); setConnectDialogOpen(true) }}>
+                      Connect
                     </Button>
                   )}
                 </div>
-              </div>
-
-              {/* Domain Status */}
-              <div className="space-y-2">
-                <Label>Domain Verification</Label>
-                <div className="flex gap-2">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Badge variant={provider.spf === "verified" ? "default" : provider.spf === "warning" ? "secondary" : "destructive"} className={cn(provider.spf === "verified" && "bg-green-600")}>
-                          SPF {provider.spf === "verified" ? "✓" : provider.spf === "warning" ? "!" : "✗"}
-                        </Badge>
-                      </TooltipTrigger>
-                      <TooltipContent>SPF record {provider.spf}</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Badge variant={provider.dkim === "verified" ? "default" : provider.dkim === "warning" ? "secondary" : "destructive"} className={cn(provider.dkim === "verified" && "bg-green-600")}>
-                          DKIM {provider.dkim === "verified" ? "✓" : provider.dkim === "warning" ? "!" : "✗"}
-                        </Badge>
-                      </TooltipTrigger>
-                      <TooltipContent>DKIM record {provider.dkim}</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Badge variant={provider.dmarc === "verified" ? "default" : provider.dmarc === "warning" ? "secondary" : "destructive"} className={cn(provider.dmarc === "verified" && "bg-green-600", provider.dmarc === "warning" && "bg-amber-500")}>
-                          DMARC {provider.dmarc === "verified" ? "✓" : provider.dmarc === "warning" ? "!" : "✗"}
-                        </Badge>
-                      </TooltipTrigger>
-                      <TooltipContent>DMARC record {provider.dmarc}</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-              </div>
-
-              {/* Webhook & Rate */}
-              {provider.connected && (
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Webhook</p>
-                    <p className="font-medium">{provider.webhookEnabled ? "Enabled" : "Disabled"}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Rate Limit</p>
-                    <p className="font-medium">{provider.rateLimit}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Region</p>
-                    <p className="font-medium">{provider.region}</p>
-                  </div>
-                </div>
-              )}
-
-              <Separator />
-
-              {/* Actions */}
-              <div className="flex gap-2">
-                {provider.connected ? (
-                  <>
-                    <Button variant="outline" className="flex-1 bg-transparent" onClick={() => { setSelectedProvider(provider.id); setTestSendOpen(true) }}>
-                      <SendIcon className="w-4 h-4 mr-2" />
-                      Test Send
-                    </Button>
-                    <Button variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50 bg-transparent">
-                      Disconnect
-                    </Button>
-                  </>
-                ) : (
-                  <Button className="flex-1" onClick={() => { setSelectedProvider(provider.id); setConnectDialogOpen(true) }}>
-                    Connect
-                  </Button>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -495,7 +779,7 @@ function ProvidersTab() {
           <div className="flex items-center justify-between">
             <div className="space-y-1">
               <p className="font-medium">Enable Fallback</p>
-              <p className="text-sm text-muted-foreground">Queue failed emails for retry with ZeptoMail if Resend fails</p>
+              <p className="text-sm text-muted-foreground">Queue failed emails for retry with a secondary provider if the primary fails</p>
             </div>
             <Switch />
           </div>
@@ -503,19 +787,19 @@ function ProvidersTab() {
       </Card>
 
       {/* Test Send Dialog */}
-      <Dialog open={testSendOpen} onOpenChange={setTestSendOpen}>
+      <Dialog open={testSendOpen} onOpenChange={(open) => { setTestSendOpen(open); if (!open) setTestResult(null) }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Send Test Email</DialogTitle>
-            <DialogDescription>Send a test email to verify your {selectedProvider} configuration</DialogDescription>
+            <DialogDescription>Send a test email via {providers.find((p) => p.id === selectedProvider)?.name ?? selectedProvider} to verify delivery</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Template</Label>
-              <Select defaultValue="welcome_v3">
+              <Select value={testTemplate} onValueChange={setTestTemplate}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {templates.map((t) => (
+                  {templateOptions.map((t) => (
                     <SelectItem key={t.id} value={t.slug}>{t.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -523,12 +807,35 @@ function ProvidersTab() {
             </div>
             <div className="space-y-2">
               <Label>Recipient Email</Label>
-              <Input type="email" placeholder="test@example.com" />
+              <Input
+                type="email"
+                placeholder="test@example.com"
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+              />
             </div>
+            {testResult && (
+              <div className={cn(
+                "flex items-start gap-2 p-3 rounded-lg border text-sm",
+                testResult.success
+                  ? "bg-green-50 border-green-200 text-green-800"
+                  : "bg-red-50 border-red-200 text-red-800"
+              )}>
+                {testResult.success ? <CheckCircle className="w-4 h-4 mt-0.5 shrink-0" /> : <XCircle className="w-4 h-4 mt-0.5 shrink-0" />}
+                <p>{testResult.message}</p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setTestSendOpen(false)}>Cancel</Button>
-            <Button><SendIcon className="w-4 h-4 mr-2" />Send Test</Button>
+            <Button onClick={handleTestSend} disabled={testSending || !testEmail}>
+              {testSending ? (
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 mr-2" />
+              )}
+              {testSending ? "Sending..." : "Send Test"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -537,18 +844,57 @@ function ProvidersTab() {
       <Dialog open={connectDialogOpen} onOpenChange={setConnectDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Connect {selectedProvider === "resend" ? "Resend" : "ZeptoMail"}</DialogTitle>
-            <DialogDescription>Enter your API credentials to connect</DialogDescription>
+            <DialogTitle>Connect {selectedProvider === "resend" ? "Resend" : selectedProvider === "smtp" ? "SMTP Provider" : "ZeptoMail"}</DialogTitle>
+            <DialogDescription>
+              {selectedProvider === "smtp"
+                ? "Enter your SMTP server credentials to connect"
+                : "Enter your API credentials to connect"}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>API Key</Label>
-              <Input type="password" placeholder="Enter your API key" className="font-mono" />
-            </div>
-            <div className="space-y-2">
-              <Label>Sending Domain</Label>
-              <Input placeholder="mail.yourdomain.com" />
-            </div>
+            {selectedProvider === "smtp" ? (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>SMTP Host</Label>
+                    <Input placeholder="smtp.example.com" className="font-mono" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Port</Label>
+                    <Input type="number" defaultValue={587} placeholder="587" className="font-mono" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Username</Label>
+                  <Input placeholder="user@example.com" className="font-mono" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Password</Label>
+                  <Input type="password" placeholder="Enter SMTP password" className="font-mono" />
+                </div>
+                <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-2">
+                    <Switch defaultChecked />
+                    <Label className="text-sm">Use TLS</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch />
+                    <Label className="text-sm">Use SSL</Label>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label>API Key</Label>
+                  <Input type="password" placeholder="Enter your API key" className="font-mono" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Sending Domain</Label>
+                  <Input placeholder="mail.yourdomain.com" />
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConnectDialogOpen(false)}>Cancel</Button>
@@ -575,6 +921,20 @@ function TriggersTab() {
   const [editingTrigger, setEditingTrigger] = useState<typeof triggers[0] | null>(null)
   const [expandedGroups, setExpandedGroups] = useState<string[]>([])
   const [triggersData, setTriggersData] = useState(triggers)
+  const [templateOptions, setTemplateOptions] = useState<EmailTemplate[]>([])
+
+  // Fetch templates for the edit trigger template dropdown
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        const res = await getEmailTemplatesFiltered({ page_size: 100 })
+        if (!cancelled) setTemplateOptions(res.results)
+      } catch { /* dropdown will be empty */ }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [])
 
   // Filter triggers
   const filteredTriggers = useMemo(() => {
@@ -631,7 +991,7 @@ function TriggersTab() {
         <Card className="border-amber-200 bg-amber-50/50">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
-              <LightbulbIcon className="w-5 h-5 text-amber-600" />
+              <Lightbulb className="w-5 h-5 text-amber-600" />
               Smart Suggestions
             </CardTitle>
           </CardHeader>
@@ -640,9 +1000,9 @@ function TriggersTab() {
               {smartSuggestions.map((s, i) => (
                 <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-white border">
                   <div className="flex items-center gap-3">
-                    {s.type === "warning" && <AlertTriangleIcon className="w-4 h-4 text-amber-500" />}
-                    {s.type === "error" && <XCircleIcon className="w-4 h-4 text-red-500" />}
-                    {s.type === "info" && <InfoIcon className="w-4 h-4 text-blue-500" />}
+                    {s.type === "warning" && <AlertTriangle className="w-4 h-4 text-amber-500" />}
+                    {s.type === "error" && <XCircle className="w-4 h-4 text-red-500" />}
+                    {s.type === "info" && <Info className="w-4 h-4 text-blue-500" />}
                     <div>
                       <p className="font-medium text-sm">{s.title}</p>
                       <p className="text-xs text-muted-foreground">{s.description}</p>
@@ -659,7 +1019,7 @@ function TriggersTab() {
       {/* Filters & Controls */}
       <div className="flex flex-wrap items-center gap-4">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Search triggers..."
             value={searchQuery}
@@ -721,7 +1081,7 @@ function TriggersTab() {
             </DropdownMenu>
           )}
           <Button>
-            <PlusIcon className="w-4 h-4 mr-2" />
+            <Plus className="w-4 h-4 mr-2" />
             Add Trigger
           </Button>
         </div>
@@ -735,7 +1095,7 @@ function TriggersTab() {
               <CollapsibleTrigger asChild>
                 <div className="flex items-center justify-between px-4 py-3 bg-muted/50 border-b cursor-pointer hover:bg-muted/70 transition-colors">
                   <div className="flex items-center gap-3">
-                    <ChevronRightIcon className={cn("w-4 h-4 transition-transform", expandedGroups.includes(group) && "rotate-90")} />
+                    <ChevronRight className={cn("w-4 h-4 transition-transform", expandedGroups.includes(group) && "rotate-90")} />
                     <span className="font-medium">{group}</span>
                     <Badge variant="secondary">{groupTriggers.length}</Badge>
                   </div>
@@ -810,7 +1170,7 @@ function TriggersTab() {
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontalIcon className="w-4 h-4" />
+                              <MoreHorizontal className="w-4 h-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
@@ -873,7 +1233,7 @@ function TriggersTab() {
                 <Select defaultValue={editingTrigger.template}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {templates.map((t) => <SelectItem key={t.id} value={t.slug}>{t.name}</SelectItem>)}
+                    {templateOptions.map((t) => <SelectItem key={t.id} value={t.slug}>{t.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -911,58 +1271,256 @@ function TriggersTab() {
 // =============================================================================
 
 function TemplatesTab() {
-  const [selectedTemplate, setSelectedTemplate] = useState<typeof templates[0] | null>(null)
+  // API data state
+  const [templates, setTemplates] = useState<EmailTemplate[]>([])
+  const [totalCount, setTotalCount] = useState(0)
+  const [loading, setLoading] = useState(true)
+
+  // Filter/pagination state
+  const [templateSearch, setTemplateSearch] = useState("")
+  const [debouncedSearch, setDebouncedSearch] = useState("")
+  const [typeFilter, setTypeFilter] = useState<TemplateType | "all">("all")
+  const [statusFilter, setStatusFilter] = useState<TemplateStatus | "all">("all")
+  const [currentPage, setCurrentPage] = useState(1)
+  const PAGE_SIZE = 15
+
+  // Selected template detail
+  const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplateDetail | null>(null)
+  const [loadingDetail, setLoadingDetail] = useState(false)
+
+  // Versions
+  const [versions, setVersions] = useState<EmailTemplateVersion[]>([])
+  const [versionsLoaded, setVersionsLoaded] = useState(false)
+  const [loadingVersions, setLoadingVersions] = useState(false)
+
+  // Editor/preview state
   const [editorMode, setEditorMode] = useState<"visual" | "code">("visual")
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop")
   const [previewTheme, setPreviewTheme] = useState<"light" | "dark">("light")
 
+  // Debounce search input (300ms)
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
+  useEffect(() => {
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(templateSearch)
+      setCurrentPage(1)
+    }, 300)
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [templateSearch])
+
+  // Fetch templates on mount and when filters/page change
+  useEffect(() => {
+    let cancelled = false
+    async function fetchTemplates() {
+      setLoading(true)
+      try {
+        const filters: TemplateFilters = { page: currentPage, page_size: PAGE_SIZE }
+        if (debouncedSearch) filters.search = debouncedSearch
+        if (typeFilter !== "all") filters.type = typeFilter
+        if (statusFilter !== "all") filters.status = statusFilter
+        const res = await getEmailTemplatesFiltered(filters)
+        if (!cancelled) {
+          setTemplates(res.results)
+          setTotalCount(res.count)
+        }
+      } catch {
+        if (!cancelled) {
+          setTemplates([])
+          setTotalCount(0)
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    fetchTemplates()
+    return () => { cancelled = true }
+  }, [currentPage, debouncedSearch, typeFilter, statusFilter])
+
+  // Fetch full template detail when selected
+  const handleSelectTemplate = useCallback(async (template: EmailTemplate) => {
+    setLoadingDetail(true)
+    setVersions([])
+    setVersionsLoaded(false)
+    try {
+      const detail = await getEmailTemplate(template.id)
+      setSelectedTemplate(detail)
+    } catch {
+      setSelectedTemplate(null)
+    } finally {
+      setLoadingDetail(false)
+    }
+  }, [])
+
+  // Fetch versions when Versions tab is opened
+  const handleLoadVersions = useCallback(async () => {
+    if (!selectedTemplate || versionsLoaded) return
+    setLoadingVersions(true)
+    try {
+      const v = await getEmailTemplateVersions(selectedTemplate.id)
+      setVersions(v)
+      setVersionsLoaded(true)
+    } catch {
+      setVersions([])
+    } finally {
+      setLoadingVersions(false)
+    }
+  }, [selectedTemplate, versionsLoaded])
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
+
   return (
-    <div className="flex gap-6 h-[calc(100vh-220px)] min-h-[600px]">
+    <div className="flex gap-6 h-[calc(100vh-240px)]">
       {/* Template List - Left */}
-      <Card className="w-72 flex-shrink-0">
-        <CardHeader className="pb-3">
+      <Card className="w-72 flex-shrink-0 flex flex-col">
+        <CardHeader className="pb-3 flex-shrink-0">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Templates</CardTitle>
-            <Button size="sm" variant="ghost"><PlusIcon className="w-4 h-4" /></Button>
+            <CardTitle className="text-base">
+              Templates{" "}
+              {!loading && <span className="text-muted-foreground font-normal">({totalCount})</span>}
+            </CardTitle>
+            <Button size="sm" variant="ghost"><Plus className="w-4 h-4" /></Button>
+          </div>
+          {/* Search */}
+          <div className="relative mt-2">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Search templates..."
+              value={templateSearch}
+              onChange={(e) => setTemplateSearch(e.target.value)}
+              className="pl-8 h-8 text-xs"
+            />
+          </div>
+          {/* Filters */}
+          <div className="flex gap-2 mt-2">
+            <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v as TemplateType | "all"); setCurrentPage(1) }}>
+              <SelectTrigger className="h-7 text-xs flex-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="Transactional">Transactional</SelectItem>
+                <SelectItem value="Marketing">Marketing</SelectItem>
+                <SelectItem value="System">System</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v as TemplateStatus | "all"); setCurrentPage(1) }}>
+              <SelectTrigger className="h-7 text-xs flex-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="Published">Published</SelectItem>
+                <SelectItem value="Draft">Draft</SelectItem>
+                <SelectItem value="Archived">Archived</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardHeader>
-        <CardContent className="p-0">
-          <ScrollArea className="h-[calc(100%-60px)]">
+        <CardContent className="flex-1 overflow-hidden p-0">
+          <ScrollArea className="h-full">
             <div className="space-y-1 p-2">
-              {templates.map((template) => (
-                <button
-                  key={template.id}
-                  onClick={() => setSelectedTemplate(template)}
-                  className={cn(
-                    "w-full text-left p-3 rounded-lg transition-colors",
-                    selectedTemplate?.id === template.id ? "bg-primary/10 border border-primary/20" : "hover:bg-muted/50"
-                  )}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-medium text-sm">{template.name}</span>
-                    <Badge variant={template.status === "Published" ? "default" : "secondary"} className={cn("text-xs", template.status === "Published" && "bg-green-600")}>
-                      {template.status}
-                    </Badge>
+              {loading ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-5 w-16 rounded-full" />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-3 w-20" />
+                      <Skeleton className="h-3 w-14" />
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{template.type}</span>
-                    <span>Used by {template.usedBy}</span>
-                  </div>
-                </button>
-              ))}
+                ))
+              ) : templates.length === 0 ? (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  No templates found
+                </div>
+              ) : (
+                templates.map((template) => (
+                  <button
+                    key={template.id}
+                    onClick={() => handleSelectTemplate(template)}
+                    className={cn(
+                      "w-full text-left p-3 rounded-lg transition-colors",
+                      selectedTemplate?.id === template.id ? "bg-primary/10 border border-primary/20" : "hover:bg-muted/50"
+                    )}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-medium text-sm truncate mr-2">{template.name}</span>
+                      <Badge variant={template.status === "Published" ? "default" : "secondary"} className={cn("text-xs flex-shrink-0", template.status === "Published" && "bg-green-600")}>
+                        {template.status}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{template.type}</span>
+                      <span>Used by {template.usedBy}</span>
+                    </div>
+                  </button>
+                ))
+              )}
             </div>
           </ScrollArea>
+          {/* Pagination controls */}
+          {!loading && totalCount > 0 && (
+            <div className="flex items-center justify-between p-2 border-t text-xs text-muted-foreground flex-shrink-0">
+              <span>{totalCount} templates</span>
+              <div className="flex items-center gap-1">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 w-6 p-0"
+                  disabled={currentPage <= 1}
+                  onClick={() => setCurrentPage((p) => p - 1)}
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </Button>
+                <span>{currentPage}/{totalPages}</span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 w-6 p-0"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage((p) => p + 1)}
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Template Editor - Right */}
-      {selectedTemplate ? (
+      {loadingDetail ? (
+        <Card className="flex-1 flex flex-col">
+          <CardHeader className="pb-3 flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="space-y-2">
+                <Skeleton className="h-6 w-48" />
+                <Skeleton className="h-4 w-32" />
+              </div>
+              <div className="flex gap-2">
+                <Skeleton className="h-9 w-24" />
+                <Skeleton className="h-9 w-20" />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="flex-1 min-h-0 p-6">
+            <div className="space-y-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-64 w-full" />
+            </div>
+          </CardContent>
+        </Card>
+      ) : selectedTemplate ? (
         <Card className="flex-1 flex flex-col">
           <CardHeader className="pb-3 flex-shrink-0">
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>{selectedTemplate.name}</CardTitle>
-                <CardDescription>Last updated: {selectedTemplate.lastUpdated}</CardDescription>
+                <CardDescription>Last updated: {selectedTemplate.lastUpdated} · v{selectedTemplate.version}</CardDescription>
               </div>
               <div className="flex gap-2">
                 <Button variant="outline">Save Draft</Button>
@@ -970,8 +1528,8 @@ function TemplatesTab() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="flex-1 overflow-hidden p-0">
-            <Tabs defaultValue="content" className="h-full flex flex-col">
+          <CardContent className="flex-1 min-h-0 p-0">
+            <Tabs defaultValue="content" className="h-full flex flex-col" onValueChange={(v) => { if (v === "versions") handleLoadVersions() }}>
               <div className="px-6 border-b">
                 <TabsList className="bg-transparent h-auto p-0 gap-6">
                   <TabsTrigger value="content" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary rounded-none pb-3">Content</TabsTrigger>
@@ -988,11 +1546,11 @@ function TemplatesTab() {
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Subject Line</Label>
-                      <Input defaultValue="Welcome to Orion, {{first_name}}!" />
+                      <Input key={selectedTemplate.id + "-subject"} defaultValue={selectedTemplate.subject} />
                     </div>
                     <div className="space-y-2">
                       <Label>Preheader</Label>
-                      <Input defaultValue="Your journey to finding the perfect role starts here." />
+                      <Input key={selectedTemplate.id + "-preheader"} defaultValue={selectedTemplate.preheader} />
                     </div>
                   </div>
 
@@ -1000,15 +1558,15 @@ function TemplatesTab() {
                   <div className="flex items-center justify-between">
                     <Label>Email Content</Label>
                     <div className="flex gap-1 bg-muted p-1 rounded-lg">
-                      <Button 
-                        size="sm" 
+                      <Button
+                        size="sm"
                         variant={editorMode === "visual" ? "secondary" : "ghost"}
                         onClick={() => setEditorMode("visual")}
                       >
                         Visual
                       </Button>
-                      <Button 
-                        size="sm" 
+                      <Button
+                        size="sm"
                         variant={editorMode === "code" ? "secondary" : "ghost"}
                         onClick={() => setEditorMode("code")}
                       >
@@ -1022,11 +1580,11 @@ function TemplatesTab() {
                     <div className="space-y-3">
                       {/* WYSIWYG Toolbar */}
                       <div className="flex items-center gap-1 p-2 border rounded-lg bg-muted/30">
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0"><BoldIcon className="w-4 h-4" /></Button>
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0"><ItalicIcon className="w-4 h-4" /></Button>
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0"><Bold className="w-4 h-4" /></Button>
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0"><Italic className="w-4 h-4" /></Button>
                         <Separator orientation="vertical" className="h-6 mx-1" />
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0"><LinkIcon className="w-4 h-4" /></Button>
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0"><ImageIcon className="w-4 h-4" /></Button>
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0"><Link className="w-4 h-4" /></Button>
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0"><Image className="w-4 h-4" /></Button>
                         <Separator orientation="vertical" className="h-6 mx-1" />
                         <Button size="sm" variant="ghost" className="h-8 px-2">Button</Button>
                         <Button size="sm" variant="ghost" className="h-8 px-2">Divider</Button>
@@ -1035,46 +1593,39 @@ function TemplatesTab() {
                           <DropdownMenuTrigger asChild>
                             <Button size="sm" variant="ghost" className="h-8 px-2">
                               Insert Variable
-                              <ChevronDownIcon className="w-3 h-3 ml-1" />
+                              <ChevronDown className="w-3 h-3 ml-1" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent>
-                            <DropdownMenuItem>{"{{first_name}}"}</DropdownMenuItem>
-                            <DropdownMenuItem>{"{{last_name}}"}</DropdownMenuItem>
-                            <DropdownMenuItem>{"{{company_name}}"}</DropdownMenuItem>
-                            <DropdownMenuItem>{"{{job_title}}"}</DropdownMenuItem>
-                            <DropdownMenuItem>{"{{magic_link}}"}</DropdownMenuItem>
+                            {selectedTemplate.variables.length > 0 ? (
+                              selectedTemplate.variables.map((v) => (
+                                <DropdownMenuItem key={v}>{`{{${v}}}`}</DropdownMenuItem>
+                              ))
+                            ) : (
+                              <DropdownMenuItem disabled>No variables</DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
                       {/* Visual Editor Area */}
-                      <div className="min-h-[300px] border rounded-lg p-4 bg-white">
-                        <p className="text-muted-foreground text-sm">[WYSIWYG Editor Placeholder]</p>
-                        <p className="mt-4">Hi {"{{first_name}}"},</p>
-                        <p className="mt-2">Welcome to Orion! We&apos;re excited to have you on board.</p>
-                        <p className="mt-4">Best,<br/>The Orion Team</p>
-                      </div>
+                      <iframe
+                        sandbox=""
+                        srcDoc={selectedTemplate.html}
+                        className="min-h-[300px] w-full border rounded-lg bg-white"
+                        title="Template preview"
+                      />
                     </div>
                   ) : (
-                    <Textarea 
+                    <Textarea
+                      key={selectedTemplate.id + "-html"}
                       className="min-h-[350px] font-mono text-sm"
-                      defaultValue={`<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-</head>
-<body>
-  <h1>Welcome, {{first_name}}!</h1>
-  <p>We're excited to have you on board.</p>
-  <a href="{{magic_link}}">Get Started</a>
-</body>
-</html>`}
+                      defaultValue={selectedTemplate.html}
                     />
                   )}
 
                   {/* Validation */}
                   <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200">
-                    <CheckCircleIcon className="w-4 h-4 text-green-600" />
+                    <CheckCircle className="w-4 h-4 text-green-600" />
                     <span className="text-sm text-green-700">All variables are valid</span>
                   </div>
                 </div>
@@ -1084,23 +1635,18 @@ function TemplatesTab() {
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">Available variables for this template:</p>
                   <div className="grid gap-3">
-                    {[
-                      { name: "first_name", desc: "User's first name" },
-                      { name: "last_name", desc: "User's last name" },
-                      { name: "email", desc: "User's email address" },
-                      { name: "company_name", desc: "Company name (if applicable)" },
-                      { name: "job_title", desc: "Job title (if applicable)" },
-                      { name: "magic_link", desc: "Authentication magic link" },
-                      { name: "unsubscribe_link", desc: "Unsubscribe URL" },
-                    ].map((v) => (
-                      <div key={v.name} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <code className="text-sm bg-muted px-2 py-0.5 rounded">{`{{${v.name}}}`}</code>
-                          <p className="text-xs text-muted-foreground mt-1">{v.desc}</p>
+                    {selectedTemplate.variables.length > 0 ? (
+                      selectedTemplate.variables.map((v) => (
+                        <div key={v} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div>
+                            <code className="text-sm bg-muted px-2 py-0.5 rounded">{`{{${v}}}`}</code>
+                          </div>
+                          <Button size="sm" variant="ghost" onClick={() => navigator.clipboard.writeText(`{{${v}}}`)}>Copy</Button>
                         </div>
-                        <Button size="sm" variant="ghost">Copy</Button>
-                      </div>
-                    ))}
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No variables defined for this template.</p>
+                    )}
                   </div>
                 </div>
               </TabsContent>
@@ -1110,10 +1656,10 @@ function TemplatesTab() {
                   <div className="flex items-center gap-4">
                     <div className="flex gap-1 bg-muted p-1 rounded-lg">
                       <Button size="sm" variant={previewMode === "desktop" ? "secondary" : "ghost"} onClick={() => setPreviewMode("desktop")}>
-                        <MonitorIcon className="w-4 h-4 mr-1" /> Desktop
+                        <Monitor className="w-4 h-4 mr-1" /> Desktop
                       </Button>
                       <Button size="sm" variant={previewMode === "mobile" ? "secondary" : "ghost"} onClick={() => setPreviewMode("mobile")}>
-                        <SmartphoneIcon className="w-4 h-4 mr-1" /> Mobile
+                        <Smartphone className="w-4 h-4 mr-1" /> Mobile
                       </Button>
                     </div>
                     <div className="flex gap-1 bg-muted p-1 rounded-lg">
@@ -1126,11 +1672,15 @@ function TemplatesTab() {
                     previewMode === "desktop" ? "w-full max-w-2xl" : "w-[375px]",
                     previewTheme === "dark" ? "bg-gray-900" : "bg-white"
                   )}>
-                    <div className={cn("p-6", previewTheme === "dark" ? "text-white" : "text-gray-900")}>
-                      <h1 className="text-2xl font-bold mb-4">Welcome, John!</h1>
-                      <p className="mb-4">We&apos;re excited to have you on board. Your journey to finding the perfect role starts here.</p>
-                      <a href="#" className="inline-block px-6 py-3 bg-primary text-white rounded-lg">Get Started</a>
-                    </div>
+                    <iframe
+                      sandbox=""
+                      srcDoc={previewTheme === "dark"
+                        ? `<div style="padding:1.5rem;color:#fff;background:#111827">${selectedTemplate.html}</div>`
+                        : `<div style="padding:1.5rem;color:#111827">${selectedTemplate.html}</div>`
+                      }
+                      className="w-full min-h-[400px]"
+                      title="Template preview"
+                    />
                   </div>
                 </div>
               </TabsContent>
@@ -1144,32 +1694,43 @@ function TemplatesTab() {
                   <div className="space-y-2">
                     <Label>Test Variables</Label>
                     <div className="space-y-2">
-                      <Input placeholder="first_name" defaultValue="John" />
-                      <Input placeholder="company_name" defaultValue="Acme Inc" />
+                      {selectedTemplate.variables.map((v) => (
+                        <Input key={v} placeholder={v} />
+                      ))}
                     </div>
                   </div>
-                  <Button><SendIcon className="w-4 h-4 mr-2" />Send Test Email</Button>
+                  <Button><Send className="w-4 h-4 mr-2" />Send Test Email</Button>
                 </div>
               </TabsContent>
 
               <TabsContent value="versions" className="flex-1 overflow-auto m-0 p-6">
                 <div className="space-y-3">
-                  {[
-                    { version: "v3 (current)", date: "Mar 15, 2024", author: "admin@orion.jobs" },
-                    { version: "v2", date: "Mar 10, 2024", author: "admin@orion.jobs" },
-                    { version: "v1", date: "Mar 5, 2024", author: "admin@orion.jobs" },
-                  ].map((v, i) => (
-                    <div key={i} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <p className="font-medium">{v.version}</p>
-                        <p className="text-sm text-muted-foreground">{v.date} by {v.author}</p>
+                  {loadingVersions ? (
+                    Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="space-y-2">
+                          <Skeleton className="h-5 w-24" />
+                          <Skeleton className="h-4 w-40" />
+                        </div>
+                        <Skeleton className="h-8 w-20" />
                       </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline">Compare</Button>
-                        {i > 0 && <Button size="sm" variant="outline">Rollback</Button>}
+                    ))
+                  ) : versions.length > 0 ? (
+                    versions.map((v, i) => (
+                      <div key={v.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <p className="font-medium">v{v.version}{i === 0 ? " (current)" : ""}</p>
+                          <p className="text-sm text-muted-foreground">{v.savedAt} by {v.savedBy}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline">Compare</Button>
+                          {i > 0 && <Button size="sm" variant="outline">Rollback</Button>}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No version history available.</p>
+                  )}
                 </div>
               </TabsContent>
             </Tabs>
@@ -1178,7 +1739,7 @@ function TemplatesTab() {
       ) : (
         <Card className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <MailIcon className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+            <Mail className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
             <p className="text-muted-foreground">Select a template to edit</p>
           </div>
         </Card>
@@ -1196,6 +1757,7 @@ function LogsTab() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [providerFilter, setProviderFilter] = useState("all")
   const [selectedLog, setSelectedLog] = useState<typeof emailLogs[0] | null>(null)
+  const [exporting, setExporting] = useState<"csv" | "json" | null>(null)
 
   const filteredLogs = emailLogs.filter((log) => {
     if (searchEmail && !log.recipient.toLowerCase().includes(searchEmail.toLowerCase())) return false
@@ -1204,12 +1766,85 @@ function LogsTab() {
     return true
   })
 
+  const handleExport = async (format: "csv" | "json") => {
+    setExporting(format)
+    try {
+      const { exportEmailLogs } = await import("@/lib/api/admin-email")
+      const filters: { status?: "Queued" | "Sent" | "Delivered" | "Bounced" | "Failed"; provider?: string; search?: string } = {}
+      if (statusFilter !== "all") filters.status = statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1) as "Queued" | "Sent" | "Delivered" | "Bounced" | "Failed"
+      if (providerFilter !== "all") filters.provider = providerFilter
+      if (searchEmail) filters.search = searchEmail
+      const blob = await exportEmailLogs(filters, format)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `email-logs-export.${format}`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error("Export failed:", err)
+    } finally {
+      setExporting(null)
+    }
+  }
+
   return (
     <div className="space-y-6">
+      {/* Retention policy guide */}
+      <Card className="border-blue-200 bg-gradient-to-r from-blue-50/80 to-amber-50/40">
+        <CardContent className="p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Shield className="w-4 h-4 text-blue-700" />
+            <p className="font-semibold text-sm">These logs are automatically deleted over time</p>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Every email Orion sends is logged here — who it was sent to, whether it was delivered, bounced, or failed, and the full provider response.
+            To protect user privacy and meet legal requirements, the system automatically deletes old logs on a schedule.
+            Not all logs are treated the same — they are split into two tiers based on what they contain and how long the law says we need to keep them.
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div className="rounded-md border border-blue-200 bg-white/80 p-2.5 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="bg-blue-600 text-white text-[10px] px-1.5 py-0">Tier 1</Badge>
+                <span className="text-xs font-semibold">Delivery logs</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                <strong className="text-foreground">Sent</strong> and <strong className="text-foreground">Queued</strong> emails — these contain recipient names and addresses (personal data).
+                GDPR says we shouldn&apos;t keep personal data longer than needed, so these are deleted first.
+              </p>
+              <p className="text-xs font-medium">Deleted after: 90 days (default)</p>
+            </div>
+            <div className="rounded-md border border-amber-200 bg-white/80 p-2.5 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="bg-amber-600 text-white text-[10px] px-1.5 py-0">Tier 2</Badge>
+                <span className="text-xs font-semibold">Compliance logs</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                <strong className="text-foreground">Bounced</strong> and <strong className="text-foreground">Failed</strong> emails — these prove we handled delivery failures and opt-outs correctly.
+                CAN-SPAM requires keeping this proof for up to 3 years, so these are retained much longer.
+              </p>
+              <p className="text-xs font-medium">Deleted after: 1,095 days / 3 years (default)</p>
+            </div>
+          </div>
+          <div className="rounded-md bg-muted/60 p-2.5 space-y-1">
+            <p className="text-xs font-medium flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-muted-foreground" /> How deletion works</p>
+            <p className="text-[11px] text-muted-foreground">
+              A background task runs every day at midnight UTC. It finds logs older than the configured retention period and deletes them in batches of 5,000.
+              <strong className="text-foreground"> Deleted logs are gone forever</strong> — there is no undo or recycle bin. If you need to keep a record permanently, export it using the Export button above before it expires.
+            </p>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            You can change retention periods in <strong className="text-foreground">Settings → Compliance &amp; Data Retention</strong>. Setting a period to 0 keeps logs forever (not recommended for GDPR).
+          </p>
+        </CardContent>
+      </Card>
+
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-4">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Search by email..."
             value={searchEmail}
@@ -1236,13 +1871,35 @@ function LogsTab() {
             <SelectItem value="all">All Providers</SelectItem>
             <SelectItem value="resend">Resend</SelectItem>
             <SelectItem value="zeptomail">ZeptoMail</SelectItem>
+            <SelectItem value="smtp">SMTP</SelectItem>
           </SelectContent>
         </Select>
 
         <Button variant="outline">
-          <CalendarIcon className="w-4 h-4 mr-2" />
+          <Calendar className="w-4 h-4 mr-2" />
           Date Range
         </Button>
+
+        <div className="ml-auto flex gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" disabled={exporting !== null}>
+                {exporting ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleExport("csv")}>
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Export as CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("json")}>
+                <FileJson className="w-4 h-4 mr-2" />
+                Export as JSON
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {/* Logs Table */}
@@ -1256,6 +1913,7 @@ function LogsTab() {
               <TableHead>Template</TableHead>
               <TableHead>Provider</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Retention</TableHead>
               <TableHead>Error</TableHead>
               <TableHead>Trace ID</TableHead>
             </TableRow>
@@ -1274,9 +1932,9 @@ function LogsTab() {
                 <TableCell className="text-sm">{log.provider}</TableCell>
                 <TableCell>
                   <Badge variant={
-                    log.status === "Delivered" ? "default" : 
-                    log.status === "Sent" ? "secondary" : 
-                    log.status === "Bounced" ? "destructive" : 
+                    log.status === "Delivered" ? "default" :
+                    log.status === "Sent" ? "secondary" :
+                    log.status === "Bounced" ? "destructive" :
                     log.status === "Failed" ? "destructive" : "outline"
                   } className={cn(
                     log.status === "Delivered" && "bg-green-600",
@@ -1284,6 +1942,19 @@ function LogsTab() {
                   )}>
                     {log.status}
                   </Badge>
+                </TableCell>
+                <TableCell>
+                  {log.status === "Bounced" || log.status === "Failed" ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
+                      <Shield className="w-3 h-3" />
+                      Tier 2
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded px-1.5 py-0.5">
+                      <Shield className="w-3 h-3" />
+                      Tier 1
+                    </span>
+                  )}
                 </TableCell>
                 <TableCell>
                   {log.errorCode ? (
@@ -1343,6 +2014,43 @@ function LogsTab() {
 
                 <Separator />
 
+                {/* Retention info for this log */}
+                {(selectedLog.status === "Bounced" || selectedLog.status === "Failed") ? (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="bg-amber-600 text-white text-[10px] px-1.5 py-0">Tier 2</Badge>
+                      <p className="text-sm font-medium text-amber-800">This log will be kept for up to 3 years</p>
+                    </div>
+                    <p className="text-xs text-amber-700">
+                      Because this email <strong>{selectedLog.status.toLowerCase()}</strong>, it counts as compliance evidence — it proves Orion
+                      handled the delivery failure or bounce correctly. CAN-SPAM law requires keeping this kind of proof,
+                      so it&apos;s retained for the longer <em>Compliance Retention</em> period (default 1,095 days).
+                    </p>
+                    <p className="text-xs text-amber-700">
+                      After that period, the system will permanently delete this log during the next daily cleanup.
+                      Once deleted, it cannot be recovered — export it now if you need a permanent copy.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="bg-blue-600 text-white text-[10px] px-1.5 py-0">Tier 1</Badge>
+                      <p className="text-sm font-medium text-blue-800">This log will be deleted after 90 days</p>
+                    </div>
+                    <p className="text-xs text-blue-700">
+                      This is a successful delivery log — it contains the recipient&apos;s email address and personal details.
+                      Under GDPR, we don&apos;t keep personal data longer than necessary, so {selectedLog.status.toLowerCase()} logs
+                      like this one are automatically deleted after the <em>Log Retention</em> period (default 90 days).
+                    </p>
+                    <p className="text-xs text-blue-700">
+                      After that period, the system will permanently delete this log during the next daily cleanup.
+                      Once deleted, it cannot be recovered — export it now if you need a permanent copy.
+                    </p>
+                  </div>
+                )}
+
+                <Separator />
+
                 {/* Raw Payload */}
                 <div>
                   <p className="font-medium mb-2">Raw Payload (sanitized)</p>
@@ -1383,7 +2091,7 @@ function LogsTab() {
                 {/* Actions */}
                 <div className="flex gap-2">
                   <Button variant="outline" className="flex-1 bg-transparent">
-                    <RefreshCwIcon className="w-4 h-4 mr-2" />
+                    <RefreshCw className="w-4 h-4 mr-2" />
                     Retry
                   </Button>
                   <Button variant="outline">View User</Button>
@@ -1402,8 +2110,111 @@ function LogsTab() {
 // =============================================================================
 
 function SettingsTab() {
-  const [killSwitchEnabled, setKillSwitchEnabled] = useState(false)
+  const [settings, setSettings] = useState<{
+    defaultFromName: string; defaultFromEmail: string; replyToAddress: string; sendingDomain: string
+    unsubscribeText: string; includeUnsubscribe: boolean
+    maxEmailsPerSecond: number; maxEmailsPerMinute: number
+    maxRetries: number; initialBackoff: number; backoffMultiplier: number
+    productionMode: boolean; killSwitchEnabled: boolean
+    logRetentionDays: number; complianceRetentionDays: number
+    lastCleanupAt: string | null; lastCleanupCount: number
+  } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [confirmKillSwitch, setConfirmKillSwitch] = useState(false)
+  const [killSwitchConfirmText, setKillSwitchConfirmText] = useState("")
+
+  const fetchSettings = useCallback(async () => {
+    try {
+      const { getEmailSettings } = await import("@/lib/api/admin-email")
+      const data = await getEmailSettings()
+      setSettings(data)
+    } catch (err) {
+      console.error("Failed to fetch settings:", err)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { fetchSettings() }, [fetchSettings])
+
+  const updateField = <K extends keyof NonNullable<typeof settings>>(key: K, value: NonNullable<typeof settings>[K]) => {
+    setSettings((prev) => prev ? { ...prev, [key]: value } : prev)
+  }
+
+  const handleSave = async () => {
+    if (!settings) return
+    setSaving(true)
+    try {
+      const { updateEmailSettings } = await import("@/lib/api/admin-email")
+      const { lastCleanupAt, lastCleanupCount, killSwitchEnabled, ...saveable } = settings
+      const updated = await updateEmailSettings(saveable)
+      setSettings(updated)
+    } catch (err) {
+      console.error("Failed to save settings:", err)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleKillSwitch = async () => {
+    if (!settings) return
+    try {
+      const { toggleKillSwitch } = await import("@/lib/api/admin-email")
+      const newState = !settings.killSwitchEnabled
+      const result = await toggleKillSwitch(newState)
+      setSettings((prev) => prev ? { ...prev, killSwitchEnabled: result.killSwitchEnabled } : prev)
+    } catch (err) {
+      console.error("Kill switch toggle failed:", err)
+    } finally {
+      setConfirmKillSwitch(false)
+      setKillSwitchConfirmText("")
+    }
+  }
+
+  const handleRotateKeys = async () => {
+    try {
+      const { rotateApiKeys } = await import("@/lib/api/admin-email")
+      await rotateApiKeys()
+    } catch (err) {
+      console.error("Key rotation failed:", err)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Card key={i}>
+            <CardContent className="p-6">
+              <Skeleton className="h-5 w-48 mb-4" />
+              <div className="grid gap-4 md:grid-cols-2">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    )
+  }
+
+  if (!settings) {
+    return (
+      <Card>
+        <CardContent className="p-8 text-center text-muted-foreground">
+          Failed to load email settings. Check backend connection.
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const formatCleanupDate = (iso: string | null) => {
+    if (!iso) return "Never"
+    try {
+      return new Date(iso).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })
+    } catch { return iso }
+  }
 
   return (
     <div className="space-y-6">
@@ -1417,19 +2228,19 @@ function SettingsTab() {
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-2">
               <Label>Default From Name</Label>
-              <Input defaultValue="Orion" />
+              <Input value={settings.defaultFromName} onChange={(e) => updateField("defaultFromName", e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>Default From Email</Label>
-              <Input defaultValue="noreply@orion.jobs" />
+              <Input value={settings.defaultFromEmail} onChange={(e) => updateField("defaultFromEmail", e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>Reply-To Address</Label>
-              <Input defaultValue="support@orion.jobs" />
+              <Input value={settings.replyToAddress} onChange={(e) => updateField("replyToAddress", e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>Sending Domain</Label>
-              <Input defaultValue="mail.orion.jobs" />
+              <Input value={settings.sendingDomain} onChange={(e) => updateField("sendingDomain", e.target.value)} />
             </div>
           </div>
         </CardContent>
@@ -1444,13 +2255,14 @@ function SettingsTab() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label>Footer Text</Label>
-            <Textarea 
-              defaultValue="You're receiving this email because you signed up for Orion. If you'd like to stop receiving these emails, you can unsubscribe at any time."
+            <Textarea
+              value={settings.unsubscribeText}
+              onChange={(e) => updateField("unsubscribeText", e.target.value)}
               className="min-h-[80px]"
             />
           </div>
           <div className="flex items-center gap-2">
-            <Switch defaultChecked />
+            <Switch checked={settings.includeUnsubscribe} onCheckedChange={(v) => updateField("includeUnsubscribe", v)} />
             <Label>Include unsubscribe link in all marketing emails</Label>
           </div>
         </CardContent>
@@ -1466,11 +2278,11 @@ function SettingsTab() {
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-2">
               <Label>Max emails per second</Label>
-              <Input type="number" defaultValue="50" />
+              <Input type="number" value={settings.maxEmailsPerSecond} onChange={(e) => updateField("maxEmailsPerSecond", Number(e.target.value))} />
             </div>
             <div className="space-y-2">
               <Label>Max emails per minute</Label>
-              <Input type="number" defaultValue="1000" />
+              <Input type="number" value={settings.maxEmailsPerMinute} onChange={(e) => updateField("maxEmailsPerMinute", Number(e.target.value))} />
             </div>
           </div>
         </CardContent>
@@ -1486,7 +2298,7 @@ function SettingsTab() {
           <div className="grid gap-6 md:grid-cols-3">
             <div className="space-y-2">
               <Label>Max Retries</Label>
-              <Select defaultValue="3">
+              <Select value={settings.maxRetries.toString()} onValueChange={(v) => updateField("maxRetries", Number(v))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {[1, 2, 3, 5, 10].map((n) => <SelectItem key={n} value={n.toString()}>{n}</SelectItem>)}
@@ -1495,7 +2307,7 @@ function SettingsTab() {
             </div>
             <div className="space-y-2">
               <Label>Initial Backoff</Label>
-              <Select defaultValue="60">
+              <Select value={settings.initialBackoff.toString()} onValueChange={(v) => updateField("initialBackoff", Number(v))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="30">30 seconds</SelectItem>
@@ -1506,7 +2318,7 @@ function SettingsTab() {
             </div>
             <div className="space-y-2">
               <Label>Backoff Multiplier</Label>
-              <Select defaultValue="2">
+              <Select value={settings.backoffMultiplier.toString()} onValueChange={(v) => updateField("backoffMultiplier", Number(v))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {[1.5, 2, 3].map((n) => <SelectItem key={n} value={n.toString()}>{n}x</SelectItem>)}
@@ -1514,6 +2326,113 @@ function SettingsTab() {
               </Select>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Compliance & Data Retention */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-slate-500 to-slate-700 flex items-center justify-center shadow-sm">
+              <Shield className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <CardTitle>Compliance & Data Retention</CardTitle>
+              <CardDescription>GDPR &amp; CAN-SPAM compliant two-tier log retention with automated cleanup</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Tier 1 — GDPR callout */}
+          <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 text-sm text-blue-800">
+            <div className="flex items-start gap-2">
+              <Shield className="w-4 h-4 mt-0.5 shrink-0" />
+              <div>
+                <p className="font-medium">Tier 1 — GDPR Storage Limitation</p>
+                <p className="mt-1">GDPR Article 5(1)(e) requires that personal data is kept no longer than necessary. Sent and pending email logs contain recipient information and are automatically deleted after the configured retention period. Default: <strong>90 days</strong>.</p>
+                <p className="mt-1 text-blue-600">Set to 0 to keep forever (not recommended for GDPR compliance).</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Tier 2 — CAN-SPAM callout */}
+          <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+              <div>
+                <p className="font-medium">Tier 2 — CAN-SPAM Compliance Evidence</p>
+                <p className="mt-1">The CAN-SPAM Act requires retaining proof of compliance — bounce handling, opt-out processing, and delivery failure records — for up to 3 years. Bounced and failed email logs are retained for the longer compliance period. Default: <strong>1,095 days (3 years)</strong>.</p>
+                <p className="mt-1 text-amber-600">Set to 0 to keep forever. Reducing below 1,095 days may affect regulatory compliance.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Log Retention (Tier 1)</Label>
+              <Select value={settings.logRetentionDays.toString()} onValueChange={(v) => updateField("logRetentionDays", Number(v))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">Keep forever</SelectItem>
+                  <SelectItem value="30">30 days</SelectItem>
+                  <SelectItem value="60">60 days</SelectItem>
+                  <SelectItem value="90">90 days (default)</SelectItem>
+                  <SelectItem value="180">180 days</SelectItem>
+                  <SelectItem value="365">365 days</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Successful delivery logs (sent/pending) older than this are permanently deleted. GDPR Article 5(1)(e) recommends minimizing retention of personal data.</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Compliance Retention (Tier 2)</Label>
+              <Select value={settings.complianceRetentionDays.toString()} onValueChange={(v) => updateField("complianceRetentionDays", Number(v))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">Keep forever</SelectItem>
+                  <SelectItem value="180">180 days</SelectItem>
+                  <SelectItem value="365">1 year</SelectItem>
+                  <SelectItem value="730">2 years</SelectItem>
+                  <SelectItem value="1095">3 years (default, CAN-SPAM)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Bounce and failure records older than this are permanently deleted. CAN-SPAM requires retaining compliance evidence for up to 3 years (1,095 days).</p>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Cleanup mechanics */}
+          <div className="rounded-lg bg-muted/50 p-3 space-y-2">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Clock className="w-4 h-4 text-muted-foreground" />
+              How automated cleanup works
+            </div>
+            <ul className="text-xs text-muted-foreground space-y-1 ml-6 list-disc">
+              <li>Runs daily via a scheduled task (Celery Beat) — no manual intervention required.</li>
+              <li>Deletions are processed in batches of 5,000 records for performance stability.</li>
+              <li>Each cleanup run is logged in the audit trail for accountability (GDPR Article 5(2)).</li>
+              <li>Deletions are <strong className="text-foreground">permanent and irreversible</strong> — deleted records cannot be recovered.</li>
+            </ul>
+          </div>
+
+          {/* Cleanup status */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="font-medium text-sm">Last Automated Cleanup</p>
+              <p className="text-sm text-muted-foreground">
+                {settings.lastCleanupAt
+                  ? `${formatCleanupDate(settings.lastCleanupAt)} — ${settings.lastCleanupCount.toLocaleString()} records removed`
+                  : "No cleanup has run yet"}
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleSave} disabled={saving}>
+              <Trash2 className="w-4 h-4 mr-2" />
+              Run Cleanup Now
+            </Button>
+          </div>
+          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+            <strong>Warning:</strong> Manual cleanup applies the same retention rules and is irreversible. Records older than the configured retention periods will be permanently deleted.
+          </p>
         </CardContent>
       </Card>
 
@@ -1530,8 +2449,10 @@ function SettingsTab() {
               <p className="text-sm text-muted-foreground">Emails will be sent to real recipients</p>
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant="default" className="bg-green-600">Production</Badge>
-              <Switch defaultChecked />
+              <Badge variant="default" className={settings.productionMode ? "bg-green-600" : "bg-amber-500"}>
+                {settings.productionMode ? "Production" : "Sandbox"}
+              </Badge>
+              <Switch checked={settings.productionMode} onCheckedChange={(v) => updateField("productionMode", v)} />
             </div>
           </div>
         </CardContent>
@@ -1549,11 +2470,11 @@ function SettingsTab() {
               <p className="font-medium text-red-900">Disable All Sending</p>
               <p className="text-sm text-red-700">Immediately stop all outgoing emails (global kill switch)</p>
             </div>
-            <Button 
-              variant="destructive"
+            <Button
+              variant={settings.killSwitchEnabled ? "default" : "destructive"}
               onClick={() => setConfirmKillSwitch(true)}
             >
-              {killSwitchEnabled ? "Re-enable" : "Disable All"}
+              {settings.killSwitchEnabled ? "Re-enable Emails" : "Disable All"}
             </Button>
           </div>
           <div className="flex items-center justify-between p-4 border border-red-200 rounded-lg bg-red-50/50">
@@ -1561,7 +2482,7 @@ function SettingsTab() {
               <p className="font-medium text-red-900">Rotate API Keys</p>
               <p className="text-sm text-red-700">Generate new API keys for all connected providers</p>
             </div>
-            <Button variant="outline" className="border-red-300 text-red-600 hover:bg-red-50 bg-transparent">
+            <Button variant="outline" className="border-red-300 text-red-600 hover:bg-red-50 bg-transparent" onClick={handleRotateKeys}>
               Rotate Keys
             </Button>
           </div>
@@ -1570,26 +2491,44 @@ function SettingsTab() {
 
       {/* Save Button */}
       <div className="flex justify-end">
-        <Button size="lg">Save Settings</Button>
+        <Button size="lg" onClick={handleSave} disabled={saving}>
+          {saving && <RefreshCw className="w-4 h-4 mr-2 animate-spin" />}
+          {saving ? "Saving..." : "Save Settings"}
+        </Button>
       </div>
 
       {/* Kill Switch Confirmation */}
-      <Dialog open={confirmKillSwitch} onOpenChange={setConfirmKillSwitch}>
+      <Dialog open={confirmKillSwitch} onOpenChange={(open) => { setConfirmKillSwitch(open); if (!open) setKillSwitchConfirmText("") }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-red-600">Confirm Kill Switch</DialogTitle>
+            <DialogTitle className="text-red-600">
+              {settings.killSwitchEnabled ? "Re-enable Email Sending" : "Confirm Kill Switch"}
+            </DialogTitle>
             <DialogDescription>
-              This will immediately stop ALL outgoing emails. This affects transactional, marketing, and system emails.
+              {settings.killSwitchEnabled
+                ? "This will re-enable all outgoing emails."
+                : "This will immediately stop ALL outgoing emails. This affects transactional, marketing, and system emails."}
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm font-medium">Type &quot;DISABLE ALL&quot; to confirm:</p>
-            <Input className="mt-2" placeholder="DISABLE ALL" />
-          </div>
+          {!settings.killSwitchEnabled && (
+            <div className="py-4">
+              <p className="text-sm font-medium">Type &quot;DISABLE ALL&quot; to confirm:</p>
+              <Input
+                className="mt-2"
+                placeholder="DISABLE ALL"
+                value={killSwitchConfirmText}
+                onChange={(e) => setKillSwitchConfirmText(e.target.value)}
+              />
+            </div>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmKillSwitch(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={() => { setKillSwitchEnabled(true); setConfirmKillSwitch(false) }}>
-              Disable All Emails
+            <Button
+              variant={settings.killSwitchEnabled ? "default" : "destructive"}
+              onClick={handleKillSwitch}
+              disabled={!settings.killSwitchEnabled && killSwitchConfirmText !== "DISABLE ALL"}
+            >
+              {settings.killSwitchEnabled ? "Re-enable Emails" : "Disable All Emails"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1599,89 +2538,66 @@ function SettingsTab() {
 }
 
 // =============================================================================
-// ICONS
+// SEND VOLUME CHART
 // =============================================================================
 
-function SearchIcon({ className }: { className?: string }) {
-  return <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-}
+const sendVolumeData = [
+  { day: "Mon", sent: 1180 },
+  { day: "Tue", sent: 1240 },
+  { day: "Wed", sent: 1050 },
+  { day: "Thu", sent: 1380 },
+  { day: "Fri", sent: 1290 },
+  { day: "Sat", sent: 680 },
+  { day: "Sun", sent: 1247 },
+]
 
-function PlusIcon({ className }: { className?: string }) {
-  return <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-}
+const SendVolumeChartInner = dynamic(
+  () =>
+    import("recharts").then((mod) => {
+      const { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } = mod
+      return {
+        default: function SendVolumeArea() {
+          return (
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={sendVolumeData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+                  <defs>
+                    <linearGradient id="sendVolumeGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={CHART.primary} stopOpacity={0.25} />
+                      <stop offset="100%" stopColor={CHART.primary} stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} vertical={false} />
+                  <XAxis dataKey="day" tick={{ fontSize: 12 }} stroke={CHART.tick} tickLine={false} axisLine={false} />
+                  <YAxis tick={{ fontSize: 12 }} stroke={CHART.tick} tickLine={false} axisLine={false} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "white",
+                      border: `1px solid ${CHART.grid}`,
+                      borderRadius: "8px",
+                      boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)",
+                    }}
+                    formatter={(value: number) => [value.toLocaleString(), "Emails"]}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="sent"
+                    stroke={CHART.primary}
+                    strokeWidth={2}
+                    fill="url(#sendVolumeGrad)"
+                    dot={false}
+                    activeDot={{ r: 4, strokeWidth: 2, fill: "white", stroke: CHART.primary }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          )
+        },
+      }
+    }),
+  { ssr: false, loading: () => <div className="h-48 bg-muted/30 rounded-lg animate-pulse" /> }
+)
 
-function SendIcon({ className }: { className?: string }) {
-  return <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
-}
-
-function MailIcon({ className }: { className?: string }) {
-  return <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-}
-
-function EyeIcon({ className }: { className?: string }) {
-  return <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-}
-
-function AlertTriangleIcon({ className }: { className?: string }) {
-  return <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-}
-
-function XCircleIcon({ className }: { className?: string }) {
-  return <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
-}
-
-function CheckCircleIcon({ className }: { className?: string }) {
-  return <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
-}
-
-function InfoIcon({ className }: { className?: string }) {
-  return <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-}
-
-function LightbulbIcon({ className }: { className?: string }) {
-  return <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
-}
-
-function MoreHorizontalIcon({ className }: { className?: string }) {
-  return <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-}
-
-function ChevronRightIcon({ className }: { className?: string }) {
-  return <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-}
-
-function ChevronDownIcon({ className }: { className?: string }) {
-  return <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-}
-
-function BoldIcon({ className }: { className?: string }) {
-  return <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 12h9a4 4 0 0 1 0 8H6V4h8a4 4 0 0 1 0 8"/></svg>
-}
-
-function ItalicIcon({ className }: { className?: string }) {
-  return <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" x2="10" y1="4" y2="4"/><line x1="14" x2="5" y1="20" y2="20"/><line x1="15" x2="9" y1="4" y2="20"/></svg>
-}
-
-function LinkIcon({ className }: { className?: string }) {
-  return <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-}
-
-function ImageIcon({ className }: { className?: string }) {
-  return <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-}
-
-function MonitorIcon({ className }: { className?: string }) {
-  return <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
-}
-
-function SmartphoneIcon({ className }: { className?: string }) {
-  return <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
-}
-
-function CalendarIcon({ className }: { className?: string }) {
-  return <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-}
-
-function RefreshCwIcon({ className }: { className?: string }) {
-  return <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+function SendVolumeChart() {
+  return <SendVolumeChartInner />
 }

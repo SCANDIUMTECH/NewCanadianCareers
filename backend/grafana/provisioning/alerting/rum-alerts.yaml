@@ -1,0 +1,88 @@
+# RUM Alert Rules — Core Web Vitals thresholds
+# Evaluates p75 over 15-minute windows
+
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: RUM Web Vitals
+    folder: Alerts
+    interval: 1m
+    rules:
+      # LCP Alert: p75 > 2.5s
+      - uid: rum-lcp-alert
+        title: "LCP p75 > 2.5s"
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 900   # 15 minutes
+              to: 0
+            datasourceUid: clickhouse
+            model:
+              rawSql: >
+                SELECT quantile(0.75)(metric_value) AS p75
+                FROM web_vitals
+                WHERE metric_name = 'LCP'
+                AND timestamp >= now() - INTERVAL 15 MINUTE
+        noDataState: OK
+        execErrState: Alerting
+        for: 5m
+        annotations:
+          summary: "LCP p75 is above 2.5 seconds"
+          description: "Largest Contentful Paint p75 has exceeded the 2.5s threshold over the last 15 minutes."
+        labels:
+          severity: warning
+          team: platform
+
+      # INP Alert: p75 > 200ms
+      - uid: rum-inp-alert
+        title: "INP p75 > 200ms"
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 900
+              to: 0
+            datasourceUid: clickhouse
+            model:
+              rawSql: >
+                SELECT quantile(0.75)(metric_value) AS p75
+                FROM web_vitals
+                WHERE metric_name = 'INP'
+                AND timestamp >= now() - INTERVAL 15 MINUTE
+        noDataState: OK
+        execErrState: Alerting
+        for: 5m
+        annotations:
+          summary: "INP p75 is above 200ms"
+          description: "Interaction to Next Paint p75 has exceeded the 200ms threshold over the last 15 minutes."
+        labels:
+          severity: warning
+          team: platform
+
+      # CLS Alert: p75 > 0.1
+      - uid: rum-cls-alert
+        title: "CLS p75 > 0.1"
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 900
+              to: 0
+            datasourceUid: clickhouse
+            model:
+              rawSql: >
+                SELECT quantile(0.75)(metric_value) AS p75
+                FROM web_vitals
+                WHERE metric_name = 'CLS'
+                AND timestamp >= now() - INTERVAL 15 MINUTE
+        noDataState: OK
+        execErrState: Alerting
+        for: 5m
+        annotations:
+          summary: "CLS p75 is above 0.1"
+          description: "Cumulative Layout Shift p75 has exceeded the 0.1 threshold over the last 15 minutes."
+        labels:
+          severity: warning
+          team: platform

@@ -3,19 +3,41 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   ORION DESIGN SYSTEM — Single Source of Truth
+
+   Typography:  Inter (body) · Manrope (headings) · JetBrains Mono (code)
+   Brand:       Cosmic Blue #3B5BDB
+   Fonts:       Self-hosted from /assets/fonts/ via next/font/local
+   Policy:      No external CDNs, no component-level font overrides
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 :root {
-  /* Orion Color System - Preserved from existing */
+  /* ── Typography Tokens (approved guideline) ───────────────────────────── */
+  --font-primary-stack: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  --font-secondary-stack: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  --font-mono-stack: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --type-scale-base: 16px;
+  --type-line-body: 1.6;
+  --type-line-tight: 1.15;
+  --type-track-tight: -0.02em;
+  --type-track-normal: 0em;
+  --num-variant: tabular-nums;
+
+  /* ── Surface & Text ───────────────────────────────────────────────────── */
   --background: #F9FAFB;
   --background-secondary: #F3F4F6;
   --foreground: #0F172A;
   --foreground-muted: #475569;
-  
-  /* Brand Accent - Deep Cosmic Blue - Preserved from existing */
+
+  /* ── Brand — Cosmic Blue ──────────────────────────────────────────────── */
   --primary: #3B5BDB;
   --primary-foreground: #FFFFFF;
   --primary-hover: #2F4BC7;
-  
-  /* UI Colors - Preserved from existing */
+  --primary-light: #5C7CFA;
+  --primary-rgb: 59, 91, 219;
+
+  /* ── UI Chrome ────────────────────────────────────────────────────────── */
   --card: #FFFFFF;
   --card-foreground: #0F172A;
   --popover: #FFFFFF;
@@ -31,14 +53,53 @@
   --border: #E5E7EB;
   --input: #E5E7EB;
   --ring: #3B5BDB;
-  
-  /* Shadcn/ui defaults - New or updated from diff */
+
+  /* ── Status Colors ────────────────────────────────────────────────────── */
+  --success: #10B981;
+  --success-foreground: #FFFFFF;
+  --success-light: #D1FAE5;
+  --warning: #F59E0B;
+  --warning-foreground: #FFFFFF;
+  --warning-light: #FEF3C7;
+  --info: #3B82F6;
+  --info-foreground: #FFFFFF;
+  --info-light: #DBEAFE;
+
+  /* ── Chart & Data Viz Palette ─────────────────────────────────────────── */
+  --chart-primary: #3B5BDB;
+  --chart-success: #10B981;
+  --chart-warning: #F59E0B;
+  --chart-purple: #8B5CF6;
+  --chart-danger: #EF4444;
+  --chart-cyan: #06B6D4;
+  --chart-pink: #EC4899;
+  --chart-indigo: #6366F1;
+  --chart-orange: #F97316;
+  --chart-lime: #84CC16;
+  --chart-slate: #64748B;
+  --chart-grid: #E5E7EB;
+  --chart-tick: #64748B;
+
+  /* ── Social Brand Colors ──────────────────────────────────────────────── */
+  --social-linkedin: #0077B5;
+  --social-facebook: #1877F2;
+  --social-instagram: #E4405F;
+  --social-instagram-from: #F58529;
+  --social-instagram-via: #DD2A7B;
+  --social-instagram-to: #8134AF;
+  --social-twitter: #000000;
+
+  /* ── shadcn chart compat ──────────────────────────────────────────────── */
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.625rem; /* Updated from 0.5rem to shadcn default */
+
+  /* ── Radius ───────────────────────────────────────────────────────────── */
+  --radius: 0.625rem;
+
+  /* ── Sidebar ──────────────────────────────────────────────────────────── */
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -48,16 +109,21 @@
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
 }
- 
+
 .dark {
   --background: oklch(0.145 0 0);
+  --background-secondary: #1E293B;
   --foreground: oklch(0.985 0 0);
+  --foreground-muted: #94A3B8;
   --card: oklch(0.145 0 0);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.145 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  --primary: #5C7CFA;
+  --primary-foreground: #FFFFFF;
+  --primary-hover: #748FFC;
+  --primary-light: #3B5BDB;
+  --primary-rgb: 92, 124, 250;
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
@@ -74,6 +140,8 @@
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
+  --chart-grid: #334155;
+  --chart-tick: #94A3B8;
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -84,22 +152,29 @@
   --sidebar-ring: oklch(0.439 0 0);
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   TAILWIND THEME — Maps CSS variables to Tailwind utility classes
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 @theme inline {
-  --font-sans: 'Inter', 'Inter Fallback', system-ui, -apple-system, sans-serif;
-  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
-  
+  /* ── Font System ──────────────────────────────────────────────────────── */
+  --font-sans: var(--font-face-primary), var(--font-primary-stack);
+  --font-secondary: var(--font-face-secondary), var(--font-secondary-stack);
+  --font-mono: var(--font-face-mono), var(--font-mono-stack);
+
+  /* ── Core Colors ──────────────────────────────────────────────────────── */
   --color-background: var(--background);
-  --color-background-secondary: var(--background-secondary); /* Preserved from existing */
+  --color-background-secondary: var(--background-secondary);
   --color-foreground: var(--foreground);
-  --color-foreground-muted: var(--foreground-muted); /* Preserved from existing */
-  
+  --color-foreground-muted: var(--foreground-muted);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  --color-primary-hover: var(--primary-hover); /* Preserved from existing */
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-light: var(--primary-light);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -111,13 +186,50 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  
-  /* New from diff */
+
+  /* ── Status Colors ────────────────────────────────────────────────────── */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-light: var(--success-light);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-light: var(--warning-light);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-light: var(--info-light);
+
+  /* ── Chart Palette ────────────────────────────────────────────────────── */
+  --color-chart-primary: var(--chart-primary);
+  --color-chart-success: var(--chart-success);
+  --color-chart-warning: var(--chart-warning);
+  --color-chart-purple: var(--chart-purple);
+  --color-chart-danger: var(--chart-danger);
+  --color-chart-cyan: var(--chart-cyan);
+  --color-chart-pink: var(--chart-pink);
+  --color-chart-indigo: var(--chart-indigo);
+  --color-chart-orange: var(--chart-orange);
+  --color-chart-lime: var(--chart-lime);
+  --color-chart-slate: var(--chart-slate);
+  --color-chart-grid: var(--chart-grid);
+  --color-chart-tick: var(--chart-tick);
+
+  /* ── Social Brand ─────────────────────────────────────────────────────── */
+  --color-social-linkedin: var(--social-linkedin);
+  --color-social-facebook: var(--social-facebook);
+  --color-social-instagram: var(--social-instagram);
+  --color-social-instagram-from: var(--social-instagram-from);
+  --color-social-instagram-via: var(--social-instagram-via);
+  --color-social-instagram-to: var(--social-instagram-to);
+  --color-social-twitter: var(--social-twitter);
+
+  /* ── shadcn chart compat ──────────────────────────────────────────────── */
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+
+  /* ── Sidebar ──────────────────────────────────────────────────────────── */
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -127,84 +239,178 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
+  /* ── Radius ───────────────────────────────────────────────────────────── */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   BASE LAYER — Global Typography Contract (mandatory, no component overrides)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
+  html {
+    font-size: var(--type-scale-base);
+  }
   body {
     @apply bg-background text-foreground;
+    font-variant-numeric: var(--num-variant);
+    line-height: var(--type-line-body);
+  }
+  button, input, textarea, select {
+    font-family: inherit;
+  }
+  ::placeholder {
+    opacity: 1;
   }
 }
 
-/* Premium Animation Keyframes */
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-8px); }
+/* ── Typography (unlayered for maximum specificity across all browsers) ── */
+body {
+  font-family: var(--font-face-primary), var(--font-primary-stack);
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-face-secondary), var(--font-secondary-stack) !important;
+  line-height: var(--type-line-tight);
+  letter-spacing: var(--type-track-tight);
+}
+code, pre, kbd, samp {
+  font-family: var(--font-face-mono), var(--font-mono-stack);
+  font-variant-numeric: var(--num-variant);
 }
 
-@keyframes pulse-glow {
-  0%, 100% { opacity: 0.4; transform: scale(1); }
-  50% { opacity: 0.8; transform: scale(1.1); }
+/* ═══════════════════════════════════════════════════════════════════════════
+   APPROVED UTILITY CLASSES — Typography
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.font-primary {
+  font-family: var(--font-face-primary), var(--font-primary-stack) !important;
+}
+.font-secondary {
+  font-family: var(--font-face-secondary), var(--font-secondary-stack) !important;
+}
+.font-mono {
+  font-family: var(--font-face-mono), var(--font-mono-stack) !important;
 }
 
-@keyframes draw-line {
-  0% { stroke-dashoffset: 100; }
-  100% { stroke-dashoffset: 0; }
-}
+/* ═══════════════════════════════════════════════════════════════════════════
+   ANIMATION KEYFRAMES
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
 
-@keyframes grain {
-  0%, 100% { transform: translate(0, 0); }
-  10% { transform: translate(-1%, -1%); }
-  20% { transform: translate(1%, 1%); }
-  30% { transform: translate(-1%, 1%); }
-  40% { transform: translate(1%, -1%); }
-  50% { transform: translate(-1%, 0%); }
-  60% { transform: translate(1%, 0%); }
-  70% { transform: translate(0%, 1%); }
-  80% { transform: translate(0%, -1%); }
-  90% { transform: translate(1%, 1%); }
+@keyframes shimmer-badge {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
-/* Utility Classes for Animations */
-.animate-float {
-  animation: float 6s ease-in-out infinite;
+@keyframes confetti {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
 }
 
-.animate-pulse-glow {
-  animation: pulse-glow 3s ease-in-out infinite;
+@keyframes wiggle {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  15% {
+    transform: rotate(14deg);
+  }
+  30% {
+    transform: rotate(-10deg);
+  }
+  45% {
+    transform: rotate(8deg);
+  }
+  60% {
+    transform: rotate(-4deg);
+  }
+  75% {
+    transform: rotate(0deg);
+  }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   UTILITY CLASSES — Animation
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 .animate-shimmer {
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(59, 91, 219, 0.08) 50%,
+    rgba(var(--primary-rgb), 0.08) 50%,
     transparent 100%
   );
   background-size: 200% 100%;
   animation: shimmer 3s ease-in-out infinite;
 }
 
-/* Magnetic button hover effect */
-.magnetic-hover {
-  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+.animate-shimmer-badge {
+  animation: shimmer-badge 2s ease-in-out infinite;
 }
 
-/* Premium text selection */
+.animate-confetti {
+  animation: confetti 3s ease-out forwards;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ARTICLE FIGURE & CAPTION STYLES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.article-figure {
+  margin: 1.5rem 0;
+}
+
+.article-figure img {
+  border-radius: 0.75rem;
+  max-width: 100%;
+  display: block;
+  margin: 0 auto;
+}
+
+.article-figure figcaption {
+  margin-top: 0.75rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.article-figure .caption-text {
+  display: block;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--foreground-muted);
+}
+
+.article-figure .caption-credit {
+  display: block;
+  font-size: 0.6875rem;
+  font-style: normal;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--foreground-muted);
+  opacity: 0.6;
+  margin-top: 0.25rem;
+}
+
+/* Premium text selection — uses brand color */
 ::selection {
-  background: rgba(59, 91, 219, 0.2);
-  color: #0F172A;
+  background: rgba(var(--primary-rgb), 0.2);
+  color: var(--foreground);
 }
 
 /* Smooth scroll behavior */
@@ -216,9 +422,9 @@ html {
   html {
     scroll-behavior: auto;
   }
-  .animate-float,
-  .animate-pulse-glow,
-  .animate-shimmer {
+  .animate-shimmer,
+  .animate-shimmer-badge,
+  .animate-confetti {
     animation: none;
   }
 }

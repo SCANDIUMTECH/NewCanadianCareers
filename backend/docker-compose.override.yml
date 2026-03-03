@@ -1,0 +1,11 @@
+# Local Development Overrides
+# This file is auto-loaded by docker-compose and overrides the main config.
+#
+# Purpose: Use Traefik v2.11 for macOS compatibility (v3.0 has Docker API issues on macOS)
+#
+# For production (Linux), the main docker-compose.yml uses v3.0.
+# See plan notes for production server setup (DOCKER_MIN_API_VERSION).
+
+services:
+  traefik:
+    image: traefik:v2.11  # Override v3.0 for macOS compatibility

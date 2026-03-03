@@ -1,11 +1,11 @@
 "use client"
 
-import React from "react"
-
-import { useState } from "react"
+import React, { useState, useEffect, useCallback } from "react"
+import { toast } from "sonner"
+import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
@@ -25,86 +25,128 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { MotionWrapper } from "@/components/motion-wrapper"
+import {
+  getJobAlerts,
+  createJobAlert,
+  updateJobAlert,
+  deleteJobAlert,
+  toggleJobAlert,
+} from "@/lib/api/candidates"
+import type { JobAlert, JobAlertCreate, JobAlertUpdate } from "@/lib/candidate/types"
 
-/**
- * Job Alerts Page
- * Manage saved searches and alert preferences
- */
-
-const savedSearches = [
-  {
-    id: 1,
-    name: "Frontend Remote $150k+",
-    query: {
-      keywords: "Frontend Engineer",
-      location: "Remote",
-      salaryMin: 150000,
-      type: "Full-time",
-    },
-    frequency: "daily",
-    enabled: true,
-    matchCount: 12,
-    lastSent: new Date("2026-02-01"),
-    createdAt: new Date("2026-01-15"),
-  },
-  {
-    id: 2,
-    name: "Product Design San Francisco",
-    query: {
-      keywords: "Product Designer",
-      location: "San Francisco, CA",
-      salaryMin: null,
-      type: "Full-time",
-    },
-    frequency: "weekly",
-    enabled: true,
-    matchCount: 8,
-    lastSent: new Date("2026-01-28"),
-    createdAt: new Date("2026-01-10"),
-  },
-  {
-    id: 3,
-    name: "Engineering Manager NYC",
-    query: {
-      keywords: "Engineering Manager",
-      location: "New York, NY",
-      salaryMin: 180000,
-      type: "Full-time",
-    },
-    frequency: "daily",
-    enabled: false,
-    matchCount: 3,
-    lastSent: new Date("2026-01-25"),
-    createdAt: new Date("2026-01-05"),
-  },
-]
+function formatDate(dateString: string | null): string {
+  if (!dateString) return "Never"
+  return new Date(dateString).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+}
 
 export default function AlertsPage() {
-  const [searches, setSearches] = useState(savedSearches)
+  const [alerts, setAlerts] = useState<JobAlert[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
+  const [editingAlert, setEditingAlert] = useState<JobAlert | null>(null)
 
-  const toggleEnabled = (id: number) => {
-    setSearches((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, enabled: !s.enabled } : s))
+  const fetchAlerts = useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const response = await getJobAlerts()
+      setAlerts(response.results)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load job alerts")
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchAlerts()
+  }, [fetchAlerts])
+
+  const handleToggle = async (id: number, enabled: boolean) => {
+    try {
+      const updated = await toggleJobAlert(id, enabled)
+      setAlerts((prev) => prev.map((a) => (a.id === id ? updated : a)))
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to toggle alert")
+    }
+  }
+
+  const handleFrequencyChange = async (id: number, frequency: "daily" | "weekly" | "off") => {
+    try {
+      const updated = await updateJobAlert(id, { frequency })
+      setAlerts((prev) => prev.map((a) => (a.id === id ? updated : a)))
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update frequency")
+    }
+  }
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this alert?")) return
+    try {
+      await deleteJobAlert(id)
+      setAlerts((prev) => prev.filter((a) => a.id !== id))
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete alert")
+    }
+  }
+
+  const handleCreate = async (data: JobAlertCreate) => {
+    try {
+      const created = await createJobAlert(data)
+      setAlerts((prev) => [...prev, created])
+      setCreateOpen(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create alert")
+    }
+  }
+
+  const handleUpdate = async (id: number, data: JobAlertUpdate) => {
+    try {
+      const updated = await updateJobAlert(id, data)
+      setAlerts((prev) => prev.map((a) => (a.id === id ? updated : a)))
+      setEditingAlert(null)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update alert")
+    }
+  }
+
+  const enabledCount = alerts.filter((a) => a.enabled).length
+  const totalMatches = alerts.reduce((acc, a) => acc + a.match_count, 0)
+
+  if (isLoading) {
+    return (
+      <div className="max-w-[1000px] mx-auto px-4 md:px-6 lg:px-8">
+        <div className="animate-pulse space-y-6">
+          <div className="flex justify-between items-center">
+            <div className="h-10 bg-background-secondary/50 rounded w-48" />
+            <div className="h-10 bg-background-secondary/50 rounded w-32" />
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-20 bg-background-secondary/50 rounded-lg" />
+            ))}
+          </div>
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-32 bg-background-secondary/50 rounded-lg" />
+            ))}
+          </div>
+        </div>
+      </div>
     )
   }
 
-  const updateFrequency = (id: number, frequency: string) => {
-    setSearches((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, frequency } : s))
+  if (error) {
+    return (
+      <div className="max-w-[1000px] mx-auto px-4 md:px-6 lg:px-8">
+        <Card className="p-8 text-center">
+          <p className="text-foreground-muted mb-4">{error}</p>
+          <Button onClick={fetchAlerts}>Try Again</Button>
+        </Card>
+      </div>
     )
   }
-
-  const deleteSearch = (id: number) => {
-    setSearches((prev) => prev.filter((s) => s.id !== id))
-  }
-
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" })
-  }
-
-  const enabledCount = searches.filter((s) => s.enabled).length
-  const totalMatches = searches.reduce((acc, s) => acc + s.matchCount, 0)
 
   return (
     <div className="max-w-[1000px] mx-auto px-4 md:px-6 lg:px-8">
@@ -130,7 +172,7 @@ export default function AlertsPage() {
               <DialogHeader>
                 <DialogTitle>Create Job Alert</DialogTitle>
               </DialogHeader>
-              <CreateAlertForm onClose={() => setCreateOpen(false)} />
+              <CreateAlertForm onClose={() => setCreateOpen(false)} onSubmit={handleCreate} />
             </DialogContent>
           </Dialog>
         </div>
@@ -141,7 +183,7 @@ export default function AlertsPage() {
         <div className="grid grid-cols-3 gap-3 mb-6">
           <Card className="border-border/50">
             <CardContent className="p-4">
-              <p className="text-2xl font-semibold text-foreground">{searches.length}</p>
+              <p className="text-2xl font-semibold text-foreground">{alerts.length}</p>
               <p className="text-xs text-foreground-muted">Saved Searches</p>
             </CardContent>
           </Card>
@@ -163,18 +205,18 @@ export default function AlertsPage() {
       {/* Alerts List */}
       <MotionWrapper delay={200}>
         <div className="space-y-4">
-          {searches.map((search) => (
+          {alerts.map((alert) => (
             <AlertCard
-              key={search.id}
-              search={search}
-              onToggle={() => toggleEnabled(search.id)}
-              onFrequencyChange={(f) => updateFrequency(search.id, f)}
-              onDelete={() => deleteSearch(search.id)}
-              formatDate={formatDate}
+              key={alert.id}
+              alert={alert}
+              onToggle={(enabled) => handleToggle(alert.id, enabled)}
+              onFrequencyChange={(f) => handleFrequencyChange(alert.id, f)}
+              onDelete={() => handleDelete(alert.id)}
+              onEdit={() => setEditingAlert(alert)}
             />
           ))}
 
-          {searches.length === 0 && (
+          {alerts.length === 0 && (
             <Card className="border-border/50">
               <CardContent className="py-16 text-center">
                 <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-background-secondary flex items-center justify-center">
@@ -215,62 +257,86 @@ export default function AlertsPage() {
           </CardContent>
         </Card>
       </MotionWrapper>
+
+      {/* Edit Alert Dialog */}
+      <Dialog open={!!editingAlert} onOpenChange={(open) => !open && setEditingAlert(null)}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit Job Alert</DialogTitle>
+          </DialogHeader>
+          {editingAlert && (
+            <EditAlertForm
+              alert={editingAlert}
+              onClose={() => setEditingAlert(null)}
+              onSubmit={(data) => handleUpdate(editingAlert.id, data)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
 function AlertCard({
-  search,
+  alert,
   onToggle,
   onFrequencyChange,
   onDelete,
-  formatDate,
+  onEdit,
 }: {
-  search: typeof savedSearches[0]
-  onToggle: () => void
-  onFrequencyChange: (f: string) => void
+  alert: JobAlert
+  onToggle: (enabled: boolean) => void
+  onFrequencyChange: (f: "daily" | "weekly" | "off") => void
   onDelete: () => void
-  formatDate: (date: Date) => string
+  onEdit: () => void
 }) {
-  const [expanded, setExpanded] = useState(false)
-
   return (
-    <Card className={cn("border transition-all duration-300", search.enabled ? "border-border/50" : "border-border/30 opacity-60")}>
+    <Card className={cn("border transition-all duration-300", alert.enabled ? "border-border/50" : "border-border/30 opacity-60")}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
-              <h3 className="text-base font-medium text-foreground">{search.name}</h3>
-              {search.matchCount > 0 && (
+              <h3 className="text-base font-medium text-foreground">{alert.name}</h3>
+              {alert.match_count > 0 && (
                 <Badge className="bg-primary/10 text-primary border-primary/20">
-                  {search.matchCount} new
+                  {alert.match_count} new
                 </Badge>
               )}
             </div>
 
             <div className="flex flex-wrap items-center gap-2 text-sm text-foreground-muted">
-              <span>{search.query.keywords}</span>
-              <span className="w-1 h-1 rounded-full bg-foreground-muted/40" />
-              <span>{search.query.location}</span>
-              {search.query.salaryMin && (
+              {alert.query.search && <span>{alert.query.search}</span>}
+              {alert.query.location && (
+                <>
+                  {alert.query.search && <span className="w-1 h-1 rounded-full bg-foreground-muted/40" />}
+                  <span>{alert.query.location}</span>
+                </>
+              )}
+              {alert.query.location_type && (
                 <>
                   <span className="w-1 h-1 rounded-full bg-foreground-muted/40" />
-                  <span>${(search.query.salaryMin / 1000).toFixed(0)}k+</span>
+                  <span className="capitalize">{alert.query.location_type}</span>
+                </>
+              )}
+              {alert.query.salary_min && (
+                <>
+                  <span className="w-1 h-1 rounded-full bg-foreground-muted/40" />
+                  <span>${(alert.query.salary_min / 1000).toFixed(0)}k+</span>
                 </>
               )}
             </div>
 
             <div className="flex items-center gap-4 mt-3 text-xs text-foreground-muted">
               <span>
-                {search.frequency === "daily" ? "Daily" : "Weekly"} alerts
+                {alert.frequency === "daily" ? "Daily" : alert.frequency === "weekly" ? "Weekly" : "Off"} alerts
               </span>
               <span className="w-1 h-1 rounded-full bg-foreground-muted/40" />
-              <span>Last sent {formatDate(search.lastSent)}</span>
+              <span>Last sent {formatDate(alert.last_sent_at)}</span>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <Select value={search.frequency} onValueChange={onFrequencyChange}>
+            <Select value={alert.frequency} onValueChange={(v) => onFrequencyChange(v as "daily" | "weekly" | "off")}>
               <SelectTrigger className="w-[100px] h-8 text-xs">
                 <SelectValue />
               </SelectTrigger>
@@ -280,16 +346,18 @@ function AlertCard({
                 <SelectItem value="off">Off</SelectItem>
               </SelectContent>
             </Select>
-            <Switch checked={search.enabled} onCheckedChange={onToggle} />
+            <Switch checked={alert.enabled} onCheckedChange={onToggle} />
           </div>
         </div>
 
-        {/* Expanded Actions */}
+        {/* Actions */}
         <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border/50">
-          <Button variant="outline" size="sm" className="flex-1 bg-transparent">
-            View Matches
-          </Button>
-          <Button variant="outline" size="sm" className="flex-1 bg-transparent">
+          <Link href={`/jobs?${new URLSearchParams(alert.query as Record<string, string>).toString()}`} className="flex-1">
+            <Button variant="outline" size="sm" className="w-full bg-transparent">
+              View Matches
+            </Button>
+          </Link>
+          <Button variant="outline" size="sm" className="flex-1 bg-transparent" onClick={onEdit}>
             Edit Search
           </Button>
           <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={onDelete}>
@@ -301,38 +369,103 @@ function AlertCard({
   )
 }
 
-function CreateAlertForm({ onClose }: { onClose: () => void }) {
+function CreateAlertForm({
+  onClose,
+  onSubmit,
+}: {
+  onClose: () => void
+  onSubmit: (data: JobAlertCreate) => Promise<void>
+}) {
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
-    keywords: "",
+    name: "",
+    search: "",
     location: "",
+    locationType: "",
     salaryMin: "",
-    type: "any",
-    frequency: "daily",
+    employmentType: "",
+    frequency: "daily" as "daily" | "weekly" | "off",
   })
+  const [errors, setErrors] = useState<{ name?: string; search?: string }>({})
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const validate = () => {
+    const newErrors: typeof errors = {}
+    if (!formData.name.trim()) {
+      newErrors.name = "Please enter a name for this alert"
+    }
+    if (!formData.search.trim()) {
+      newErrors.search = "Please enter at least one keyword"
+    }
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle form submission
-    onClose()
+    if (!validate()) return
+
+    setIsSubmitting(true)
+    try {
+      await onSubmit({
+        name: formData.name,
+        query: {
+          search: formData.search || undefined,
+          location: formData.location || undefined,
+          location_type: formData.locationType as "remote" | "onsite" | "hybrid" | undefined,
+          salary_min: formData.salaryMin ? parseInt(formData.salaryMin) : undefined,
+          employment_type: formData.employmentType ? [formData.employmentType] : undefined,
+        },
+        frequency: formData.frequency,
+        enabled: true,
+      })
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create alert")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 pt-4">
       <div className="space-y-2">
-        <Label htmlFor="keywords">Keywords</Label>
+        <Label htmlFor="name" className={cn(errors.name && "text-destructive")}>
+          Alert Name <span className="text-destructive">*</span>
+        </Label>
         <Input
-          id="keywords"
-          placeholder="e.g., Frontend Engineer, React Developer"
-          value={formData.keywords}
-          onChange={(e) => setFormData({ ...formData, keywords: e.target.value })}
+          id="name"
+          placeholder="e.g., Frontend Remote $150k+"
+          value={formData.name}
+          onChange={(e) => {
+            setFormData({ ...formData, name: e.target.value })
+            if (errors.name && e.target.value.trim()) setErrors({ ...errors, name: undefined })
+          }}
+          className={cn(errors.name && "border-destructive")}
         />
+        {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="search" className={cn(errors.search && "text-destructive")}>
+          Keywords <span className="text-destructive">*</span>
+        </Label>
+        <Input
+          id="search"
+          placeholder="e.g., Frontend Engineer, React Developer"
+          value={formData.search}
+          onChange={(e) => {
+            setFormData({ ...formData, search: e.target.value })
+            if (errors.search && e.target.value.trim()) setErrors({ ...errors, search: undefined })
+          }}
+          className={cn(errors.search && "border-destructive")}
+        />
+        {errors.search && <p className="text-sm text-destructive">{errors.search}</p>}
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="location">Location</Label>
         <Input
           id="location"
-          placeholder="e.g., Remote, New York, San Francisco"
+          placeholder="e.g., San Francisco, New York"
           value={formData.location}
           onChange={(e) => setFormData({ ...formData, location: e.target.value })}
         />
@@ -340,7 +473,21 @@ function CreateAlertForm({ onClose }: { onClose: () => void }) {
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="salary">Minimum Salary</Label>
+          <Label htmlFor="locationType">Work Type</Label>
+          <Select value={formData.locationType} onValueChange={(v) => setFormData({ ...formData, locationType: v })}>
+            <SelectTrigger>
+              <SelectValue placeholder="Any" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Any</SelectItem>
+              <SelectItem value="remote">Remote</SelectItem>
+              <SelectItem value="onsite">On-site</SelectItem>
+              <SelectItem value="hybrid">Hybrid</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="salary">Min Salary</Label>
           <Input
             id="salary"
             placeholder="e.g., 150000"
@@ -349,44 +496,222 @@ function CreateAlertForm({ onClose }: { onClose: () => void }) {
             onChange={(e) => setFormData({ ...formData, salaryMin: e.target.value })}
           />
         </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="type">Job Type</Label>
-          <Select value={formData.type} onValueChange={(v) => setFormData({ ...formData, type: v })}>
+          <Label htmlFor="employmentType">Job Type</Label>
+          <Select value={formData.employmentType} onValueChange={(v) => setFormData({ ...formData, employmentType: v })}>
             <SelectTrigger>
-              <SelectValue placeholder="Any type" />
+              <SelectValue placeholder="Any" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="any">Any type</SelectItem>
-              <SelectItem value="full-time">Full-time</SelectItem>
-              <SelectItem value="part-time">Part-time</SelectItem>
+              <SelectItem value="">Any</SelectItem>
+              <SelectItem value="full_time">Full-time</SelectItem>
+              <SelectItem value="part_time">Part-time</SelectItem>
               <SelectItem value="contract">Contract</SelectItem>
+              <SelectItem value="internship">Internship</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="frequency">Alert Frequency</Label>
+          <Select
+            value={formData.frequency}
+            onValueChange={(v) => setFormData({ ...formData, frequency: v as "daily" | "weekly" | "off" })}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="daily">Daily</SelectItem>
+              <SelectItem value="weekly">Weekly</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
 
+      <p className="text-xs text-foreground-muted">
+        You&apos;ll receive an email when new jobs match this search
+      </p>
+
+      <div className="flex justify-end gap-2 pt-4">
+        <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Creating..." : "Create Alert"}
+        </Button>
+      </div>
+    </form>
+  )
+}
+
+function EditAlertForm({
+  alert,
+  onClose,
+  onSubmit,
+}: {
+  alert: JobAlert
+  onClose: () => void
+  onSubmit: (data: JobAlertUpdate) => Promise<void>
+}) {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [formData, setFormData] = useState({
+    name: alert.name,
+    search: alert.query.search || "",
+    location: alert.query.location || "",
+    locationType: alert.query.location_type || "",
+    salaryMin: alert.query.salary_min?.toString() || "",
+    employmentType: alert.query.employment_type?.[0] || "",
+    frequency: alert.frequency,
+  })
+  const [errors, setErrors] = useState<{ name?: string; search?: string }>({})
+
+  const validate = () => {
+    const newErrors: typeof errors = {}
+    if (!formData.name.trim()) {
+      newErrors.name = "Please enter a name for this alert"
+    }
+    if (!formData.search.trim()) {
+      newErrors.search = "Please enter at least one keyword"
+    }
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!validate()) return
+
+    setIsSubmitting(true)
+    try {
+      await onSubmit({
+        name: formData.name,
+        query: {
+          search: formData.search || undefined,
+          location: formData.location || undefined,
+          location_type: formData.locationType as "remote" | "onsite" | "hybrid" | undefined,
+          salary_min: formData.salaryMin ? parseInt(formData.salaryMin) : undefined,
+          employment_type: formData.employmentType ? [formData.employmentType] : undefined,
+        },
+        frequency: formData.frequency,
+      })
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update alert")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4 pt-4">
       <div className="space-y-2">
-        <Label htmlFor="frequency">Alert Frequency</Label>
-        <Select value={formData.frequency} onValueChange={(v) => setFormData({ ...formData, frequency: v })}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="daily">Daily</SelectItem>
-            <SelectItem value="weekly">Weekly</SelectItem>
-          </SelectContent>
-        </Select>
-        <p className="text-xs text-foreground-muted">
-          You&apos;ll receive an email when new jobs match this search
-        </p>
+        <Label htmlFor="edit-name" className={cn(errors.name && "text-destructive")}>
+          Alert Name <span className="text-destructive">*</span>
+        </Label>
+        <Input
+          id="edit-name"
+          value={formData.name}
+          onChange={(e) => {
+            setFormData({ ...formData, name: e.target.value })
+            if (errors.name && e.target.value.trim()) setErrors({ ...errors, name: undefined })
+          }}
+          className={cn(errors.name && "border-destructive")}
+        />
+        {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="edit-search" className={cn(errors.search && "text-destructive")}>
+          Keywords <span className="text-destructive">*</span>
+        </Label>
+        <Input
+          id="edit-search"
+          value={formData.search}
+          onChange={(e) => {
+            setFormData({ ...formData, search: e.target.value })
+            if (errors.search && e.target.value.trim()) setErrors({ ...errors, search: undefined })
+          }}
+          className={cn(errors.search && "border-destructive")}
+        />
+        {errors.search && <p className="text-sm text-destructive">{errors.search}</p>}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="edit-location">Location</Label>
+        <Input
+          id="edit-location"
+          value={formData.location}
+          onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Work Type</Label>
+          <Select value={formData.locationType} onValueChange={(v) => setFormData({ ...formData, locationType: v })}>
+            <SelectTrigger>
+              <SelectValue placeholder="Any" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Any</SelectItem>
+              <SelectItem value="remote">Remote</SelectItem>
+              <SelectItem value="onsite">On-site</SelectItem>
+              <SelectItem value="hybrid">Hybrid</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Min Salary</Label>
+          <Input
+            type="number"
+            value={formData.salaryMin}
+            onChange={(e) => setFormData({ ...formData, salaryMin: e.target.value })}
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Job Type</Label>
+          <Select value={formData.employmentType} onValueChange={(v) => setFormData({ ...formData, employmentType: v })}>
+            <SelectTrigger>
+              <SelectValue placeholder="Any" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Any</SelectItem>
+              <SelectItem value="full_time">Full-time</SelectItem>
+              <SelectItem value="part_time">Part-time</SelectItem>
+              <SelectItem value="contract">Contract</SelectItem>
+              <SelectItem value="internship">Internship</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Alert Frequency</Label>
+          <Select
+            value={formData.frequency}
+            onValueChange={(v) => setFormData({ ...formData, frequency: v as "daily" | "weekly" | "off" })}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="daily">Daily</SelectItem>
+              <SelectItem value="weekly">Weekly</SelectItem>
+              <SelectItem value="off">Off</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="flex justify-end gap-2 pt-4">
-        <Button type="button" variant="outline" onClick={onClose}>
+        <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
           Cancel
         </Button>
-        <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary-hover">
-          Create Alert
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Saving..." : "Save Changes"}
         </Button>
       </div>
     </form>

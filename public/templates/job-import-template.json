@@ -1,0 +1,253 @@
+[
+  {
+    "title": "Senior Software Engineer",
+    "description": "We are looking for a senior software engineer to lead development of our core platform. You will architect scalable microservices, mentor junior developers, and drive technical decisions across the engineering team.",
+    "employment_type": "full_time",
+    "experience_level": "senior",
+    "category": "engineering",
+    "city": "Toronto",
+    "state": "Ontario",
+    "country": "Canada",
+    "location_type": "hybrid",
+    "department": "Engineering",
+    "timezone": "America/Toronto",
+    "responsibilities": [
+      "Architect and build scalable microservices",
+      "Mentor junior and mid-level engineers",
+      "Lead code reviews and set engineering standards",
+      "Collaborate with product on technical roadmap"
+    ],
+    "requirements": [
+      "5+ years software development experience",
+      "Proficient in Python and TypeScript",
+      "Experience designing distributed systems",
+      "Strong understanding of relational and NoSQL databases"
+    ],
+    "nice_to_have": [
+      "Experience with Django or FastAPI",
+      "Knowledge of AWS or GCP",
+      "Contributions to open-source projects"
+    ],
+    "skills": ["Python", "TypeScript", "PostgreSQL", "Redis", "Docker", "AWS"],
+    "benefits": [
+      "Comprehensive health and dental insurance",
+      "Hybrid work flexibility",
+      "$2,000 annual learning budget",
+      "Stock options"
+    ],
+    "salary_min": 130000,
+    "salary_max": 170000,
+    "salary_currency": "CAD",
+    "salary_period": "year",
+    "show_salary": true,
+    "equity": true,
+    "equity_min": 0.05,
+    "equity_max": 0.15,
+    "apply_method": "internal",
+    "apply_email": "",
+    "apply_url": "",
+    "apply_instructions": "",
+    "meta_title": "Senior Software Engineer - Toronto (Hybrid)",
+    "meta_description": "Join our engineering team as a Senior Software Engineer. Competitive salary $130K-$170K CAD with equity. Hybrid work in Toronto."
+  },
+  {
+    "title": "Marketing Coordinator",
+    "description": "Join our marketing team to coordinate campaigns across digital and traditional channels. You will manage social media calendars, assist with content creation, and track campaign performance metrics.",
+    "employment_type": "full_time",
+    "experience_level": "entry",
+    "category": "marketing",
+    "city": "Vancouver",
+    "state": "British Columbia",
+    "country": "Canada",
+    "location_type": "onsite",
+    "department": "Marketing",
+    "timezone": "America/Vancouver",
+    "responsibilities": [
+      "Manage social media content calendar",
+      "Coordinate email marketing campaigns",
+      "Track and report on campaign KPIs",
+      "Assist with event planning and logistics"
+    ],
+    "requirements": [
+      "Bachelor's degree in Marketing or related field",
+      "1+ years of marketing experience or internship",
+      "Familiarity with social media platforms and analytics",
+      "Strong written and verbal communication skills"
+    ],
+    "nice_to_have": [
+      "Experience with HubSpot or Mailchimp",
+      "Basic graphic design skills (Canva, Figma)",
+      "Google Analytics certification"
+    ],
+    "skills": ["Social Media", "Email Marketing", "Content Writing", "Google Analytics", "Canva"],
+    "benefits": [
+      "Extended health benefits",
+      "Transit pass",
+      "3 weeks paid vacation"
+    ],
+    "salary_min": 45000,
+    "salary_max": 55000,
+    "salary_currency": "CAD",
+    "salary_period": "year",
+    "show_salary": true,
+    "equity": false,
+    "equity_min": null,
+    "equity_max": null,
+    "apply_method": "email",
+    "apply_email": "careers@example.com",
+    "apply_url": "",
+    "apply_instructions": "Please include a cover letter and portfolio link.",
+    "meta_title": "",
+    "meta_description": ""
+  },
+  {
+    "title": "UX/UI Designer",
+    "description": "We need a creative UX/UI designer to craft intuitive user experiences for our SaaS platform. You will conduct user research, create wireframes and prototypes, and collaborate closely with engineering to ship polished features.",
+    "employment_type": "contract",
+    "experience_level": "mid",
+    "category": "design",
+    "city": "Montreal",
+    "state": "Quebec",
+    "country": "Canada",
+    "location_type": "remote",
+    "department": "Design",
+    "timezone": "America/Montreal",
+    "responsibilities": [
+      "Conduct user research and usability testing",
+      "Create wireframes, mockups, and interactive prototypes",
+      "Maintain and evolve the design system",
+      "Work with engineers to ensure pixel-perfect implementation"
+    ],
+    "requirements": [
+      "3+ years of UX/UI design experience",
+      "Proficiency with Figma",
+      "Portfolio demonstrating end-to-end design process",
+      "Understanding of accessibility standards (WCAG)"
+    ],
+    "nice_to_have": [
+      "Experience with SaaS products",
+      "Motion design skills (After Effects, Lottie)",
+      "Basic front-end knowledge (HTML/CSS)"
+    ],
+    "skills": ["Figma", "User Research", "Prototyping", "Design Systems", "Accessibility"],
+    "benefits": [
+      "Fully remote position",
+      "Flexible working hours",
+      "Equipment allowance"
+    ],
+    "salary_min": 75,
+    "salary_max": 95,
+    "salary_currency": "CAD",
+    "salary_period": "hour",
+    "show_salary": true,
+    "equity": false,
+    "equity_min": null,
+    "equity_max": null,
+    "apply_method": "external",
+    "apply_email": "",
+    "apply_url": "https://careers.example.com/apply/ux-designer",
+    "apply_instructions": "",
+    "meta_title": "UX/UI Designer (Remote Contract)",
+    "meta_description": "Remote contract UX/UI designer role. $75-$95/hr CAD. Join our design team to shape the future of our SaaS platform."
+  },
+  {
+    "title": "Data Analyst",
+    "description": "Seeking a data analyst to turn raw data into actionable business insights. You will build dashboards, write SQL queries, and present findings to stakeholders across the organization.",
+    "employment_type": "full_time",
+    "experience_level": "mid",
+    "category": "data",
+    "city": "Calgary",
+    "state": "Alberta",
+    "country": "Canada",
+    "location_type": "hybrid",
+    "department": "Data & Analytics",
+    "timezone": "America/Edmonton",
+    "responsibilities": [
+      "Build and maintain business intelligence dashboards",
+      "Write complex SQL queries for ad-hoc analysis",
+      "Present data-driven recommendations to leadership",
+      "Collaborate with engineering on data pipeline improvements"
+    ],
+    "requirements": [
+      "2+ years of data analysis experience",
+      "Advanced SQL skills",
+      "Experience with BI tools (Tableau, Looker, or Power BI)",
+      "Strong statistical reasoning"
+    ],
+    "nice_to_have": [
+      "Python or R for statistical analysis",
+      "Experience with dbt or Airflow",
+      "Knowledge of A/B testing methodology"
+    ],
+    "skills": ["SQL", "Tableau", "Python", "Excel", "Statistics"],
+    "benefits": [
+      "Health and dental coverage",
+      "RRSP matching",
+      "Flexible hybrid schedule"
+    ],
+    "salary_min": 70000,
+    "salary_max": 90000,
+    "salary_currency": "CAD",
+    "salary_period": "year",
+    "show_salary": false,
+    "equity": false,
+    "equity_min": null,
+    "equity_max": null,
+    "apply_method": "internal",
+    "apply_email": "",
+    "apply_url": "",
+    "apply_instructions": "",
+    "meta_title": "",
+    "meta_description": ""
+  },
+  {
+    "title": "Customer Support Specialist",
+    "description": "We are hiring a customer support specialist to provide world-class support to our growing user base. You will handle support tickets, troubleshoot issues, and help improve our knowledge base documentation.",
+    "employment_type": "part_time",
+    "experience_level": "entry",
+    "category": "customer_support",
+    "city": "Ottawa",
+    "state": "Ontario",
+    "country": "Canada",
+    "location_type": "remote",
+    "department": "Support",
+    "timezone": "America/Toronto",
+    "responsibilities": [
+      "Respond to customer inquiries via chat, email, and phone",
+      "Troubleshoot and resolve product issues",
+      "Escalate complex cases to engineering",
+      "Contribute to knowledge base articles"
+    ],
+    "requirements": [
+      "Excellent written and verbal communication",
+      "Patience and empathy in customer interactions",
+      "Basic technical troubleshooting ability",
+      "Available for 20-25 hours per week"
+    ],
+    "nice_to_have": [
+      "Experience with Zendesk or Intercom",
+      "Bilingual (English/French)",
+      "Previous SaaS support experience"
+    ],
+    "skills": ["Customer Service", "Communication", "Problem Solving", "Zendesk"],
+    "benefits": [
+      "Remote work",
+      "Flexible scheduling",
+      "Paid training"
+    ],
+    "salary_min": 22,
+    "salary_max": 28,
+    "salary_currency": "CAD",
+    "salary_period": "hour",
+    "show_salary": true,
+    "equity": false,
+    "equity_min": null,
+    "equity_max": null,
+    "apply_method": "internal",
+    "apply_email": "",
+    "apply_url": "",
+    "apply_instructions": "",
+    "meta_title": "",
+    "meta_description": ""
+  }
+]

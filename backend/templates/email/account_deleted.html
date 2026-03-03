@@ -1,0 +1,32 @@
+{% extends "email/base.html" %}
+{% block title %}Account Deleted{% endblock %}
+{% block preheader %}<span style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Your Orion account has been permanently deleted.</span>{% endblock %}
+{% block accent_color %}#6B7280{% endblock %}
+
+{% block hero_icon %}
+<tr>
+  <td align="center" style="padding:32px 40px 0 40px;">
+    <div style="display:inline-block;width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,#F9FAFB,#F3F4F6);text-align:center;line-height:56px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+    </div>
+  </td>
+</tr>
+{% endblock %}
+
+{% block content %}
+<h1 style="margin:0 0 8px;font-size:28px;font-weight:700;color:#0F172A;letter-spacing:-0.02em;line-height:1.2;" class="email-heading email-hero-heading">Account Deleted</h1>
+
+<p style="margin:0 0 16px;font-size:16px;color:#374151;line-height:1.6;" class="email-text">Hi {{ name }},</p>
+
+<p style="margin:0 0 24px;font-size:16px;color:#374151;line-height:1.6;" class="email-text">
+  Your Orion account has been permanently deleted as requested. All your personal data has been removed from our systems in accordance with our privacy policy.
+</p>
+
+<p style="margin:0 0 24px;font-size:16px;color:#374151;line-height:1.6;" class="email-text">
+  If you ever want to use Orion again, you're welcome to create a new account at any time.
+</p>
+
+<p style="margin:0;font-size:13px;color:#6B7280;line-height:1.5;" class="email-text-secondary">
+  Thank you for being part of the Orion community. We wish you all the best.
+</p>
+{% endblock %}

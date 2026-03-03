@@ -1,14 +1,68 @@
-import React from "react"
 import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
+import type { ReactNode } from 'react'
+import localFont from 'next/font/local'
 import { Analytics } from '@vercel/analytics/next'
+import { AuthProvider } from '@/lib/auth/context'
+import { Toaster } from 'sonner'
+import { RUMProvider } from '@/components/rum-provider'
 import './globals.css'
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = localFont({
+  src: '../assets/fonts/Inter/Inter-VariableFont_opsz,wght.ttf',
+  weight: "100 900",
+  variable: "--font-face-primary",
+  display: "swap",
+});
+
+const interItalic = localFont({
+  src: '../assets/fonts/Inter/Inter-Italic-VariableFont_opsz,wght.ttf',
+  weight: "100 900",
+  style: "italic",
+  variable: "--font-face-primary-italic",
+  display: "swap",
+  preload: false,
+});
+
+const manrope = localFont({
+  src: '../assets/fonts/Manrope/Manrope-VariableFont_wght.ttf',
+  weight: "200 800",
+  variable: "--font-face-secondary",
+  display: "swap",
+});
+
+const jetbrainsMono = localFont({
+  src: '../assets/fonts/JetBrains_Mono/JetBrainsMono-VariableFont_wght.ttf',
+  weight: "100 800",
+  variable: "--font-face-mono",
+  display: "swap",
+});
+
+const jetbrainsMonoItalic = localFont({
+  src: '../assets/fonts/JetBrains_Mono/JetBrainsMono-Italic-VariableFont_wght.ttf',
+  weight: "100 800",
+  style: "italic",
+  variable: "--font-face-mono-italic",
+  display: "swap",
+  preload: false,
+});
 
 export const metadata: Metadata = {
   title: 'Orion - Find the right people. Without the noise.',
   description: 'Orion is a modern hiring platform built for clarity — for candidates, companies, and agencies.',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://orion.jobs'),
+  openGraph: {
+    title: 'Orion - Find the right people. Without the noise.',
+    description: 'Orion is a modern hiring platform built for clarity — for candidates, companies, and agencies.',
+    siteName: 'Orion',
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Orion - Find the right people. Without the noise.',
+    description: 'Orion is a modern hiring platform built for clarity — for candidates, companies, and agencies.',
+    images: ['/og-image.png'],
+  },
   icons: {
     icon: [
       {
@@ -26,22 +80,33 @@ export const metadata: Metadata = {
     ],
     apple: '/apple-icon.png',
   },
-    generator: 'v0.app'
 }
 
 export const viewport: Viewport = {
   themeColor: '#F9FAFB',
 }
 
+const fontVariables = [
+  inter.variable,
+  interItalic.variable,
+  manrope.variable,
+  jetbrainsMono.variable,
+  jetbrainsMonoItalic.variable,
+].join(' ')
+
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: ReactNode
 }>) {
   return (
-    <html lang="en">
-      <body className={`font-sans antialiased`}>
-        {children}
+    <html lang="en" className={fontVariables}>
+      <body className="font-sans antialiased">
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+        <Toaster richColors position="top-right" />
+        <RUMProvider />
         <Analytics />
       </body>
     </html>

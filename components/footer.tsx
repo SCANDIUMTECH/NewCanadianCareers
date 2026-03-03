@@ -1,21 +1,15 @@
 "use client"
 
-import React from "react"
-
-import { MotionWrapper } from "./motion-wrapper"
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 import { cn } from "@/lib/utils"
-
-/**
- * Minimal Footer
- * Premium hover effects on links
- */
+import { MotionWrapper } from "./motion-wrapper"
+import { AffiliateSlot } from "@/components/affiliates/affiliate-slot"
 
 const footerLinks = [
   { label: "About", href: "#" },
   { label: "Careers", href: "#" },
-  { label: "Privacy", href: "#" },
-  { label: "Terms", href: "#" },
+  { label: "Privacy", href: "/privacy" },
+  { label: "Terms", href: "/terms" },
 ]
 
 export function Footer() {
@@ -39,6 +33,10 @@ export function Footer() {
             </nav>
 
           </div>
+        </MotionWrapper>
+
+        <MotionWrapper delay={50}>
+          <AffiliateSlot placement="footer" variant="footer" className="mt-8" />
         </MotionWrapper>
 
         <MotionWrapper delay={100}>
@@ -82,7 +80,7 @@ function LogoWordmark() {
   )
 }
 
-function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
+function FooterLink({ href, children }: { href: string; children: ReactNode }) {
   const [isHovered, setIsHovered] = useState(false)
   
   return (

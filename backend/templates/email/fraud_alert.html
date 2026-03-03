@@ -1,0 +1,61 @@
+{% extends "email/base.html" %}
+{% block title %}Fraud Alert{% endblock %}
+{% block preheader %}<span style="display:none;max-height:0;overflow:hidden;mso-hide:all;">{{ severity }} fraud alert triggered on Orion.</span>{% endblock %}
+{% block accent_color %}#DC2626{% endblock %}
+
+{% block hero_icon %}
+<tr>
+  <td align="center" style="padding:32px 40px 0 40px;">
+    <div style="display:inline-block;width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,#FEF2F2,#FEE2E2);text-align:center;line-height:56px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </div>
+  </td>
+</tr>
+{% endblock %}
+
+{% block content %}
+<h1 style="margin:0 0 8px;font-size:28px;font-weight:700;color:#0F172A;letter-spacing:-0.02em;line-height:1.2;" class="email-heading email-hero-heading">Fraud Alert</h1>
+
+<!-- Severity Badge -->
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+  <tr>
+    <td style="background:#FEE2E2;color:#991B1B;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;">{{ severity }}</td>
+  </tr>
+</table>
+
+<p style="margin:0 0 16px;font-size:16px;color:#374151;line-height:1.6;" class="email-text">Hi {{ name }},</p>
+
+<p style="margin:0 0 24px;font-size:16px;color:#374151;line-height:1.6;" class="email-text">
+  A fraud detection rule has been triggered. Please review the details below and take appropriate action.
+</p>
+
+<!-- Detail Card (Red) -->
+<div class="email-info-card" style="background:#FEF2F2;border:1px solid #FECACA;border-left:4px solid #DC2626;border-radius:10px;padding:20px;margin-bottom:24px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td style="padding-bottom:10px;">
+        <p style="margin:0;font-size:12px;font-weight:600;color:#991B1B;text-transform:uppercase;letter-spacing:0.05em;">Alert Details</p>
+      </td>
+    </tr>
+    <tr><td style="padding-bottom:6px;"><p style="margin:0;font-size:14px;color:#374151;line-height:1.5;" class="email-text"><strong>Alert Type:</strong> {{ alert_type }}</p></td></tr>
+    <tr><td style="padding-bottom:6px;"><p style="margin:0;font-size:14px;color:#374151;line-height:1.5;" class="email-text"><strong>Subject:</strong> {{ subject_name }}</p></td></tr>
+    <tr><td style="padding-bottom:6px;"><p style="margin:0;font-size:14px;color:#374151;line-height:1.5;" class="email-text"><strong>Description:</strong> {{ description }}</p></td></tr>
+    <tr><td style="padding-bottom:6px;"><p style="margin:0;font-size:14px;color:#374151;line-height:1.5;" class="email-text"><strong>IP Address:</strong> {{ ip_address }}</p></td></tr>
+    <tr><td style="padding-bottom:6px;"><p style="margin:0;font-size:14px;color:#374151;line-height:1.5;" class="email-text"><strong>Indicators:</strong> {{ indicators }}</p></td></tr>
+    <tr><td style="padding-bottom:6px;"><p style="margin:0;font-size:14px;color:#374151;line-height:1.5;" class="email-text"><strong>Rule:</strong> {{ rule_name }}</p></td></tr>
+    <tr><td><p style="margin:0;font-size:14px;color:#374151;line-height:1.5;" class="email-text"><strong>Detected:</strong> {{ time }}</p></td></tr>
+  </table>
+</div>
+
+<!-- CTA -->
+<table role="presentation" cellpadding="0" cellspacing="0" border="0">
+  <tr>
+    <td align="center" style="border-radius:10px;background:#DC2626;">
+      <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{{ alert_url }}" style="height:48px;v-text-anchor:middle;width:200px;" arcsize="21%" fillcolor="#DC2626" stroke="f"><w:anchorlock/><center style="color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;font-weight:600;">Review Alert</center></v:roundrect><![endif]-->
+      <!--[if !mso]><!--><a href="{{ alert_url }}" class="email-cta" style="display:inline-block;padding:14px 32px;background:#DC2626;color:#ffffff;text-decoration:none;border-radius:10px;font-size:16px;font-weight:600;line-height:1;">Review Alert</a><!--<![endif]-->
+    </td>
+  </tr>
+</table>
+
+<p style="margin:16px 0 0;font-size:12px;color:#9CA3AF;line-height:1.5;" class="email-text-legal">This is an automated alert from Orion Fraud Detection.</p>
+{% endblock %}

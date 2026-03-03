@@ -1,28 +1,98 @@
 "use client"
 
-import React from "react"
-
-import { useState } from "react"
+import { useState, type FormEvent, type ReactNode } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { AuthInput } from "@/components/auth-input"
 import { MotionWrapper } from "@/components/motion-wrapper"
+import { TurnstileGuard, useTurnstileToken } from "@/components/turnstile"
+import { useAuth } from "@/hooks/use-auth"
+import { ROLE_REDIRECTS } from "@/lib/auth/types"
+import type { ApiError, UserRole } from "@/lib/auth/types"
 
 type AccountType = "candidate" | "company" | null
 
+// Map frontend account types to backend roles
+const ACCOUNT_TYPE_TO_ROLE: Record<NonNullable<AccountType>, UserRole> = {
+  candidate: "candidate",
+  company: "employer",
+}
+
 export default function SignupPage() {
+  const router = useRouter()
+  const { register } = useAuth()
+
   const [step, setStep] = useState<1 | 2>(1)
   const [accountType, setAccountType] = useState<AccountType>(null)
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [passwordConfirm, setPasswordConfirm] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const { turnstileToken, setTurnstileToken } = useTurnstileToken()
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
+    setError("")
+
+    if (!accountType) return
+
+    if (password !== passwordConfirm) {
+      setError("Passwords do not match")
+      return
+    }
+
     setIsLoading(true)
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    setIsLoading(false)
+
+    try {
+      const role = ACCOUNT_TYPE_TO_ROLE[accountType]
+
+      // For employers, the name field is the company name
+      // For candidates, it's their personal name
+      let firstName = ""
+      let lastName = ""
+      let companyName: string | undefined
+
+      if (accountType === "company") {
+        companyName = name.trim()
+      } else {
+        const nameParts = name.trim().split(/\s+/)
+        firstName = nameParts[0] || ""
+        lastName = nameParts.slice(1).join(" ") || ""
+      }
+
+      const user = await register({
+        email,
+        password,
+        password_confirm: passwordConfirm,
+        first_name: firstName,
+        last_name: lastName,
+        role,
+        company_name: companyName,
+        turnstile_token: turnstileToken || undefined,
+      })
+
+      // Redirect based on email verification status
+      if (!user.email_verified) {
+        router.push('/verify-email/prompt')
+      } else {
+        router.push(ROLE_REDIRECTS[user.role])
+      }
+    } catch (err) {
+      const apiError = err as ApiError
+      // Show field-specific errors or general message
+      if (apiError.errors?.email) {
+        setError(apiError.errors.email[0])
+      } else if (apiError.errors?.password) {
+        setError(apiError.errors.password[0])
+      } else {
+        setError(apiError.message || "Could not create account")
+      }
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleTypeSelect = (type: AccountType) => {
@@ -38,13 +108,13 @@ export default function SignupPage() {
         <div 
           className="absolute inset-0"
           style={{
-            background: "radial-gradient(ellipse 80% 80% at 80% 20%, rgba(59, 91, 219, 0.3) 0%, transparent 50%)"
+            background: "radial-gradient(ellipse 80% 80% at 80% 20%, rgba(var(--primary-rgb), 0.3) 0%, transparent 50%)"
           }}
         />
         <div 
           className="absolute inset-0"
           style={{
-            background: "radial-gradient(ellipse 60% 60% at 20% 80%, rgba(59, 91, 219, 0.2) 0%, transparent 50%)"
+            background: "radial-gradient(ellipse 60% 60% at 20% 80%, rgba(var(--primary-rgb), 0.2) 0%, transparent 50%)"
           }}
         />
         
@@ -196,12 +266,24 @@ export default function SignupPage() {
                     required
                   />
 
+                  <AuthInput
+                    type="password"
+                    label="Confirm password"
+                    value={passwordConfirm}
+                    onChange={(e) => setPasswordConfirm(e.target.value)}
+                    autoComplete="new-password"
+                    error={error}
+                    required
+                  />
+
                   <p className="text-xs text-foreground-muted pt-1">
                     By creating an account, you agree to our{" "}
                     <Link href="/terms" className="text-primary hover:underline">Terms</Link>
                     {" "}and{" "}
                     <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
                   </p>
+
+                  <TurnstileGuard feature="auth" onToken={setTurnstileToken} />
 
                   <button
                     type="submit"
@@ -326,25 +408,23 @@ function AccountTypeCard({
   )
 }
 
-function SocialButton({ 
-  provider, 
-  children 
-}: { 
+function SocialButton({
+  provider,
+  children
+}: {
   provider: "google" | "github"
-  children: React.ReactNode 
+  children: ReactNode
 }) {
-  const [isHovered, setIsHovered] = useState(false)
-
   return (
     <button
       type="button"
+      disabled
+      title="Coming soon"
       className={cn(
         "flex items-center justify-center gap-3 py-3 px-4 rounded-lg border border-border",
         "text-sm font-medium text-foreground transition-all duration-300",
-        "hover:border-foreground-muted/50 hover:shadow-sm"
+        "opacity-50 cursor-not-allowed"
       )}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
       {provider === "google" && (
         <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -359,12 +439,7 @@ function SocialButton({
           <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
         </svg>
       )}
-      <span className={cn(
-        "transition-transform duration-300",
-        isHovered && "translate-x-0.5"
-      )}>
-        {children}
-      </span>
+      <span>{children}</span>
     </button>
   )
 }

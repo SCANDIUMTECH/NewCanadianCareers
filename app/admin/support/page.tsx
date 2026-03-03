@@ -1,28 +1,30 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { motion } from "framer-motion"
 import {
   Search,
-  User,
   Building2,
   Eye,
-  Clock,
-  FileText,
-  Download,
   AlertTriangle,
   ExternalLink,
-  ChevronRight,
-  Mail,
-  Phone,
-  Calendar,
   Activity,
   Shield,
   LogIn,
+  Download,
+  RefreshCw,
+  User,
+  LifeBuoy,
+  Clock,
+  CheckCircle,
+  Loader2,
+  XCircle,
 } from "lucide-react"
+import { UserAvatar } from "@/components/user-avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Dialog,
@@ -42,87 +44,248 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { cn } from "@/lib/utils"
+import {
+  searchSupportUsers,
+  searchSupportCompanies,
+  getUserTimeline,
+  getCompanyTimeline,
+  exportUserData,
+  exportCompanyData,
+  listExportJobs,
+  type SupportUserResult,
+  type SupportCompanyResult,
+  type TimelineEvent,
+  type DataExportJob,
+} from "@/lib/api/admin-support"
+import { startImpersonation } from "@/lib/api/admin-users"
+import { toast } from "sonner"
 
-// Mock user timeline
-const mockUserTimeline = [
-  { id: "e1", type: "login", description: "User logged in", timestamp: "2026-02-02T09:30:00", ip: "192.168.1.1" },
-  { id: "e2", type: "profile_update", description: "Updated profile information", timestamp: "2026-02-02T09:35:00" },
-  { id: "e3", type: "application", description: "Applied to Senior Engineer at TechCorp", timestamp: "2026-02-02T10:00:00" },
-  { id: "e4", type: "job_view", description: "Viewed Product Designer at GrowthLabs", timestamp: "2026-02-02T10:15:00" },
-  { id: "e5", type: "search", description: "Searched for 'remote engineering jobs'", timestamp: "2026-02-02T10:20:00" },
-  { id: "e6", type: "application", description: "Applied to DevOps Engineer at DataFlow", timestamp: "2026-02-02T10:45:00" },
-]
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 },
+  },
+}
 
-// Mock company timeline
-const mockCompanyTimeline = [
-  { id: "c1", type: "job_posted", description: "Posted new job: Senior Engineer", timestamp: "2026-02-01T14:00:00", user: "john@techcorp.com" },
-  { id: "c2", type: "candidate_viewed", description: "Viewed candidate: Sarah Johnson", timestamp: "2026-02-01T15:30:00", user: "jane@techcorp.com" },
-  { id: "c3", type: "job_updated", description: "Updated job: Product Designer", timestamp: "2026-02-02T09:00:00", user: "john@techcorp.com" },
-  { id: "c4", type: "package_purchased", description: "Purchased Premium Package", timestamp: "2026-02-02T10:00:00", user: "john@techcorp.com" },
-]
-
-// Mock user search results
-const mockUserResults = [
-  { id: "u1", name: "Sarah Johnson", email: "sarah.j@email.com", type: "candidate", status: "active", lastActive: "2026-02-02T10:45:00" },
-  { id: "u2", name: "John Smith", email: "john@techcorp.com", type: "employer", company: "TechCorp Inc", status: "active", lastActive: "2026-02-02T09:00:00" },
-]
-
-// Mock company search results
-const mockCompanyResults = [
-  { id: "co1", name: "TechCorp Inc", domain: "techcorp.com", status: "verified", jobCount: 12, employeeCount: 3 },
-  { id: "co2", name: "Tech Solutions", domain: "techsolutions.io", status: "pending", jobCount: 2, employeeCount: 1 },
-]
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
+}
 
 export default function SupportToolsPage() {
   const [activeTab, setActiveTab] = useState("lookup")
   const [searchType, setSearchType] = useState<"user" | "company">("user")
   const [searchQuery, setSearchQuery] = useState("")
-  const [searchResults, setSearchResults] = useState<typeof mockUserResults | typeof mockCompanyResults | null>(null)
-  const [selectedEntity, setSelectedEntity] = useState<{ type: string; data: unknown } | null>(null)
-  const [impersonateDialog, setImpersonateDialog] = useState(false)
-  const [impersonateReason, setImpersonateReason] = useState("")
-  const [exportDialog, setExportDialog] = useState(false)
+  const [isSearching, setIsSearching] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
 
-  const handleSearch = () => {
-    if (searchType === "user") {
-      setSearchResults(mockUserResults.filter(u => 
-        u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        u.email.toLowerCase().includes(searchQuery.toLowerCase())
-      ))
-    } else {
-      setSearchResults(mockCompanyResults.filter(c => 
-        c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        c.domain.toLowerCase().includes(searchQuery.toLowerCase())
-      ))
+  // Search results state
+  const [userResults, setUserResults] = useState<SupportUserResult[]>([])
+  const [companyResults, setCompanyResults] = useState<SupportCompanyResult[]>([])
+
+  // Selected entity for timeline
+  const [selectedEntity, setSelectedEntity] = useState<{
+    type: "user" | "company"
+    data: SupportUserResult | SupportCompanyResult
+  } | null>(null)
+
+  // Timeline state
+  const [timeline, setTimeline] = useState<TimelineEvent[]>([])
+  const [isLoadingTimeline, setIsLoadingTimeline] = useState(false)
+  const [timelineError, setTimelineError] = useState<string | null>(null)
+
+  // Dialog state
+  const [impersonateDialog, setImpersonateDialog] = useState(false)
+  const [impersonateTarget, setImpersonateTarget] = useState<SupportUserResult | null>(null)
+  const [impersonateReason, setImpersonateReason] = useState("")
+  const [isImpersonating, setIsImpersonating] = useState(false)
+
+  const [exportDialog, setExportDialog] = useState(false)
+  const [exportTarget, setExportTarget] = useState<{
+    type: "user" | "company"
+    data: SupportUserResult | SupportCompanyResult
+  } | null>(null)
+  const [exportFormat, setExportFormat] = useState<"csv" | "json" | "xlsx">("csv")
+  const [exportIncludePII, setExportIncludePII] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
+
+  // Export jobs state
+  const [exportJobs, setExportJobs] = useState<DataExportJob[]>([])
+  const [isLoadingExportJobs, setIsLoadingExportJobs] = useState(false)
+
+  // Search handler
+  const handleSearch = useCallback(async () => {
+    if (!searchQuery.trim()) return
+
+    setIsSearching(true)
+    setSearchError(null)
+
+    try {
+      if (searchType === "user") {
+        const response = await searchSupportUsers({ query: searchQuery })
+        setUserResults(response.results)
+        setCompanyResults([])
+      } else {
+        const response = await searchSupportCompanies({ query: searchQuery })
+        setCompanyResults(response.results)
+        setUserResults([])
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Search failed"
+      setSearchError(message)
+    } finally {
+      setIsSearching(false)
+    }
+  }, [searchQuery, searchType])
+
+  // Load timeline when entity is selected
+  useEffect(() => {
+    if (!selectedEntity) {
+      setTimeline([])
+      return
+    }
+
+    const loadTimeline = async () => {
+      setIsLoadingTimeline(true)
+      setTimelineError(null)
+
+      try {
+        if (selectedEntity.type === "user") {
+          const response = await getUserTimeline((selectedEntity.data as SupportUserResult).id)
+          setTimeline(response.results)
+        } else {
+          const response = await getCompanyTimeline((selectedEntity.data as SupportCompanyResult).id)
+          setTimeline(response.results)
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to load timeline"
+        setTimelineError(message)
+      } finally {
+        setIsLoadingTimeline(false)
+      }
+    }
+
+    loadTimeline()
+  }, [selectedEntity])
+
+  // Impersonate handler (uses admin-users API with redirect)
+  const handleImpersonate = async () => {
+    if (!impersonateTarget || !impersonateReason.trim()) return
+
+    setIsImpersonating(true)
+    try {
+      const result = await startImpersonation(impersonateTarget.id, { reason: impersonateReason })
+      setImpersonateDialog(false)
+      setImpersonateReason("")
+      setImpersonateTarget(null)
+      // Redirect to the impersonation URL
+      if (result.redirect_url) {
+        window.location.href = result.redirect_url
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to start impersonation"
+      toast.error(message)
+    } finally {
+      setIsImpersonating(false)
     }
   }
 
-  const isUserResults = (results: unknown[]): results is typeof mockUserResults => {
-    return searchType === "user"
+  // Export handler
+  const handleExport = async () => {
+    if (!exportTarget) return
+
+    setIsExporting(true)
+    try {
+      let job
+      if (exportTarget.type === "user") {
+        job = await exportUserData((exportTarget.data as SupportUserResult).id, {
+          format: exportFormat,
+          include_pii: exportIncludePII,
+        })
+      } else {
+        job = await exportCompanyData((exportTarget.data as SupportCompanyResult).id, {
+          format: exportFormat,
+          include_pii: exportIncludePII,
+        })
+      }
+      toast.success(`Export started. Job ID: ${job.id}. You will be notified when it's ready.`)
+      setExportDialog(false)
+      setExportTarget(null)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to start export"
+      toast.error(message)
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  // Fetch export jobs when switching to export tab
+  useEffect(() => {
+    if (activeTab !== "export") return
+    const fetchExportJobs = async () => {
+      setIsLoadingExportJobs(true)
+      try {
+        const data = await listExportJobs()
+        setExportJobs(data.results)
+      } catch {
+        // Silently fail — the section will show empty state
+      } finally {
+        setIsLoadingExportJobs(false)
+      }
+    }
+    fetchExportJobs()
+  }, [activeTab])
+
+  // Reset search when type changes
+  const handleSearchTypeChange = (type: "user" | "company") => {
+    setSearchType(type)
+    setUserResults([])
+    setCompanyResults([])
+    setSearchError(null)
   }
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="space-y-8"
+    >
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Support Tools</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          User lookup, impersonation, timelines, and data export
-        </p>
-      </div>
+      <motion.div variants={itemVariants} className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-sky-500 to-cyan-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
+              <LifeBuoy className="h-6 w-6 text-white" />
+            </div>
+            <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-green-500 border-2 border-background" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Support Tools</h1>
+            <p className="text-muted-foreground text-sm mt-0.5">
+              User lookup, impersonation, timelines, and data export
+            </p>
+          </div>
+        </div>
+      </motion.div>
 
       {/* Warning Banner */}
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-        <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-sm font-medium text-amber-800">Sensitive Operations</p>
-          <p className="text-sm text-amber-700 mt-1">
-            All actions on this page are logged to the audit trail. Impersonation requires explicit justification.
-          </p>
-        </div>
-      </div>
+      <motion.div variants={itemVariants}>
+        <Card className="border-amber-200 bg-amber-50/50">
+          <CardContent className="p-4 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-amber-800">Sensitive Operations</p>
+              <p className="text-sm text-amber-700 mt-1">
+                All actions on this page are logged to the audit trail. Impersonation requires explicit justification.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
+      <motion.div variants={itemVariants}>
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="lookup">User/Company Lookup</TabsTrigger>
@@ -132,13 +295,11 @@ export default function SupportToolsPage() {
 
         {/* Lookup Tab */}
         <TabsContent value="lookup" className="space-y-6">
-          <div className="bg-card border border-border rounded-xl p-6">
+          <Card>
+          <CardContent className="p-6">
             <div className="flex flex-col md:flex-row gap-4 mb-6">
               <div className="flex-1 flex gap-2">
-                <Select value={searchType} onValueChange={(v: "user" | "company") => {
-                  setSearchType(v)
-                  setSearchResults(null)
-                }}>
+                <Select value={searchType} onValueChange={handleSearchTypeChange}>
                   <SelectTrigger className="w-[140px]">
                     <SelectValue />
                   </SelectTrigger>
@@ -157,19 +318,30 @@ export default function SupportToolsPage() {
                     className="pl-9"
                   />
                 </div>
-                <Button onClick={handleSearch}>Search</Button>
+                <Button onClick={handleSearch} disabled={isSearching}>
+                  {isSearching ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Search"}
+                </Button>
               </div>
             </div>
 
+            {/* Search Error */}
+            {searchError && (
+              <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg mb-6">
+                <p className="text-sm text-destructive">{searchError}</p>
+              </div>
+            )}
+
             {/* Search Results */}
-            {searchResults && searchResults.length > 0 && (
-              <div className="border border-border rounded-lg divide-y divide-border">
-                {isUserResults(searchResults) ? (
-                  searchResults.map(user => (
+            {(userResults.length > 0 || companyResults.length > 0) && (
+              <Card className="divide-y divide-border overflow-hidden">
+                {searchType === "user" ? (
+                  userResults.map(user => (
                     <div key={user.id} className="p-4 flex items-center gap-4 hover:bg-muted/30 transition-colors">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <User className="w-5 h-5 text-primary" />
-                      </div>
+                      <UserAvatar
+                        name={user.name}
+                        avatar={user.avatar}
+                        size="md"
+                      />
                       <div className="flex-1 min-w-0">
                         <p className="font-medium">{user.name}</p>
                         <p className="text-sm text-muted-foreground">{user.email}</p>
@@ -177,8 +349,19 @@ export default function SupportToolsPage() {
                           <Badge variant="secondary" className="text-xs">
                             {user.type}
                           </Badge>
-                          {user.type === "employer" && (
-                            <span className="text-xs text-muted-foreground">{(user as typeof mockUserResults[1]).company}</span>
+                          <Badge
+                            className={
+                              user.status === "active"
+                                ? "bg-emerald-100 text-emerald-700"
+                                : user.status === "suspended"
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-red-100 text-red-700"
+                            }
+                          >
+                            {user.status}
+                          </Badge>
+                          {user.company && (
+                            <span className="text-xs text-muted-foreground">{user.company}</span>
                           )}
                         </div>
                       </div>
@@ -197,19 +380,37 @@ export default function SupportToolsPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setImpersonateDialog(true)}
+                          onClick={() => {
+                            setImpersonateTarget(user)
+                            setImpersonateDialog(true)
+                          }}
                         >
                           <Eye className="w-4 h-4 mr-1" />
                           Impersonate
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setExportTarget({ type: "user", data: user })
+                            setExportDialog(true)
+                          }}
+                        >
+                          <Download className="w-4 h-4 mr-1" />
+                          Export
                         </Button>
                       </div>
                     </div>
                   ))
                 ) : (
-                  (searchResults as typeof mockCompanyResults).map(company => (
+                  companyResults.map(company => (
                     <div key={company.id} className="p-4 flex items-center gap-4 hover:bg-muted/30 transition-colors">
                       <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Building2 className="w-5 h-5 text-primary" />
+                        {company.logo ? (
+                          <img src={company.logo} alt={company.name} className="w-8 h-8 rounded-lg object-cover" />
+                        ) : (
+                          <Building2 className="w-5 h-5 text-primary" />
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium">{company.name}</p>
@@ -218,7 +419,7 @@ export default function SupportToolsPage() {
                           <Badge className={company.status === "verified" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}>
                             {company.status}
                           </Badge>
-                          <span className="text-xs text-muted-foreground">{company.jobCount} jobs · {company.employeeCount} employees</span>
+                          <span className="text-xs text-muted-foreground">{company.job_count} jobs · {company.employee_count} employees</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -233,7 +434,22 @@ export default function SupportToolsPage() {
                           <Activity className="w-4 h-4 mr-1" />
                           Timeline
                         </Button>
-                        <Button variant="outline" size="sm">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setExportTarget({ type: "company", data: company })
+                            setExportDialog(true)
+                          }}
+                        >
+                          <Download className="w-4 h-4 mr-1" />
+                          Export
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(`/admin/companies?search=${encodeURIComponent(company.name)}`, "_blank")}
+                        >
                           <ExternalLink className="w-4 h-4 mr-1" />
                           View
                         </Button>
@@ -241,44 +457,45 @@ export default function SupportToolsPage() {
                     </div>
                   ))
                 )}
-              </div>
+              </Card>
             )}
 
-            {searchResults && searchResults.length === 0 && (
+            {/* No Results */}
+            {!isSearching && searchQuery && userResults.length === 0 && companyResults.length === 0 && !searchError && (
               <div className="text-center py-8 text-muted-foreground">
-                No results found for &ldquo;{searchQuery}&rdquo;
+                <Search className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                <p>No results found for &ldquo;{searchQuery}&rdquo;</p>
               </div>
             )}
-          </div>
+          </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Timeline Tab */}
         <TabsContent value="timeline" className="space-y-6">
-          <div className="bg-card border border-border rounded-xl p-6">
+          <Card>
+          <CardContent className="p-6">
             {selectedEntity ? (
               <>
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "w-10 h-10 rounded-lg flex items-center justify-center",
-                      selectedEntity.type === "user" ? "bg-primary/10" : "bg-primary/10"
-                    )}>
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 to-cyan-600 text-white shadow-sm">
                       {selectedEntity.type === "user" ? (
-                        <User className="w-5 h-5 text-primary" />
+                        <User className="w-5 h-5" />
                       ) : (
-                        <Building2 className="w-5 h-5 text-primary" />
+                        <Building2 className="w-5 h-5" />
                       )}
                     </div>
                     <div>
                       <p className="font-medium">
-                        {selectedEntity.type === "user" 
-                          ? (selectedEntity.data as typeof mockUserResults[0]).name 
-                          : (selectedEntity.data as typeof mockCompanyResults[0]).name}
+                        {selectedEntity.type === "user"
+                          ? (selectedEntity.data as SupportUserResult).name
+                          : (selectedEntity.data as SupportCompanyResult).name}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {selectedEntity.type === "user" 
-                          ? (selectedEntity.data as typeof mockUserResults[0]).email 
-                          : (selectedEntity.data as typeof mockCompanyResults[0]).domain}
+                        {selectedEntity.type === "user"
+                          ? (selectedEntity.data as SupportUserResult).email
+                          : (selectedEntity.data as SupportCompanyResult).domain}
                       </p>
                     </div>
                   </div>
@@ -287,39 +504,59 @@ export default function SupportToolsPage() {
                   </Button>
                 </div>
 
-                <div className="relative pl-6 border-l-2 border-border space-y-6">
-                  {(selectedEntity.type === "user" ? mockUserTimeline : mockCompanyTimeline).map((event, i) => (
-                    <motion.div
-                      key={event.id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.05 }}
-                      className="relative"
-                    >
-                      <div className="absolute -left-[25px] w-4 h-4 rounded-full bg-card border-2 border-primary" />
-                      <div className="bg-muted/30 rounded-lg p-4">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <p className="font-medium text-sm">{event.description}</p>
-                            {selectedEntity.type === "company" && (event as typeof mockCompanyTimeline[0]).user && (
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                by {(event as typeof mockCompanyTimeline[0]).user}
-                              </p>
-                            )}
-                            {selectedEntity.type === "user" && (event as typeof mockUserTimeline[0]).ip && (
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                IP: {(event as typeof mockUserTimeline[0]).ip}
-                              </p>
-                            )}
+                {/* Timeline Error */}
+                {timelineError && (
+                  <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg mb-6">
+                    <p className="text-sm text-destructive">{timelineError}</p>
+                  </div>
+                )}
+
+                {/* Timeline Loading */}
+                {isLoadingTimeline && (
+                  <div className="flex items-center justify-center py-12">
+                    <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+
+                {/* Timeline Events */}
+                {!isLoadingTimeline && !timelineError && timeline.length > 0 && (
+                  <div className="relative pl-6 border-l-2 border-border space-y-6">
+                    {timeline.map((event, i) => (
+                      <motion.div
+                        key={event.id}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                        className="relative"
+                      >
+                        <div className="absolute -left-[25px] w-4 h-4 rounded-full bg-card border-2 border-primary" />
+                        <div className="bg-muted/30 rounded-lg p-4">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <p className="font-medium text-sm">{event.description}</p>
+                              {event.ip && (
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  IP: {event.ip}
+                                </p>
+                              )}
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(event.timestamp).toLocaleString()}
+                            </span>
                           </div>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(event.timestamp).toLocaleString()}
-                          </span>
                         </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+
+                {/* No Timeline Events */}
+                {!isLoadingTimeline && !timelineError && timeline.length === 0 && (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Activity className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                    <p>No activity found for this {selectedEntity.type}</p>
+                  </div>
+                )}
               </>
             ) : (
               <div className="text-center py-12 text-muted-foreground">
@@ -327,41 +564,84 @@ export default function SupportToolsPage() {
                 <p>Select a user or company from the lookup tab to view their timeline</p>
               </div>
             )}
-          </div>
+          </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Export Tab */}
         <TabsContent value="export" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
-              { title: "User Report", description: "Export all user data as CSV", icon: User },
-              { title: "Company Report", description: "Export company data and metrics", icon: Building2 },
-              { title: "Job Listings Report", description: "All jobs with applications data", icon: FileText },
-              { title: "Revenue Report", description: "Package purchases and billing", icon: Calendar },
-              { title: "Activity Report", description: "Platform-wide activity log", icon: Activity },
-              { title: "Custom Query", description: "Run custom data export", icon: Download },
-            ].map((report, i) => (
-              <motion.div
-                key={report.title}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className="bg-card border border-border rounded-xl p-6"
-              >
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                  <report.icon className="w-5 h-5 text-primary" />
-                </div>
-                <h3 className="font-medium">{report.title}</h3>
-                <p className="text-sm text-muted-foreground mt-1 mb-4">{report.description}</p>
-                <Button variant="outline" size="sm" onClick={() => setExportDialog(true)}>
-                  <Download className="w-4 h-4 mr-2" />
-                  Export
-                </Button>
-              </motion.div>
+              { title: "User Report", description: "Export all user data as CSV", icon: User, gradient: "from-sky-500 to-cyan-600", accent: "bg-sky-500", onClick: () => setActiveTab("lookup") },
+              { title: "Company Report", description: "Export company data and metrics", icon: Building2, gradient: "from-violet-500 to-purple-600", accent: "bg-violet-500", onClick: () => setActiveTab("lookup") },
+              { title: "Activity Report", description: "Platform-wide activity log", icon: Activity, gradient: "from-emerald-500 to-teal-600", accent: "bg-emerald-500", onClick: () => window.open("/admin/audit", "_blank") },
+            ].map((report) => (
+              <Card key={report.title} className="relative overflow-hidden group">
+                <div className={`absolute -top-6 -right-6 w-24 h-24 rounded-full ${report.accent} opacity-[0.06] transition-opacity duration-300 group-hover:opacity-[0.10]`} />
+                <div className={`absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r ${report.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+                <CardContent className="p-6 relative">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br ${report.gradient} text-white shadow-sm mb-4`}>
+                    <report.icon className="w-5 h-5" />
+                  </div>
+                  <h3 className="font-medium">{report.title}</h3>
+                  <p className="text-sm text-muted-foreground mt-1 mb-4">{report.description}</p>
+                  <Button variant="outline" size="sm" className="gap-1.5" onClick={report.onClick}>
+                    <Download className="w-4 h-4" />
+                    Export
+                  </Button>
+                </CardContent>
+              </Card>
             ))}
           </div>
+
+          <Card className="relative overflow-hidden">
+            <CardContent className="p-6">
+              <h3 className="font-medium mb-4">Recent Exports</h3>
+              {isLoadingExportJobs ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : exportJobs.length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground">
+                  <Download className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                  <p className="text-sm">No exports yet. Use the lookup tab to search for a specific user or company to export their data.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {exportJobs.map((job) => (
+                    <div key={job.id} className="flex items-center justify-between rounded-lg border p-3">
+                      <div className="flex items-center gap-3">
+                        {job.status === "completed" && <CheckCircle className="h-4 w-4 text-emerald-500" />}
+                        {job.status === "processing" && <Loader2 className="h-4 w-4 animate-spin text-blue-500" />}
+                        {job.status === "pending" && <Clock className="h-4 w-4 text-amber-500" />}
+                        {job.status === "failed" && <XCircle className="h-4 w-4 text-red-500" />}
+                        <div>
+                          <p className="text-sm font-medium">Export #{job.id.slice(0, 8)}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(job.created_at).toLocaleDateString()} &middot; {job.status}
+                          </p>
+                        </div>
+                      </div>
+                      {job.status === "completed" && job.download_url && (
+                        <Button variant="outline" size="sm" className="gap-1.5" asChild>
+                          <a href={job.download_url} target="_blank" rel="noopener noreferrer">
+                            <Download className="h-3.5 w-3.5" />
+                            Download
+                          </a>
+                        </Button>
+                      )}
+                      {job.status === "failed" && job.error && (
+                        <span className="text-xs text-red-600 max-w-[200px] truncate">{job.error}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
+      </motion.div>
 
       {/* Impersonate Dialog */}
       <Dialog open={impersonateDialog} onOpenChange={setImpersonateDialog}>
@@ -376,6 +656,12 @@ export default function SupportToolsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {impersonateTarget && (
+              <div className="p-3 bg-muted/30 rounded-lg">
+                <p className="font-medium">{impersonateTarget.name}</p>
+                <p className="text-sm text-muted-foreground">{impersonateTarget.email}</p>
+              </div>
+            )}
             <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
               <p className="font-medium">Warning:</p>
               <ul className="list-disc list-inside mt-1 space-y-1">
@@ -394,9 +680,13 @@ export default function SupportToolsPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setImpersonateDialog(false)}>Cancel</Button>
-            <Button disabled={!impersonateReason.trim()}>
-              <LogIn className="w-4 h-4 mr-2" />
+            <Button variant="outline" onClick={() => setImpersonateDialog(false)} disabled={isImpersonating}>Cancel</Button>
+            <Button onClick={handleImpersonate} disabled={!impersonateReason.trim() || isImpersonating}>
+              {isImpersonating ? (
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <LogIn className="w-4 h-4 mr-2" />
+              )}
               Start Impersonation
             </Button>
           </DialogFooter>
@@ -407,10 +697,24 @@ export default function SupportToolsPage() {
       <Dialog open={exportDialog} onOpenChange={setExportDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Export Report</DialogTitle>
+            <DialogTitle>Export Data</DialogTitle>
             <DialogDescription>Configure your data export</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {exportTarget && (
+              <div className="p-3 bg-muted/30 rounded-lg">
+                <p className="font-medium">
+                  {exportTarget.type === "user"
+                    ? (exportTarget.data as SupportUserResult).name
+                    : (exportTarget.data as SupportCompanyResult).name}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {exportTarget.type === "user"
+                    ? (exportTarget.data as SupportUserResult).email
+                    : (exportTarget.data as SupportCompanyResult).domain}
+                </p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Date Range</Label>
               <div className="grid grid-cols-2 gap-2">
@@ -420,7 +724,7 @@ export default function SupportToolsPage() {
             </div>
             <div className="space-y-2">
               <Label>Format</Label>
-              <Select defaultValue="csv">
+              <Select value={exportFormat} onValueChange={(v) => setExportFormat(v as typeof exportFormat)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -432,19 +736,23 @@ export default function SupportToolsPage() {
               </Select>
             </div>
             <div className="flex items-center justify-between">
-              <Label>Include PII</Label>
-              <Switch />
+              <Label>Include PII (Personally Identifiable Information)</Label>
+              <Switch checked={exportIncludePII} onCheckedChange={setExportIncludePII} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setExportDialog(false)}>Cancel</Button>
-            <Button>
-              <Download className="w-4 h-4 mr-2" />
+            <Button variant="outline" onClick={() => setExportDialog(false)} disabled={isExporting}>Cancel</Button>
+            <Button onClick={handleExport} disabled={isExporting}>
+              {isExporting ? (
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4 mr-2" />
+              )}
               Generate Export
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </motion.div>
   )
 }

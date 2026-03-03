@@ -1,51 +1,158 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
-import { cn } from "@/lib/utils"
+import { cn, formatTimeAgo } from "@/lib/utils"
+import { APPLICATION_STATUS_STYLES } from "@/lib/constants/status-styles"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { MotionWrapper } from "@/components/motion-wrapper"
+import { useCandidate } from "@/hooks/use-candidate"
+import {
+  getSavedJobs,
+  getMyApplications,
+  getJobAlerts,
+} from "@/lib/api/candidates"
+import type {
+  SavedJob,
+  CandidateApplicationListItem,
+  JobAlert,
+  CandidateProfile,
+} from "@/lib/candidate/types"
 
-/**
- * Candidate Dashboard
- * Overview of saved jobs, applications, alerts, and recent activity
- * Premium UI with Orion design language
- */
+interface RecentlyViewedJob {
+  id: number
+  title: string
+  company: string
+  location: string
+  viewedAt: string
+}
 
-// Mock data
-const savedJobs = [
-  { id: 1, title: "Senior Frontend Engineer", company: "Acme Corp", logo: null, location: "Remote", salary: "$140k - $180k", saved: "2 days ago", type: "Full-time" },
-  { id: 2, title: "Product Designer", company: "Stellar Inc", logo: null, location: "San Francisco, CA", salary: "$120k - $160k", saved: "3 days ago", type: "Full-time" },
-  { id: 3, title: "Full Stack Developer", company: "Nova Labs", logo: null, location: "New York, NY", salary: "$130k - $170k", saved: "5 days ago", type: "Full-time" },
-]
+function getRecentlyViewed(): RecentlyViewedJob[] {
+  if (typeof window === "undefined") return []
+  try {
+    const stored = localStorage.getItem("orion_recently_viewed_jobs")
+    if (stored) {
+      return JSON.parse(stored).slice(0, 5)
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return []
+}
 
-const applications = [
-  { id: 1, title: "Engineering Manager", company: "TechFlow", status: "reviewing", appliedAt: "Jan 28, 2026" },
-  { id: 2, title: "Staff Engineer", company: "BuildCo", status: "submitted", appliedAt: "Jan 25, 2026" },
-  { id: 3, title: "Lead Developer", company: "DataSync", status: "interviewing", appliedAt: "Jan 20, 2026" },
-]
+function getGreeting(): string {
+  const hour = new Date().getHours()
+  if (hour < 12) return "Good morning"
+  if (hour < 17) return "Good afternoon"
+  return "Good evening"
+}
 
-const recentlyViewed = [
-  { id: 1, title: "Backend Engineer", company: "CloudFirst", location: "Remote", viewedAt: "1 hour ago" },
-  { id: 2, title: "DevOps Engineer", company: "InfraTeam", location: "Austin, TX", viewedAt: "3 hours ago" },
-  { id: 3, title: "Software Architect", company: "Enterprise Co", location: "Chicago, IL", viewedAt: "Yesterday" },
-]
+function calculateProfileCompletion(profile: CandidateProfile | null) {
+  if (!profile) {
+    return { percentage: 0, items: [] }
+  }
 
-const savedSearches = [
-  { id: 1, query: "Frontend Remote $150k+", matches: 12, alertFrequency: "daily" },
-  { id: 2, query: "Product Design San Francisco", matches: 8, alertFrequency: "weekly" },
-]
+  const items = [
+    { label: "Basic info", completed: !!(profile.first_name && profile.last_name && profile.email) },
+    { label: "Resume uploaded", completed: !!profile.resume },
+    { label: "Preferred locations", completed: profile.preferred_locations.length > 0 },
+    { label: "Job preferences", completed: !!profile.remote_preference },
+    { label: "Keywords added", completed: profile.preferred_keywords.length > 0 },
+  ]
+
+  const completedCount = items.filter((i) => i.completed).length
+  const percentage = Math.round((completedCount / items.length) * 100)
+
+  return { percentage, items }
+}
 
 export default function CandidateDashboard() {
-  const [isVisible, setIsVisible] = useState(false)
+  const { profile, savedJobsCount, applicationsCount, isLoading: contextLoading } = useCandidate()
+
+  const [savedJobs, setSavedJobs] = useState<SavedJob[]>([])
+  const [applications, setApplications] = useState<CandidateApplicationListItem[]>([])
+  const [jobAlerts, setJobAlerts] = useState<JobAlert[]>([])
+  const [recentlyViewed, setRecentlyViewed] = useState<RecentlyViewedJob[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchDashboardData = useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const [savedJobsRes, applicationsRes, alertsRes] = await Promise.all([
+        getSavedJobs({ page_size: 3 }),
+        getMyApplications({ page_size: 3 }),
+        getJobAlerts(),
+      ])
+      setSavedJobs(savedJobsRes.results)
+      setApplications(applicationsRes.results)
+      setJobAlerts(alertsRes.results.slice(0, 2))
+      setRecentlyViewed(getRecentlyViewed())
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load dashboard data")
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
-    setIsVisible(true)
-  }, [])
+    fetchDashboardData()
+  }, [fetchDashboardData])
+
+  const profileCompletion = calculateProfileCompletion(profile)
+
+  // Count applications in review
+  const inReviewCount = applications.filter((app) => app.status === "reviewing").length
+
+  // Calculate total new matches from alerts
+  const totalMatches = jobAlerts.reduce((sum, alert) => sum + alert.match_count, 0)
+
+  // Determine profile trend text
+  const getProfileTrend = () => {
+    if (!profile?.resume) return "Add resume"
+    if (profileCompletion.percentage < 100) return "Complete profile"
+    return "Profile complete"
+  }
+
+  if (isLoading || contextLoading) {
+    return (
+      <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8">
+        <div className="animate-pulse space-y-8">
+          <div className="h-16 bg-background-secondary/50 rounded-lg" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-24 bg-background-secondary/50 rounded-lg" />
+            ))}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              <div className="h-64 bg-background-secondary/50 rounded-lg" />
+              <div className="h-64 bg-background-secondary/50 rounded-lg" />
+            </div>
+            <div className="space-y-6">
+              <div className="h-48 bg-background-secondary/50 rounded-lg" />
+              <div className="h-48 bg-background-secondary/50 rounded-lg" />
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8">
+        <Card className="p-8 text-center">
+          <p className="text-foreground-muted mb-4">{error}</p>
+          <Button onClick={fetchDashboardData}>Try Again</Button>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-[1400px] mx-auto px-4 md:px-6 lg:px-8">
@@ -53,12 +160,12 @@ export default function CandidateDashboard() {
       <MotionWrapper delay={0}>
         <div className="mb-8">
           <div className="flex items-center gap-2 text-sm text-foreground-muted mb-2">
-            <span>Good morning</span>
+            <span>{getGreeting()}</span>
             <span className="inline-block w-1 h-1 rounded-full bg-primary/40" />
             <span>{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</span>
           </div>
           <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
-            Welcome back, John
+            Welcome back, {profile?.first_name || "there"}
           </h1>
         </div>
       </MotionWrapper>
@@ -68,30 +175,30 @@ export default function CandidateDashboard() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <StatCard
             label="Saved Jobs"
-            value={savedJobs.length}
+            value={savedJobsCount}
             href="/candidate/saved"
-            trend="+2 this week"
+            trend={savedJobs.length > 0 ? `${savedJobs.length} recent` : "None yet"}
             color="primary"
           />
           <StatCard
             label="Applications"
-            value={applications.length}
+            value={applicationsCount}
             href="/candidate/applications"
-            trend="1 in review"
+            trend={inReviewCount > 0 ? `${inReviewCount} in review` : "Track status"}
             color="blue"
           />
           <StatCard
             label="Job Alerts"
-            value={savedSearches.length}
+            value={jobAlerts.length}
             href="/candidate/alerts"
-            trend="12 new matches"
+            trend={totalMatches > 0 ? `${totalMatches} new matches` : "Create alerts"}
             color="green"
           />
           <StatCard
             label="Profile Score"
-            value="85%"
+            value={`${profileCompletion.percentage}%`}
             href="/candidate/profile"
-            trend="Add resume"
+            trend={getProfileTrend()}
             color="amber"
           />
         </div>
@@ -116,11 +223,22 @@ export default function CandidateDashboard() {
                 </Link>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="divide-y divide-border/50">
-                  {savedJobs.map((job, index) => (
-                    <JobCard key={job.id} job={job} index={index} />
-                  ))}
-                </div>
+                {savedJobs.length === 0 ? (
+                  <div className="p-8 text-center">
+                    <p className="text-foreground-muted mb-4">No saved jobs yet</p>
+                    <Link href="/jobs">
+                      <Button variant="outline" size="sm">
+                        Browse Jobs
+                      </Button>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-border/50">
+                    {savedJobs.map((savedJob) => (
+                      <JobCard key={savedJob.id} savedJob={savedJob} />
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </MotionWrapper>
@@ -140,11 +258,22 @@ export default function CandidateDashboard() {
                 </Link>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="divide-y divide-border/50">
-                  {applications.map((app, index) => (
-                    <ApplicationCard key={app.id} application={app} index={index} />
-                  ))}
-                </div>
+                {applications.length === 0 ? (
+                  <div className="p-8 text-center">
+                    <p className="text-foreground-muted mb-4">No applications yet</p>
+                    <Link href="/jobs">
+                      <Button variant="outline" size="sm">
+                        Find Jobs
+                      </Button>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-border/50">
+                    {applications.map((app) => (
+                      <ApplicationCard key={app.id} application={app} />
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </MotionWrapper>
@@ -154,7 +283,7 @@ export default function CandidateDashboard() {
         <div className="space-y-6">
           {/* Profile Completion */}
           <MotionWrapper delay={250}>
-            <ProfileCompletionCard />
+            <ProfileCompletionCard items={profileCompletion.items} percentage={profileCompletion.percentage} />
           </MotionWrapper>
 
           {/* Saved Searches */}
@@ -171,25 +300,33 @@ export default function CandidateDashboard() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                {savedSearches.map((search) => (
-                  <div
-                    key={search.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-background-secondary/50 hover:bg-background-secondary transition-colors"
-                  >
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{search.query}</p>
-                      <p className="text-xs text-foreground-muted mt-0.5">
-                        {search.matches} new matches · {search.alertFrequency}
-                      </p>
+                {jobAlerts.length === 0 ? (
+                  <p className="text-sm text-foreground-muted text-center py-4">
+                    No job alerts set up
+                  </p>
+                ) : (
+                  jobAlerts.map((alert) => (
+                    <div
+                      key={alert.id}
+                      className="flex items-center justify-between p-3 rounded-lg bg-background-secondary/50 hover:bg-background-secondary transition-colors"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{alert.name}</p>
+                        <p className="text-xs text-foreground-muted mt-0.5">
+                          {alert.match_count} new matches · {alert.frequency}
+                        </p>
+                      </div>
+                      <Badge variant="secondary" className="text-xs">
+                        {alert.match_count}
+                      </Badge>
                     </div>
-                    <Badge variant="secondary" className="text-xs">
-                      {search.matches}
-                    </Badge>
-                  </div>
-                ))}
-                <Button variant="outline" size="sm" className="w-full mt-2 bg-transparent">
-                  + Create new alert
-                </Button>
+                  ))
+                )}
+                <Link href="/candidate/alerts">
+                  <Button variant="outline" size="sm" className="w-full mt-2 bg-transparent">
+                    + Create new alert
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
           </MotionWrapper>
@@ -201,21 +338,27 @@ export default function CandidateDashboard() {
                 <CardTitle className="text-lg font-semibold">Recently Viewed</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {recentlyViewed.map((job) => (
-                  <Link
-                    key={job.id}
-                    href={`/jobs/${job.id}`}
-                    className="block p-3 rounded-lg hover:bg-background-secondary/50 transition-colors group"
-                  >
-                    <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
-                      {job.title}
-                    </p>
-                    <p className="text-xs text-foreground-muted mt-0.5">
-                      {job.company} · {job.location}
-                    </p>
-                    <p className="text-xs text-foreground-muted/60 mt-1">{job.viewedAt}</p>
-                  </Link>
-                ))}
+                {recentlyViewed.length === 0 ? (
+                  <p className="text-sm text-foreground-muted text-center py-4">
+                    No recently viewed jobs
+                  </p>
+                ) : (
+                  recentlyViewed.map((job) => (
+                    <Link
+                      key={job.id}
+                      href={`/jobs/${job.id}`}
+                      className="block p-3 rounded-lg hover:bg-background-secondary/50 transition-colors group"
+                    >
+                      <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                        {job.title}
+                      </p>
+                      <p className="text-xs text-foreground-muted mt-0.5">
+                        {job.company} · {job.location}
+                      </p>
+                      <p className="text-xs text-foreground-muted/60 mt-1">{job.viewedAt}</p>
+                    </Link>
+                  ))
+                )}
               </CardContent>
             </Card>
           </MotionWrapper>
@@ -225,7 +368,6 @@ export default function CandidateDashboard() {
   )
 }
 
-// Stat Card Component
 function StatCard({
   label,
   value,
@@ -259,8 +401,7 @@ function StatCard({
   )
 }
 
-// Job Card Component
-function JobCard({ job, index }: { job: typeof savedJobs[0]; index: number }) {
+function JobCard({ savedJob }: { savedJob: SavedJob }) {
   const [isHovered, setIsHovered] = useState(false)
 
   return (
@@ -270,116 +411,140 @@ function JobCard({ job, index }: { job: typeof savedJobs[0]; index: number }) {
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Company Logo */}
-      <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-background-secondary flex items-center justify-center">
-        <span className="text-lg font-semibold text-foreground-muted">
-          {job.company.charAt(0)}
-        </span>
+      <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-background-secondary flex items-center justify-center overflow-hidden">
+        {savedJob.job.company_logo ? (
+          <img
+            src={savedJob.job.company_logo}
+            alt={savedJob.job.company_name}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <span className="text-lg font-semibold text-foreground-muted">
+            {savedJob.job.company_name.charAt(0)}
+          </span>
+        )}
       </div>
 
       {/* Job Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <h3 className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
-              {job.title}
-            </h3>
-            <p className="text-sm text-foreground-muted">{job.company}</p>
+            <Link href={`/jobs/${savedJob.job.job_id}`}>
+              <h3 className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                {savedJob.job.title}
+              </h3>
+            </Link>
+            <p className="text-sm text-foreground-muted">{savedJob.job.company_name}</p>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn(
-              "h-8 px-3 transition-all duration-300",
-              isHovered ? "opacity-100 translate-x-0" : "opacity-0 translate-x-2"
-            )}
-          >
-            Apply
-          </Button>
+          <Link href={`/jobs/${savedJob.job.job_id}`}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                "h-8 px-3 transition-all duration-300",
+                isHovered ? "opacity-100 translate-x-0" : "opacity-0 translate-x-2"
+              )}
+            >
+              Apply
+            </Button>
+          </Link>
         </div>
         <div className="flex flex-wrap items-center gap-2 mt-2">
           <Badge variant="secondary" className="text-xs font-normal">
-            {job.location}
+            {savedJob.job.location}
           </Badge>
-          <Badge variant="secondary" className="text-xs font-normal">
-            {job.salary}
-          </Badge>
-          <span className="text-xs text-foreground-muted/60">Saved {job.saved}</span>
+          {savedJob.job.salary_display && (
+            <Badge variant="secondary" className="text-xs font-normal">
+              {savedJob.job.salary_display}
+            </Badge>
+          )}
+          <span className="text-xs text-foreground-muted/60">
+            Saved {formatTimeAgo(savedJob.created_at)}
+          </span>
         </div>
       </div>
     </div>
   )
 }
 
-// Application Card Component
-function ApplicationCard({ application, index }: { application: typeof applications[0]; index: number }) {
-  const statusStyles = {
-    submitted: { label: "Submitted", color: "bg-blue-500/10 text-blue-600 border-blue-500/20" },
-    reviewing: { label: "In Review", color: "bg-amber-500/10 text-amber-600 border-amber-500/20" },
-    interviewing: { label: "Interviewing", color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
-    rejected: { label: "Not Selected", color: "bg-red-500/10 text-red-600 border-red-500/20" },
-    offered: { label: "Offer", color: "bg-purple-500/10 text-purple-600 border-purple-500/20" },
-  }
-
-  const status = statusStyles[application.status as keyof typeof statusStyles]
+function ApplicationCard({ application }: { application: CandidateApplicationListItem }) {
+  const style = APPLICATION_STATUS_STYLES[application.status]
+  const status = style
+    ? { label: style.label, color: style.className }
+    : { label: application.status, color: "" }
 
   return (
-    <div className="flex items-center justify-between p-4 hover:bg-background-secondary/30 transition-colors group">
+    <Link
+      href={`/candidate/applications?id=${application.id}`}
+      className="flex items-center justify-between p-4 hover:bg-background-secondary/30 transition-colors group"
+    >
       <div className="flex items-center gap-4">
-        <div className="w-10 h-10 rounded-lg bg-background-secondary flex items-center justify-center">
-          <span className="text-sm font-semibold text-foreground-muted">
-            {application.company.charAt(0)}
-          </span>
+        <div className="w-10 h-10 rounded-lg bg-background-secondary flex items-center justify-center overflow-hidden">
+          {application.job.company_logo ? (
+            <img
+              src={application.job.company_logo}
+              alt={application.job.company_name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <span className="text-sm font-semibold text-foreground-muted">
+              {application.job.company_name.charAt(0)}
+            </span>
+          )}
         </div>
         <div>
           <h3 className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
-            {application.title}
+            {application.job.title}
           </h3>
-          <p className="text-sm text-foreground-muted">{application.company}</p>
+          <p className="text-sm text-foreground-muted">{application.job.company_name}</p>
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <span className="text-xs text-foreground-muted hidden sm:inline">{application.appliedAt}</span>
+        <span className="text-xs text-foreground-muted hidden sm:inline">
+          {new Date(application.created_at).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          })}
+        </span>
         <Badge variant="outline" className={cn("text-xs", status.color)}>
           {status.label}
         </Badge>
+        {application.has_unread_messages && (
+          <span className="w-2 h-2 rounded-full bg-primary" />
+        )}
       </div>
-    </div>
+    </Link>
   )
 }
 
-// Profile Completion Card
-function ProfileCompletionCard() {
-  const completionItems = [
-    { label: "Basic info", completed: true },
-    { label: "Resume uploaded", completed: true },
-    { label: "Preferred locations", completed: true },
-    { label: "Job preferences", completed: false },
-    { label: "Skills added", completed: false },
-  ]
-
-  const completedCount = completionItems.filter((i) => i.completed).length
-  const progress = (completedCount / completionItems.length) * 100
-
+function ProfileCompletionCard({
+  items,
+  percentage,
+}: {
+  items: Array<{ label: string; completed: boolean }>
+  percentage: number
+}) {
   return (
     <Card className="border-border/50 shadow-sm overflow-hidden">
       {/* Gradient header */}
       <div
         className="h-2"
         style={{
-          background: "linear-gradient(90deg, #3B5BDB 0%, #5C7CFA 100%)",
-          width: `${progress}%`,
+          background: "linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%)",
+          width: `${percentage}%`,
         }}
       />
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-semibold">Profile Strength</CardTitle>
-          <span className="text-sm font-medium text-primary">{Math.round(progress)}%</span>
+          <span className="text-sm font-medium text-primary">{percentage}%</span>
         </div>
       </CardHeader>
       <CardContent>
-        <Progress value={progress} className="h-2 mb-4" />
+        <Progress value={percentage} className="h-2 mb-4" />
         <div className="space-y-2">
-          {completionItems.map((item, index) => (
+          {items.map((item, index) => (
             <div key={index} className="flex items-center gap-2">
               {item.completed ? (
                 <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -396,7 +561,7 @@ function ProfileCompletionCard() {
         </div>
         <Link href="/candidate/profile">
           <Button variant="outline" size="sm" className="w-full mt-4 bg-transparent">
-            Complete Profile
+            {percentage < 100 ? "Complete Profile" : "Edit Profile"}
           </Button>
         </Link>
       </CardContent>

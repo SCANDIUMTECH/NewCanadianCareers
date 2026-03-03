@@ -10,12 +10,7 @@ interface MagneticButtonProps {
   onClick?: () => void
 }
 
-/**
- * Magnetic Button
- * Premium hover effect that follows cursor movement
- * Button subtly moves toward the cursor position
- */
-export function MagneticButton({ 
+export function MagneticButton({
   children, 
   className, 
   variant = "primary",

@@ -1,14 +1,10 @@
 "use client"
 
+import Link from "next/link"
 import { MotionWrapper } from "./motion-wrapper"
 import { TextReveal, LineReveal } from "./text-reveal"
 import { MagneticButton } from "./magnetic-button"
 import { UIFrame } from "./ui-frame"
-
-/**
- * Built for Companies & Agencies
- * Reversed layout with premium UI frame
- */
 
 export function CompaniesSection() {
   return (
@@ -17,7 +13,7 @@ export function CompaniesSection() {
       <div 
         className="absolute right-0 bottom-0 w-full h-full pointer-events-none"
         style={{
-          background: "radial-gradient(ellipse 60% 40% at 100% 50%, rgba(59, 91, 219, 0.04) 0%, transparent 50%)"
+          background: "radial-gradient(ellipse 60% 40% at 100% 50%, rgba(var(--primary-rgb), 0.04) 0%, transparent 50%)"
         }}
       />
       
@@ -61,9 +57,11 @@ export function CompaniesSection() {
             </MotionWrapper>
 
             <MotionWrapper delay={400}>
-              <MagneticButton variant="ghost">
-                Post your first role
-              </MagneticButton>
+              <Link href="/signup">
+                <MagneticButton variant="ghost">
+                  Post your first role
+                </MagneticButton>
+              </Link>
             </MotionWrapper>
           </div>
 

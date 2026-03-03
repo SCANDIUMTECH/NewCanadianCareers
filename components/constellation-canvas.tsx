@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { BRAND } from "@/lib/constants/colors"
 
 interface Node {
   x: number
@@ -12,11 +13,6 @@ interface Node {
   pulsePhase: number
 }
 
-/**
- * Animated Constellation Canvas
- * Creates an ambient particle field with connected nodes
- * Inspired by span.app's premium visual approach
- */
 export function ConstellationCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animationRef = useRef<number>(0)
@@ -45,6 +41,7 @@ export function ConstellationCanvas() {
       const dpr = window.devicePixelRatio || 1
       canvas.width = rect.width * dpr
       canvas.height = rect.height * dpr
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
       ctx.scale(dpr, dpr)
     }
     resizeCanvas()
@@ -138,16 +135,16 @@ export function ConstellationCanvas() {
           node.x, node.y, 0,
           node.x, node.y, node.radius * 3
         )
-        gradient.addColorStop(0, `rgba(59, 91, 219, ${pulseOpacity})`)
-        gradient.addColorStop(0.5, `rgba(59, 91, 219, ${pulseOpacity * 0.3})`)
-        gradient.addColorStop(1, "rgba(59, 91, 219, 0)")
+        gradient.addColorStop(0, `rgba(${BRAND.primaryRgb}, ${pulseOpacity})`)
+        gradient.addColorStop(0.5, `rgba(${BRAND.primaryRgb}, ${pulseOpacity * 0.3})`)
+        gradient.addColorStop(1, `rgba(${BRAND.primaryRgb}, 0)`)
         ctx.fillStyle = gradient
         ctx.arc(node.x, node.y, node.radius * 3, 0, Math.PI * 2)
         ctx.fill()
 
         // Draw core
         ctx.beginPath()
-        ctx.fillStyle = `rgba(59, 91, 219, ${pulseOpacity})`
+        ctx.fillStyle = `rgba(${BRAND.primaryRgb}, ${pulseOpacity})`
         ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2)
         ctx.fill()
 
@@ -161,7 +158,7 @@ export function ConstellationCanvas() {
           if (dist < 120) {
             const connectionOpacity = (1 - dist / 120) * 0.15
             ctx.beginPath()
-            ctx.strokeStyle = `rgba(59, 91, 219, ${connectionOpacity})`
+            ctx.strokeStyle = `rgba(${BRAND.primaryRgb}, ${connectionOpacity})`
             ctx.lineWidth = 1
             ctx.moveTo(node.x, node.y)
             ctx.lineTo(other.x, other.y)

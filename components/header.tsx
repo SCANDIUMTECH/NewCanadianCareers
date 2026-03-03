@@ -1,38 +1,91 @@
 "use client"
 
-import React from "react"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, Fragment, type ReactNode, type MouseEvent } from "react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
-
-/**
- * Ultra Premium Floating Header
- * - Glassmorphism with layered transparency
- * - Floating pill design with glow effects
- * - Magnetic hover interactions
- * - Smooth scroll-aware transitions
- */
+import { LayoutGrid } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { UserAvatar } from "@/components/user-avatar"
+import { useAuth } from "@/hooks/use-auth"
+import { ROLE_REDIRECTS } from "@/lib/auth/types"
 
 const navLinks = [
-  { label: "Candidates", href: "#candidates" },
-  { label: "Companies", href: "#companies" },
-  { label: "Platform", href: "#platform" },
+  { label: "Find Jobs", href: "/jobs" },
+  { label: "For Companies", href: "/company" },
+  { label: "For Candidates", href: "/candidate" },
 ]
+
+const devMenuPages = {
+  "Public": [
+    { label: "Home", href: "/" },
+    { label: "Jobs", href: "/jobs" },
+    { label: "Login", href: "/login" },
+    { label: "Signup", href: "/signup" },
+    { label: "Forgot Password", href: "/forgot-password" },
+    { label: "Terms", href: "/terms" },
+    { label: "Privacy", href: "/privacy" },
+  ],
+  "Candidate": [
+    { label: "Dashboard", href: "/candidate" },
+    { label: "Profile", href: "/candidate/profile" },
+    { label: "Saved Jobs", href: "/candidate/saved" },
+    { label: "Applications", href: "/candidate/applications" },
+    { label: "Job Alerts", href: "/candidate/alerts" },
+    { label: "Settings", href: "/candidate/settings" },
+  ],
+  "Company": [
+    { label: "Dashboard", href: "/company" },
+    { label: "Jobs", href: "/company/jobs" },
+    { label: "Create Job", href: "/company/jobs/new" },
+    { label: "Analytics", href: "/company/analytics" },
+    { label: "Team", href: "/company/team" },
+    { label: "Billing", href: "/company/billing" },
+    { label: "Packages", href: "/company/packages" },
+    { label: "Settings", href: "/company/settings" },
+  ],
+  "Agency": [
+    { label: "Dashboard", href: "/agency" },
+    { label: "Companies", href: "/agency/companies" },
+    { label: "Jobs", href: "/agency/jobs" },
+    { label: "Team", href: "/agency/team" },
+    { label: "Billing", href: "/agency/billing" },
+  ],
+  "Admin": [
+    { label: "Dashboard", href: "/admin" },
+    { label: "Users", href: "/admin/users" },
+    { label: "Companies", href: "/admin/companies" },
+    { label: "Jobs", href: "/admin/jobs" },
+    { label: "Moderation", href: "/admin/moderation" },
+    { label: "Settings", href: "/admin/settings" },
+  ],
+}
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
   const [activeLink, setActiveLink] = useState<string | null>(null)
+  const { user, isLoading, isAuthenticated, logout } = useAuth()
 
   useEffect(() => {
-    setTimeout(() => setIsVisible(true), 300)
+    const timer = setTimeout(() => setIsVisible(true), 300)
 
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20)
     }
 
     window.addEventListener("scroll", handleScroll, { passive: true })
-    return () => window.removeEventListener("scroll", handleScroll)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener("scroll", handleScroll)
+    }
   }, [])
 
   return (
@@ -70,7 +123,7 @@ export function Header() {
             isScrolled ? "opacity-100" : "opacity-0"
           )}
           style={{
-            background: "linear-gradient(180deg, rgba(59,91,219,0.15) 0%, transparent 50%)",
+            background: "linear-gradient(180deg, rgba(var(--primary-rgb), 0.15) 0%, transparent 50%)",
             mask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
             maskComposite: "xor",
             WebkitMaskComposite: "xor",
@@ -98,45 +151,95 @@ export function Header() {
           {/* Center Navigation - Pill style */}
           <div className="hidden md:flex items-center relative">
             {/* Active indicator background */}
-            <div 
+            <div
               className={cn(
                 "absolute h-8 rounded-full bg-foreground/5 transition-all duration-300 ease-out",
                 activeLink ? "opacity-100" : "opacity-0"
               )}
-              style={{
-                left: activeLink === "Candidates" ? "0px" : activeLink === "Companies" ? "96px" : activeLink === "Platform" ? "192px" : "0px",
-                width: activeLink === "Candidates" ? "88px" : activeLink === "Companies" ? "96px" : activeLink === "Platform" ? "80px" : "0px",
-              }}
             />
-            
+
             {navLinks.map((link) => (
-              <NavLink 
-                key={link.label} 
+              <NavLink
+                key={link.label}
                 href={link.href}
+                label={link.label}
                 onHover={setActiveLink}
                 isActive={activeLink === link.label}
-              >
-                {link.label}
-              </NavLink>
+              />
             ))}
+
+            {/* Dev Menu — only in development */}
+            {process.env.NODE_ENV === "development" && <DevMenu />}
           </div>
 
           {/* Auth Buttons */}
           <div className="flex items-center gap-2 md:gap-3">
-            <Link 
-              href="/login"
-              className={cn(
-                "hidden sm:flex items-center justify-center px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300",
-                "text-foreground-muted hover:text-foreground hover:bg-foreground/5"
-              )}
-            >
-              Sign in
-            </Link>
-            
-            {/* Premium CTA Button */}
-            <PremiumButton href="/signup">
-              Get Started
-            </PremiumButton>
+            {isLoading ? (
+              <div className="w-20 h-9 rounded-lg bg-foreground/5 animate-pulse" />
+            ) : isAuthenticated && user ? (
+              <>
+                <Link
+                  href={ROLE_REDIRECTS[user.role]}
+                  className={cn(
+                    "hidden sm:flex items-center justify-center px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300",
+                    "text-foreground-muted hover:text-foreground hover:bg-foreground/5"
+                  )}
+                >
+                  Dashboard
+                </Link>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all">
+                      <UserAvatar
+                        name={user.full_name}
+                        avatar={user.avatar}
+                        size="sm"
+                        className="border-2 border-transparent hover:border-primary/20 transition-colors"
+                      />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 bg-card/95 backdrop-blur-xl border-white/20">
+                    <DropdownMenuLabel className="font-normal">
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">{user.full_name}</p>
+                        <p className="text-xs leading-none text-foreground-muted">{user.email}</p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href={ROLE_REDIRECTS[user.role]} className="cursor-pointer">
+                        Dashboard
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-red-600 cursor-pointer"
+                      onClick={logout}
+                    >
+                      Sign out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className={cn(
+                    "hidden sm:flex items-center justify-center px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300",
+                    "text-foreground-muted hover:text-foreground hover:bg-foreground/5"
+                  )}
+                >
+                  Sign in
+                </Link>
+
+                {/* Premium CTA Button */}
+                <PremiumButton href="/signup">
+                  Get Started
+                </PremiumButton>
+              </>
+            )}
           </div>
 
         </nav>
@@ -145,38 +248,81 @@ export function Header() {
   )
 }
 
-function NavLink({ 
-  href, 
-  children, 
+function NavLink({
+  href,
+  label,
   onHover,
-  isActive 
-}: { 
+  isActive,
+}: {
   href: string
-  children: React.ReactNode
+  label: string
   onHover: (label: string | null) => void
   isActive: boolean
 }) {
   return (
-    <a
+    <Link
       href={href}
       className={cn(
         "relative px-4 py-2 text-sm font-medium transition-all duration-300",
         isActive ? "text-foreground" : "text-foreground-muted hover:text-foreground"
       )}
-      onMouseEnter={() => onHover(children as string)}
+      onMouseEnter={() => onHover(label)}
       onMouseLeave={() => onHover(null)}
     >
-      {children}
-    </a>
+      {label}
+    </Link>
   )
 }
 
-function PremiumButton({ href, children }: { href: string; children: React.ReactNode }) {
+function DevMenu() {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          className={cn(
+            "ml-2 flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-300",
+            "text-foreground-muted hover:text-foreground hover:bg-foreground/5"
+          )}
+          aria-label="All Pages"
+        >
+          <LayoutGrid className="w-4 h-4" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        className="w-56 bg-card/95 backdrop-blur-xl border-white/20"
+      >
+        {Object.entries(devMenuPages).map(([section, pages], index) => (
+          <Fragment key={section}>
+            {index > 0 && <DropdownMenuSeparator />}
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="text-xs text-foreground-muted uppercase tracking-wider">
+                {section}
+              </DropdownMenuLabel>
+              {pages.map((page) => (
+                <DropdownMenuItem key={page.href} asChild>
+                  <Link
+                    href={page.href}
+                    className="cursor-pointer"
+                  >
+                    {page.label}
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
+          </Fragment>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+function PremiumButton({ href, children }: { href: string; children: ReactNode }) {
   const buttonRef = useRef<HTMLAnchorElement>(null)
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [isHovered, setIsHovered] = useState(false)
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = (e: MouseEvent) => {
     if (!buttonRef.current) return
     const rect = buttonRef.current.getBoundingClientRect()
     setPosition({

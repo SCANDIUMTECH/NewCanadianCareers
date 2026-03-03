@@ -1,0 +1,32 @@
+# Media serving — routes /media/* to MinIO S3-compatible storage
+# Traefik proxies browser requests to MinIO with path rewriting:
+#   /media/articles/cover.jpg → /orion-media/articles/cover.jpg
+#
+# MinIO bucket policy is set to public-read by the minio-init service.
+
+http:
+  middlewares:
+    # Rewrite /media/{key} → /orion-media/{key} (bucket path-style access)
+    media-rewrite:
+      replacePathRegex:
+        regex: "^/media/(.*)"
+        replacement: "/orion-media/$1"
+
+    # Cache + security headers for media assets
+    media-headers:
+      headers:
+        customResponseHeaders:
+          Cache-Control: "public, max-age=604800"
+          X-Content-Type-Options: "nosniff"
+          # Block SVG script execution and all inline/eval JavaScript
+          Content-Security-Policy: "default-src 'none'; img-src 'self'; style-src 'none'; script-src 'none'"
+          # Force download for non-image types (defense against HTML/SVG XSS)
+          X-Download-Options: "noopen"
+          X-Permitted-Cross-Domain-Policies: "none"
+        accessControlAllowOriginList:
+          - "*"
+        accessControlAllowMethods:
+          - "GET"
+          - "HEAD"
+          - "OPTIONS"
+        accessControlMaxAge: 86400

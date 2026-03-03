@@ -1,0 +1,143 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "title": "Core Web Vitals — p75 Over Time",
+      "type": "timeseries",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 0 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "spanNulls": true,
+            "fillOpacity": 10
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "LCP (s)" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "#3B5BDB", "mode": "fixed" } },
+              { "id": "custom.axisLabel", "value": "LCP (seconds)" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "CLS" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "#22C55E", "mode": "fixed" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "INP (ms)" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "#F59E0B", "mode": "fixed" } }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT toStartOfHour(timestamp) AS time, quantile(0.75)(metric_value) AS \"LCP (s)\" FROM web_vitals WHERE metric_name = 'LCP' AND timestamp >= now() - INTERVAL ${__interval} GROUP BY time ORDER BY time",
+          "format": "time_series",
+          "refId": "A"
+        },
+        {
+          "rawSql": "SELECT toStartOfHour(timestamp) AS time, quantile(0.75)(metric_value) AS \"CLS\" FROM web_vitals WHERE metric_name = 'CLS' AND timestamp >= now() - INTERVAL ${__interval} GROUP BY time ORDER BY time",
+          "format": "time_series",
+          "refId": "B"
+        },
+        {
+          "rawSql": "SELECT toStartOfHour(timestamp) AS time, quantile(0.75)(metric_value) AS \"INP (ms)\" FROM web_vitals WHERE metric_name = 'INP' AND timestamp >= now() - INTERVAL ${__interval} GROUP BY time ORDER BY time",
+          "format": "time_series",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "title": "CWV by Device Type",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 10 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "targets": [
+        {
+          "rawSql": "SELECT device_type AS \"Device\", metric_name AS \"Metric\", round(quantile(0.75)(metric_value), 3) AS \"p75\", round(quantile(0.95)(metric_value), 3) AS \"p95\", count() AS \"Samples\" FROM web_vitals WHERE timestamp >= now() - INTERVAL 7 DAY GROUP BY device_type, metric_name ORDER BY device_type, metric_name",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Sample Count Over Time",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 10 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 50
+          },
+          "color": { "fixedColor": "#3B5BDB", "mode": "fixed" }
+        }
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT toStartOfHour(timestamp) AS time, count() AS \"Samples\" FROM web_vitals WHERE timestamp >= now() - INTERVAL ${__interval} GROUP BY time ORDER BY time",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Rating Distribution",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 18 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "targets": [
+        {
+          "rawSql": "SELECT rating AS \"Rating\", count() AS \"Count\" FROM web_vitals WHERE timestamp >= now() - INTERVAL 7 DAY GROUP BY rating ORDER BY rating",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Slowest Pages (Top 10 by LCP p75)",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 16, "x": 8, "y": 18 },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "targets": [
+        {
+          "rawSql": "SELECT page_path AS \"Page\", round(quantile(0.75)(metric_value), 2) AS \"LCP p75 (s)\", round(quantile(0.95)(metric_value), 2) AS \"LCP p95 (s)\", count() AS \"Samples\" FROM web_vitals WHERE metric_name = 'LCP' AND timestamp >= now() - INTERVAL 7 DAY GROUP BY page_path ORDER BY \"LCP p75 (s)\" DESC LIMIT 10",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "tags": ["rum", "web-vitals", "performance"],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "RUM — Core Web Vitals",
+  "uid": "rum-web-vitals",
+  "version": 1
+}

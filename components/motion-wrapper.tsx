@@ -1,13 +1,6 @@
 "use client"
 
-import React from "react"
-import { useEffect, useRef, useState, type ReactNode } from "react"
-
-/**
- * Motion-ready wrapper component
- * Premium staggered reveal with smooth easing
- * Respects prefers-reduced-motion
- */
+import { useEffect, useRef, useState, type RefObject, type ReactNode } from "react"
 
 interface MotionWrapperProps {
   children: ReactNode
@@ -67,13 +60,13 @@ export function MotionWrapper({
 
   return (
     <Component
-      ref={ref as React.RefObject<HTMLDivElement>}
+      ref={ref as RefObject<HTMLDivElement>}
       className={className}
       style={{
         opacity: isVisible ? 1 : 0,
         transform: isVisible ? "translate(0, 0)" : transforms[direction],
         transition: "opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1), transform 0.9s cubic-bezier(0.22, 1, 0.36, 1)",
-        willChange: "opacity, transform",
+        willChange: isVisible ? "auto" : "opacity, transform",
       }}
     >
       {children}

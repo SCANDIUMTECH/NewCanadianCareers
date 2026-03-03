@@ -9,11 +9,6 @@ interface UIFrameProps {
   className?: string
 }
 
-/**
- * Premium UI Frame
- * Wireframe placeholder with 3D tilt effect on hover
- * No fake dashboards - just elegant wireframe aesthetic
- */
 export function UIFrame({ label, variant = "candidate", className }: UIFrameProps) {
   const frameRef = useRef<HTMLDivElement>(null)
   const [transform, setTransform] = useState({ rotateX: 0, rotateY: 0 })
@@ -76,7 +71,7 @@ export function UIFrame({ label, variant = "candidate", className }: UIFrameProp
           isHovered && "opacity-100"
         )}
         style={{
-          background: "radial-gradient(circle at center, rgba(59, 91, 219, 0.03) 0%, transparent 70%)"
+          background: "radial-gradient(circle at center, rgba(var(--primary-rgb), 0.03) 0%, transparent 70%)"
         }}
       />
 
@@ -108,7 +103,7 @@ export function UIFrame({ label, variant = "candidate", className }: UIFrameProp
           isHovered && "opacity-100"
         )}
         style={{
-          background: "linear-gradient(transparent 50%, rgba(59, 91, 219, 0.02) 50%)",
+          background: "linear-gradient(transparent 50%, rgba(var(--primary-rgb), 0.02) 50%)",
           backgroundSize: "100% 4px",
         }}
       />

@@ -1,0 +1,28 @@
+http:
+  middlewares:
+    # Security headers — applied to all routes
+    secure-headers:
+      headers:
+        frameDeny: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        permissionsPolicy: "camera=(), microphone=(), geolocation=(), payment=()"
+        customResponseHeaders:
+          X-Robots-Tag: "noindex,nofollow"  # For admin pages
+          X-Content-Type-Options: "nosniff"
+          X-Download-Options: "noopen"
+          X-Permitted-Cross-Domain-Policies: "none"
+          Strict-Transport-Security: "max-age=63072000; includeSubDomains; preload"
+
+    # Rate limiting for API — 100 req/s average, burst of 50
+    rate-limit:
+      rateLimit:
+        average: 100
+        burst: 50
+
+    # Strip /api prefix if needed
+    api-strip:
+      stripPrefix:
+        prefixes:
+          - "/api"

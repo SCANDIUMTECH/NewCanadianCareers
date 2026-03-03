@@ -1,14 +1,10 @@
 "use client"
 
+import Link from "next/link"
 import { MotionWrapper } from "./motion-wrapper"
 import { TextReveal, LineReveal } from "./text-reveal"
 import { MagneticButton } from "./magnetic-button"
 import { UIFrame } from "./ui-frame"
-
-/**
- * Designed for Candidates
- * Editorial text with premium UI frame
- */
 
 export function CandidatesSection() {
   return (
@@ -17,7 +13,7 @@ export function CandidatesSection() {
       <div 
         className="absolute left-0 top-0 w-full h-full pointer-events-none"
         style={{
-          background: "radial-gradient(ellipse 60% 40% at 0% 50%, rgba(59, 91, 219, 0.04) 0%, transparent 50%)"
+          background: "radial-gradient(ellipse 60% 40% at 0% 50%, rgba(var(--primary-rgb), 0.04) 0%, transparent 50%)"
         }}
       />
       
@@ -56,9 +52,11 @@ export function CandidatesSection() {
             </MotionWrapper>
 
             <MotionWrapper delay={400}>
-              <MagneticButton variant="ghost">
-                Create your profile
-              </MagneticButton>
+              <Link href="/signup">
+                <MagneticButton variant="ghost">
+                  Create your profile
+                </MagneticButton>
+              </Link>
             </MotionWrapper>
           </div>
 
