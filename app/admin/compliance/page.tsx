@@ -90,6 +90,7 @@ import type {
   LegalDocumentType,
   CreateLegalDocumentData,
 } from "@/lib/admin/types"
+import GDPRAdmin from "@/components/admin/gdpr-admin"
 
 const enforcementConfig: Record<string, { label: string; color: string }> = {
   manual: { label: "Manual", color: "bg-gray-100 text-gray-700" },
@@ -688,6 +689,7 @@ export default function CompliancePage() {
           </TabsTrigger>
           <TabsTrigger value="retention">Retention Rules</TabsTrigger>
           <TabsTrigger value="policies">Privacy Policies</TabsTrigger>
+          <TabsTrigger value="gdpr">GDPR</TabsTrigger>
         </TabsList>
 
         {/* Data Requests Tab */}
@@ -1118,6 +1120,11 @@ export default function CompliancePage() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        {/* GDPR Module Tab */}
+        <TabsContent value="gdpr">
+          <GDPRAdmin />
         </TabsContent>
       </Tabs>
       </motion.div>

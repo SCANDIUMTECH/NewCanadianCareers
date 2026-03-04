@@ -56,6 +56,9 @@ urlpatterns = [
     # Webhooks (email provider callbacks — no auth)
     path('api/webhooks/', include('apps.marketing.webhook_urls')),
 
+    # GDPR compliance (public consent + admin APIs)
+    path('api/gdpr/', include('apps.gdpr.urls')),
+
     # RUM (Real User Monitoring) ingest endpoint — no auth, HMAC-secured
     path('rum/v1/', include('apps.rum.urls')),
 ]

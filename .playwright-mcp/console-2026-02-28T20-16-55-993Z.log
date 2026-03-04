@@ -1,0 +1,11 @@
+[    1962ms] [WARNING] Google Maps JavaScript API has been loaded directly without loading=async. This can result in suboptimal performance. For best-practice loading patterns please see https://goo.gle/js-api-loading @ https://maps.google.com/maps/api/js?key=AIzaSyAHsqrUFE9p0W8d2YjfLGg_cIE1HU70h0E&libraries=places&ver=6.7.4:1412
+[    1985ms] Uncaught TypeError: Cannot read properties of null (reading 'tagName')
+    at value (https://cdn.jsdelivr.net/npm/typed.js@2.0.9:9:6994)
+    at t (https://cdn.jsdelivr.net/npm/typed.js@2.0.9:9:902)
+    at <anonymous> (:1:24)
+    at t.activateScript (https://newcanadian.careers/cdn-cgi/scripts/7d0fa10a/cloudflare-static/rocket-loader.min.js:0:11854)
+    at <anonymous> (https://newcanadian.careers/cdn-cgi/scripts/7d0fa10a/cloudflare-static/rocket-loader.min.js:0:11051)
+    at t.run (https://newcanadian.careers/cdn-cgi/scripts/7d0fa10a/cloudflare-static/rocket-loader.min.js:0:11258)
+    at <anonymous> (https://newcanadian.careers/cdn-cgi/scripts/7d0fa10a/cloudflare-static/rocket-loader.min.js:0:11155)
+    at <anonymous> (https://newcanadian.careers/cdn-cgi/scripts/7d0fa10a/cloudflare-static/rocket-loader.min.js:0:669)
+[    2052ms] [WARNING] As of March 1st, 2025, google.maps.places.Autocomplete is not available to new customers. Please use google.maps.places.PlaceAutocompleteElement instead. At this time, google.maps.places.Autocomplete is not scheduled to be discontinued, but google.maps.places.PlaceAutocompleteElement is recommended over google.maps.places.Autocomplete. While google.maps.places.Autocomplete will continue to receive bug fixes for any major regressions, existing bugs in google.maps.places.Autocomplete will not be addressed. At least 12 months notice will be given before support is discontinued. Please see https://developers.google.com/maps/legacy for additional details and https://developers.google.com/maps/documentation/javascript/places-migration-overview for the migration guide. @ https://maps.google.com/maps/api/js?key=AIzaSyAHsqrUFE9p0W8d2YjfLGg_cIE1HU70h0E&libraries=places&ver=6.7.4:59

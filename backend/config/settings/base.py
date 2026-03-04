@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'apps.marketing',
     'apps.ai',
     'apps.rum',
+    'apps.gdpr',
 ]
 
 MIDDLEWARE = [
@@ -61,6 +62,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'apps.audit.middleware.AuditMiddleware',
+    'apps.gdpr.middleware.GDPRLastLoginMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -329,6 +331,19 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'apps.moderation.tasks.purge_old_tracking_records',
         'schedule': crontab(minute=0, hour=3),  # Daily at 3 AM
     },
+    # ── GDPR scheduled tasks ──────────────────────────────────────
+    'gdpr-enforce-data-retention': {
+        'task': 'apps.gdpr.tasks.enforce_data_retention',
+        'schedule': 60 * 60 * 24,  # Daily
+    },
+    'gdpr-check-dsar-deadlines': {
+        'task': 'apps.gdpr.tasks.check_dsar_deadlines',
+        'schedule': 60 * 60 * 24,  # Daily
+    },
+    'gdpr-purge-old-consent-logs': {
+        'task': 'apps.gdpr.tasks.purge_old_consent_logs',
+        'schedule': crontab(minute=0, hour=4, day_of_week='sunday'),  # Weekly on Sunday at 4 AM
+    },
 }
 
 # Stripe
@@ -441,6 +456,13 @@ SLACK_WEBHOOKS = {
     'jobs': os.environ.get('SLACK_WEBHOOK_JOBS', ''),
     'system': os.environ.get('SLACK_WEBHOOK_SYSTEM', ''),
 }
+
+# GDPR Module Settings
+GDPR_BACKEND_URL = os.environ.get('GDPR_BACKEND_URL', 'http://localhost')
+GDPR_DPO_EMAIL = os.environ.get('GDPR_DPO_EMAIL', 'dpo@orion.jobs')
+GDPR_EXPORTS_DIR = BASE_DIR / 'gdpr_exports'
+GDPR_COOKIE_DOMAIN = os.environ.get('GDPR_COOKIE_DOMAIN', '')
+GDPR_DATA_RETENTION_DAYS = int(os.environ.get('GDPR_DATA_RETENTION_DAYS', '730'))
 
 # Login Security Settings (SOC2, GDPR, NIST 800-53 aligned)
 LOGIN_SECURITY = {

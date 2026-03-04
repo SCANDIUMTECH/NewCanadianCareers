@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'ORION CONTEXT REMINDER: Backend=Django+DRF on Docker (port 80 via Traefik, Django internal port 8000). Frontend=Next.js 16 (port 3000). Start backend: cd backend && docker-compose up. API client: lib/api/client.ts. Types: lib/{auth,company,candidate,agency,admin}/types.ts. Build check: npm run build. Read files before editing. Match existing patterns.'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "osascript -e 'display notification \"Claude Code finished\" with title \"Orion\"' 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  }
+}

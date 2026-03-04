@@ -1,0 +1,18 @@
+Django>=5.1,<6.0
+djangorestframework>=3.15,<4.0
+django-cors-headers>=4.4,<5.0
+django-filter>=24.0
+psycopg2-binary>=2.9,<3.0
+celery>=5.4,<6.0
+redis>=5.0,<6.0
+django-celery-beat>=2.6,<3.0
+gunicorn>=22.0,<23.0
+python-dotenv>=1.0,<2.0
+requests>=2.32,<3.0
+django-ipware>=7.0,<8.0
+cryptography>=43.0
+# HTML sanitization for XSS protection (Gap 9)
+nh3>=0.2.14
+# Optional: MaxMind GeoIP2 for server-side EU detection (Gap 12)
+# Uncomment and download GeoLite2-Country.mmdb to enable:
+# geoip2>=4.8,<5.0

@@ -3,6 +3,10 @@ import type { ReactNode } from 'react'
 import localFont from 'next/font/local'
 import { Analytics } from '@vercel/analytics/next'
 import { AuthProvider } from '@/lib/auth/context'
+import { GDPRProvider } from '@/components/gdpr/GDPRProvider'
+import { CookieBanner } from '@/components/gdpr/CookieBanner'
+import { PrivacySettingsModal } from '@/components/gdpr/PrivacySettingsModal'
+import { PrivacySettingsTrigger } from '@/components/gdpr/PrivacySettingsTrigger'
 import { Toaster } from 'sonner'
 import { RUMProvider } from '@/components/rum-provider'
 import './globals.css'
@@ -103,7 +107,12 @@ export default function RootLayout({
     <html lang="en" className={fontVariables}>
       <body className="font-sans antialiased">
         <AuthProvider>
-          {children}
+          <GDPRProvider>
+            {children}
+            <CookieBanner />
+            <PrivacySettingsModal />
+            <PrivacySettingsTrigger />
+          </GDPRProvider>
         </AuthProvider>
         <Toaster richColors position="top-right" />
         <RUMProvider />
