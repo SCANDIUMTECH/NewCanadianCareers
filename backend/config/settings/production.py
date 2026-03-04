@@ -1,5 +1,5 @@
 """
-Production settings for Orion backend.
+Production settings for New Canadian Careers backend.
 """
 import os
 import dj_database_url
@@ -7,7 +7,7 @@ from .base import *
 
 DEBUG = False
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'orion.jobs,api.orion.jobs').split(',')
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'newcanadian.careers,api.newcanadian.careers').split(',')
 
 # Database - PostgreSQL
 DATABASES = {
@@ -38,11 +38,11 @@ X_FRAME_OPTIONS = 'DENY'
 
 # CSRF
 CSRF_COOKIE_SECURE = True
-CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'https://orion.jobs').split(',')
+CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'https://newcanadian.careers').split(',')
 
 # Session
 SESSION_COOKIE_SECURE = True
-SESSION_COOKIE_DOMAIN = os.environ.get('SESSION_COOKIE_DOMAIN', '.orion.jobs')
+SESSION_COOKIE_DOMAIN = os.environ.get('SESSION_COOKIE_DOMAIN', '.newcanadian.careers')
 
 # Storage — MinIO (S3-compatible).
 # Django 5.x requires STORAGES dict (DEFAULT_FILE_STORAGE is deprecated).
@@ -56,7 +56,7 @@ STORAGES = {
 }
 AWS_ACCESS_KEY_ID = os.environ.get('MINIO_ACCESS_KEY')
 AWS_SECRET_ACCESS_KEY = os.environ.get('MINIO_SECRET_KEY')
-AWS_STORAGE_BUCKET_NAME = os.environ.get('MINIO_BUCKET_NAME', 'orion-media')
+AWS_STORAGE_BUCKET_NAME = os.environ.get('MINIO_BUCKET_NAME', 'ncc-media')
 AWS_S3_ENDPOINT_URL = f"http://{os.environ.get('MINIO_ENDPOINT', 'minio:9000')}"
 AWS_S3_USE_SSL = os.environ.get('MINIO_USE_SSL', 'False').lower() == 'true'
 AWS_S3_FILE_OVERWRITE = False
@@ -65,15 +65,15 @@ AWS_S3_SIGNATURE_VERSION = 's3v4'
 AWS_S3_REGION_NAME = 'us-east-1'
 
 # Public media URL — Traefik (or CDN) proxies /media/* to MinIO/S3.
-# Bucket has public-read policy. Override MEDIA_DOMAIN for CDN (e.g. cdn.orion.jobs/media).
-AWS_S3_CUSTOM_DOMAIN = os.environ.get('MEDIA_DOMAIN', 'orion.jobs/media')
+# Bucket has public-read policy. Override MEDIA_DOMAIN for CDN (e.g. cdn.newcanadian.careers/media).
+AWS_S3_CUSTOM_DOMAIN = os.environ.get('MEDIA_DOMAIN', 'newcanadian.careers/media')
 AWS_S3_URL_PROTOCOL = 'https:'
 AWS_QUERYSTRING_AUTH = False
 
 # Logging
 LOGGING['handlers']['file'] = {
     'class': 'logging.FileHandler',
-    'filename': '/var/log/orion/django.log',
+    'filename': '/var/log/ncc/django.log',
     'formatter': 'verbose',
 }
 LOGGING['root']['handlers'] = ['console', 'file']

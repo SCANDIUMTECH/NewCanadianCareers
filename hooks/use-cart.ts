@@ -27,7 +27,7 @@ interface CartState {
   promoCode: PromoCode | null
 }
 
-const CART_STORAGE_KEY = "orion_cart"
+const CART_STORAGE_KEY = "ncc_cart"
 
 function getInitialState(): CartState {
   if (typeof window === "undefined") {

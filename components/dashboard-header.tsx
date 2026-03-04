@@ -123,7 +123,7 @@ export function DashboardHeader({
             <div className="flex items-center gap-4">
               <Link href="/" className="flex items-center group">
                 <span className="text-lg font-semibold tracking-tight text-foreground transition-colors duration-300 group-hover:text-primary">
-                  Orion
+                  NCC
                 </span>
                 <span className="ml-1.5 w-2 h-2 rounded-full bg-primary/50 transition-all duration-500 group-hover:bg-primary group-hover:shadow-lg group-hover:shadow-primary/50" />
               </Link>

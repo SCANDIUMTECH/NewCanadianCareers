@@ -26,10 +26,10 @@ const deviceConfig: { value: Device; label: string; icon: React.ReactNode }[] = 
 ]
 
 const placementUrls: Record<BannerPlacement, string> = {
-  homepage: "orion.com",
-  search_top: "orion.com/jobs",
-  search_sidebar: "orion.com/jobs",
-  job_detail: "orion.com/jobs/product-designer",
+  homepage: "newcanadian.careers",
+  search_top: "newcanadian.careers/jobs",
+  search_sidebar: "newcanadian.careers/jobs",
+  job_detail: "newcanadian.careers/jobs/product-designer",
 }
 
 const placementDimensions: Record<BannerPlacement, string> = {

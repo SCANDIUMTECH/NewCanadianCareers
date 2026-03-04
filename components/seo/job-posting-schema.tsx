@@ -62,7 +62,7 @@ function mapSalaryPeriod(period: string): SalaryPeriod {
 }
 
 export function JobPostingJsonLd({ job }: JobPostingSchemaProps) {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://orion.jobs'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://newcanadian.careers'
 
   const hiringOrganization: HiringOrganization = {
     '@type': 'Organization',
@@ -108,7 +108,7 @@ export function JobPostingJsonLd({ job }: JobPostingSchemaProps) {
     ...(baseSalary && { baseSalary }),
     identifier: {
       '@type': 'PropertyValue',
-      name: 'Orion',
+      name: 'New Canadian Careers',
       value: job.id,
     },
     url: `${baseUrl}/jobs/${job.id}`,
@@ -141,7 +141,7 @@ export function JobPostingJsonLd({ job }: JobPostingSchemaProps) {
 
 // For previewing schema in admin panel
 export function generateJobPostingSchema(job: JobPostingSchemaProps['job']): string {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://orion.jobs'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://newcanadian.careers'
 
   const schema = {
     '@context': 'https://schema.org',
@@ -180,7 +180,7 @@ export function generateJobPostingSchema(job: JobPostingSchemaProps['job']): str
     }),
     identifier: {
       '@type': 'PropertyValue',
-      name: 'Orion',
+      name: 'New Canadian Careers',
       value: job.id,
     },
     url: `${baseUrl}/jobs/${job.id}`,

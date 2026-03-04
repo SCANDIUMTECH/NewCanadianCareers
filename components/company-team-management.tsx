@@ -449,7 +449,7 @@ export function CompanyTeamManagement() {
           <DialogHeader>
             <DialogTitle>Invite Team Member</DialogTitle>
             <DialogDescription>
-              Send an invitation to join your company on Orion.
+              Send an invitation to join your company on New Canadian Careers.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">

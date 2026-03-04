@@ -138,7 +138,7 @@ export function Header() {
             {/* Logo glow on hover */}
             <div className="absolute -inset-3 rounded-xl bg-primary/0 group-hover:bg-primary/5 transition-all duration-500" />
             <span className="relative text-lg font-semibold tracking-tight text-foreground transition-all duration-300 group-hover:text-primary">
-              Orion
+              NCC
             </span>
             <span 
               className={cn(

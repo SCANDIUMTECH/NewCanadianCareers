@@ -188,7 +188,7 @@ export function StepPublish({ data, onPackageSelect, selectedPackageId }: StepPu
                   <p className="text-sm font-medium text-foreground">Start receiving applications</p>
                   <p className="text-xs text-foreground-muted">
                     {data.applyMethod === "internal"
-                      ? "Manage applications directly in Orion"
+                      ? "Manage applications directly in New Canadian Careers"
                       : data.applyMethod === "email"
                       ? `Applications sent to ${data.applyEmail}`
                       : "Candidates redirected to your external URL"}

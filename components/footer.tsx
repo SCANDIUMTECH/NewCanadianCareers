@@ -42,7 +42,7 @@ export function Footer() {
         <MotionWrapper delay={100}>
           <div className="mt-12 pt-8 border-t border-border/30">
             <p className="text-sm text-foreground-muted/60">
-              &copy; {new Date().getFullYear()} Orion. All rights reserved.
+              &copy; {new Date().getFullYear()} New Canadian Careers. All rights reserved.
             </p>
           </div>
         </MotionWrapper>
@@ -67,7 +67,7 @@ function LogoWordmark() {
           isHovered ? "text-primary" : "text-foreground"
         )}
       >
-        Orion
+        NCC
       </span>
       {/* Subtle dot accent */}
       <span 

@@ -15,7 +15,7 @@ interface ArticleSchemaProps {
 }
 
 export function ArticleJsonLd({ article }: ArticleSchemaProps) {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://orion.jobs'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://newcanadian.careers'
 
   const schema = {
     '@context': 'https://schema.org',
@@ -29,11 +29,11 @@ export function ArticleJsonLd({ article }: ArticleSchemaProps) {
     ...(article.updatedAt && { dateModified: article.updatedAt }),
     author: {
       '@type': 'Person',
-      name: article.authorName || 'Orion Team',
+      name: article.authorName || 'New Canadian Careers Team',
     },
     publisher: {
       '@type': 'Organization',
-      name: 'Orion Jobs',
+      name: 'New Canadian Careers',
       url: baseUrl,
     },
     url: `${baseUrl}/news/${article.slug}`,

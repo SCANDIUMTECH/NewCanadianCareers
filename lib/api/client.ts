@@ -1,8 +1,8 @@
 /**
- * API client for Orion backend.
+ * API client for New Canadian Careers backend.
  * Handles base URL, cookie-based auth, token refresh, and typed errors.
  * Authentication is managed via HTTP-only cookies set by the backend.
- * The browser automatically sends orion_access and orion_refresh cookies.
+ * The browser automatically sends ncc_access and ncc_refresh cookies.
  */
 
 import type { ApiError } from '@/lib/auth/types'
@@ -14,7 +14,7 @@ const API_BASE_URL = typeof window !== 'undefined'
   : (process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || '')
 
 // Session expired event for global handling
-export const SESSION_EXPIRED_EVENT = 'orion:session_expired'
+export const SESSION_EXPIRED_EVENT = 'ncc:session_expired'
 
 // Track whether session expired event has been emitted to prevent duplicates
 let sessionExpiredEmitted = false
@@ -36,17 +36,17 @@ export function resetSessionExpiredFlag(): void {
  */
 export function hasSession(): boolean {
   if (typeof window === 'undefined') return false
-  return document.cookie.split(';').some(c => c.trim().startsWith('orion_has_session='))
+  return document.cookie.split(';').some(c => c.trim().startsWith('ncc_has_session='))
 }
 
 /**
- * Clear the orion_has_session presence flag cookie (client-side).
+ * Clear the ncc_has_session presence flag cookie (client-side).
  * The HTTP-only auth cookies are cleared by the backend on logout.
  */
 export function clearSessionCookie(): void {
   if (typeof window === 'undefined') return
   const secure = window.location.protocol === 'https:' ? '; Secure' : ''
-  document.cookie = `orion_has_session=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax${secure}`
+  document.cookie = `ncc_has_session=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax${secure}`
 }
 
 // Flag to prevent multiple simultaneous refresh attempts
@@ -55,7 +55,7 @@ let refreshPromise: Promise<boolean> | null = null
 
 /**
  * Attempt to refresh the access token using the refresh cookie.
- * The browser sends orion_refresh automatically via credentials: 'include'.
+ * The browser sends ncc_refresh automatically via credentials: 'include'.
  * Returns true if successful (backend sets new cookies), false otherwise.
  */
 async function refreshAccessToken(): Promise<boolean> {
@@ -108,7 +108,7 @@ export async function apiClient<T>(
     throw { message: 'Network error: Unable to connect to server. Please check your connection.', status: 0 } as ApiError
   }
 
-  // On 401, try to refresh (browser sends orion_refresh cookie) and retry once
+  // On 401, try to refresh (browser sends ncc_refresh cookie) and retry once
   if (response.status === 401 && hasSession()) {
     const refreshed = await refreshAccessToken()
     if (refreshed) {

@@ -1,0 +1,31 @@
+/* NCC - https://coolors.co/ff4500-1f2833-00a2df-f2f2f2-ff0056 */
+
+- CSV
+
+ff4500,1f2833,00a2df,f2f2f2,ff0056
+
+- With #
+
+#ff4500, #1f2833, #00a2df, #f2f2f2, #ff0056
+
+- Array
+
+["ff4500","1f2833","00a2df","f2f2f2","ff0056"]
+
+- Object
+
+{"Crimson Carrot":"ff4500","Jet Black":"1f2833","Fresh Sky":"00a2df","White Smoke":"f2f2f2","Hot Fuchsia":"ff0056"}
+
+- Extended Array
+
+[{"name":"Crimson Carrot","hex":"ff4500","rgb":[255,69,0],"cmyk":[0,73,100,0],"hsb":[16,100,100],"hsl":[16,100,50],"lab":[58,68,69]},{"name":"Jet Black","hex":"1f2833","rgb":[31,40,51],"cmyk":[39,22,0,80],"hsb":[213,39,20],"hsl":[213,24,16],"lab":[16,-1,-8]},{"name":"Fresh Sky","hex":"00a2df","rgb":[0,162,223],"cmyk":[100,27,0,13],"hsb":[196,100,87],"hsl":[196,100,44],"lab":[63,-13,-41]},{"name":"White Smoke","hex":"f2f2f2","rgb":[242,242,242],"cmyk":[0,0,0,5],"hsb":[0,0,95],"hsl":[0,0,95],"lab":[95,0,0]},{"name":"Hot Fuchsia","hex":"ff0056","rgb":[255,0,86],"cmyk":[0,100,66,0],"hsb":[340,100,100],"hsl":[340,100,50],"lab":[54,82,28]}]
+
+- XML
+
+<palette>
+  <color name="Crimson Carrot" hex="ff4500" r="255" g="69" b="0" />
+  <color name="Jet Black" hex="1f2833" r="31" g="40" b="51" />
+  <color name="Fresh Sky" hex="00a2df" r="0" g="162" b="223" />
+  <color name="White Smoke" hex="f2f2f2" r="242" g="242" b="242" />
+  <color name="Hot Fuchsia" hex="ff0056" r="255" g="0" b="86" />
+</palette>

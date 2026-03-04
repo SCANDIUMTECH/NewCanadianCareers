@@ -1,16 +1,16 @@
 # Media serving — routes /media/* to MinIO S3-compatible storage
 # Traefik proxies browser requests to MinIO with path rewriting:
-#   /media/articles/cover.jpg → /orion-media/articles/cover.jpg
+#   /media/articles/cover.jpg → /ncc-media/articles/cover.jpg
 #
 # MinIO bucket policy is set to public-read by the minio-init service.
 
 http:
   middlewares:
-    # Rewrite /media/{key} → /orion-media/{key} (bucket path-style access)
+    # Rewrite /media/{key} → /ncc-media/{key} (bucket path-style access)
     media-rewrite:
       replacePathRegex:
         regex: "^/media/(.*)"
-        replacement: "/orion-media/$1"
+        replacement: "/ncc-media/$1"
 
     # Cache + security headers for media assets
     media-headers:

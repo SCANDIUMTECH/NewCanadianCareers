@@ -1,5 +1,5 @@
 /**
- * Auth types for Orion frontend-backend integration.
+ * Auth types for New Canadian Careers frontend-backend integration.
  * Matches backend User model from apps/users/serializers.py
  */
 

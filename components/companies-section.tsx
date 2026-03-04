@@ -51,7 +51,7 @@ export function CompaniesSection() {
                 lineClassName="text-lg text-foreground-muted leading-relaxed"
                 lines={[
                   "Post roles in minutes. Review candidates who actually match. Communicate directly — no middlemen, no noise.",
-                  "Whether you're hiring for one role or one hundred, Orion scales with you. Built for speed without sacrificing depth."
+                  "Whether you're hiring for one role or one hundred, New Canadian Careers scales with you. Built for speed without sacrificing depth."
                 ]}
               />
             </MotionWrapper>

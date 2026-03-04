@@ -7,7 +7,7 @@ const AUTH_PAGES = ['/login', '/signup', '/forgot-password', '/reset-password']
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
-  const hasToken = !!request.cookies.get('orion_has_session')?.value
+  const hasToken = !!request.cookies.get('ncc_has_session')?.value
 
   const isProtectedRoute = PROTECTED_ROUTES.some(route => pathname.startsWith(route))
   const isAuthPage = AUTH_PAGES.some(page => pathname.startsWith(page))

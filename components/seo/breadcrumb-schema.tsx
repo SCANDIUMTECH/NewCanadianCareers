@@ -5,7 +5,7 @@ interface BreadcrumbSchemaProps {
 }
 
 export function BreadcrumbJsonLd({ items }: BreadcrumbSchemaProps) {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://orion.jobs'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://newcanadian.careers'
 
   const schema = {
     '@context': 'https://schema.org',
@@ -31,7 +31,7 @@ export function generateBreadcrumbItems(
   path: string,
   customLabels?: Record<string, string>
 ): BreadcrumbItem[] {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://orion.jobs'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://newcanadian.careers'
   const segments = path.split('/').filter(Boolean)
 
   const defaultLabels: Record<string, string> = {

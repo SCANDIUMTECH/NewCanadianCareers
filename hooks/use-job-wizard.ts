@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { type JobWizardData, defaultJobData } from "@/lib/job-wizard-schema"
 
-const STORAGE_KEY = "orion-job-draft"
+const STORAGE_KEY = "ncc-job-draft"
 
 export type ValidationErrors = {
   [K in keyof JobWizardData]?: string

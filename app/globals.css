@@ -4,10 +4,10 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   ORION DESIGN SYSTEM — Single Source of Truth
+   NEW CANADIAN CAREERS DESIGN SYSTEM — Single Source of Truth
 
    Typography:  Inter (body) · Manrope (headings) · JetBrains Mono (code)
-   Brand:       Cosmic Blue #3B5BDB
+   Brand:       NCC Orange #FF4500 · Navy #1F2833
    Fonts:       Self-hosted from /assets/fonts/ via next/font/local
    Policy:      No external CDNs, no component-level font overrides
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -25,17 +25,17 @@
   --num-variant: tabular-nums;
 
   /* ── Surface & Text ───────────────────────────────────────────────────── */
-  --background: #F9FAFB;
-  --background-secondary: #F3F4F6;
-  --foreground: #0F172A;
+  --background: #F2F2F2;
+  --background-secondary: #E8E8E8;
+  --foreground: #1F2833;
   --foreground-muted: #475569;
 
-  /* ── Brand — Cosmic Blue ──────────────────────────────────────────────── */
-  --primary: #3B5BDB;
+  /* ── Brand — NCC Orange ──────────────────────────────────────────────── */
+  --primary: #FF4500;
   --primary-foreground: #FFFFFF;
-  --primary-hover: #2F4BC7;
-  --primary-light: #5C7CFA;
-  --primary-rgb: 59, 91, 219;
+  --primary-hover: #E03D00;
+  --primary-light: #FF6633;
+  --primary-rgb: 255, 69, 0;
 
   /* ── UI Chrome ────────────────────────────────────────────────────────── */
   --card: #FFFFFF;
@@ -46,13 +46,17 @@
   --secondary-foreground: #0F172A;
   --muted: #F3F4F6;
   --muted-foreground: #475569;
-  --accent: #3B5BDB;
+  --accent: #FF4500;
   --accent-foreground: #FFFFFF;
-  --destructive: #EF4444;
+  --destructive: #FF0056;
   --destructive-foreground: #FFFFFF;
+  --highlight: #FF0056;
+  --highlight-foreground: #FFFFFF;
+  --sky: #00A2DF;
+  --sky-foreground: #FFFFFF;
   --border: #E5E7EB;
   --input: #E5E7EB;
-  --ring: #3B5BDB;
+  --ring: #FF4500;
 
   /* ── Status Colors ────────────────────────────────────────────────────── */
   --success: #10B981;
@@ -61,12 +65,12 @@
   --warning: #F59E0B;
   --warning-foreground: #FFFFFF;
   --warning-light: #FEF3C7;
-  --info: #3B82F6;
+  --info: #00A2DF;
   --info-foreground: #FFFFFF;
-  --info-light: #DBEAFE;
+  --info-light: #D6F0FB;
 
   /* ── Chart & Data Viz Palette ─────────────────────────────────────────── */
-  --chart-primary: #3B5BDB;
+  --chart-primary: #FF4500;
   --chart-success: #10B981;
   --chart-warning: #F59E0B;
   --chart-purple: #8B5CF6;
@@ -119,11 +123,11 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.145 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: #5C7CFA;
+  --primary: #FF6633;
   --primary-foreground: #FFFFFF;
-  --primary-hover: #748FFC;
-  --primary-light: #3B5BDB;
-  --primary-rgb: 92, 124, 250;
+  --primary-hover: #FF7A4D;
+  --primary-light: #FF4500;
+  --primary-rgb: 255, 102, 51;
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);

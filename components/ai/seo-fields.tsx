@@ -178,10 +178,10 @@ export function SEOFields({
               Search Preview
             </p>
             <p className="text-sm text-blue-700 font-medium leading-snug truncate">
-              {metaTitle || "Job Title — Company | Orion Jobs"}
+              {metaTitle || "Job Title — Company | New Canadian Careers"}
             </p>
             <p className="text-xs text-green-700 truncate">
-              orion.jobs/jobs/...
+              newcanadian.careers/jobs/...
             </p>
             <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">
               {metaDescription || "Job description preview will appear here..."}

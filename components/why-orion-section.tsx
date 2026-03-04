@@ -21,7 +21,7 @@ export function WhyOrionSection() {
           <div className="flex items-center gap-4 mb-8">
             <div className="h-px w-8 bg-primary/40" />
             <p className="text-sm font-medium text-foreground-muted tracking-wide uppercase">
-              Why Orion Exists
+              Why NCC Exists
             </p>
           </div>
         </MotionWrapper>
@@ -44,7 +44,7 @@ export function WhyOrionSection() {
             lineClassName="text-lg text-foreground-muted leading-relaxed"
             lines={[
               "Job boards are cluttered. Applicant tracking systems are bloated. Candidates apply to hundreds of roles and hear nothing back. Companies drown in resumes they never read.",
-              "Orion is different. We strip away the noise to surface what matters: the right connection between talent and opportunity. No gamification. No dark patterns. No wasted time."
+              "New Canadian Careers is different. We strip away the noise to surface what matters: the right connection between talent and opportunity. No gamification. No dark patterns. No wasted time."
             ]}
           />
           

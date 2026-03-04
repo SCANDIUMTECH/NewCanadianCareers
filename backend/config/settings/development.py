@@ -1,5 +1,5 @@
 """
-Development settings for Orion backend.
+Development settings for New Canadian Careers backend.
 """
 import os
 from .base import *
@@ -12,9 +12,9 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', 'web']
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'orion_dev'),
-        'USER': os.environ.get('DB_USER', 'orion'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', 'orion_dev_password'),
+        'NAME': os.environ.get('DB_NAME', 'ncc_dev'),
+        'USER': os.environ.get('DB_USER', 'ncc'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'ncc_dev_password'),
         'HOST': os.environ.get('DB_HOST', 'localhost'),
         'PORT': os.environ.get('DB_PORT', '5432'),
     }
@@ -57,7 +57,7 @@ STORAGES = {
 }
 AWS_ACCESS_KEY_ID = os.environ.get('MINIO_ACCESS_KEY')
 AWS_SECRET_ACCESS_KEY = os.environ.get('MINIO_SECRET_KEY')
-AWS_STORAGE_BUCKET_NAME = os.environ.get('MINIO_BUCKET_NAME', 'orion-media')
+AWS_STORAGE_BUCKET_NAME = os.environ.get('MINIO_BUCKET_NAME', 'ncc-media')
 AWS_S3_ENDPOINT_URL = f"http://{os.environ.get('MINIO_ENDPOINT', 'minio:9000')}"
 AWS_S3_USE_SSL = False
 AWS_S3_FILE_OVERWRITE = False

@@ -41,7 +41,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 
-const PENDING_PUBLISH_KEY = "orion-pending-publish"
+const PENDING_PUBLISH_KEY = "ncc-pending-publish"
 
 function mapWizardDataToCreateJob(data: JobWizardData): CreateJobData {
   const typeMap: Record<string, CreateJobData["employment_type"]> = {

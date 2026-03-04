@@ -39,7 +39,7 @@ export function PlatformSection() {
         {/* The statement paragraph */}
         <MotionWrapper delay={300}>
           <p className="mt-12 md:mt-16 text-xl md:text-2xl text-foreground-muted leading-relaxed max-w-3xl">
-            Orion isn&apos;t just a job board. It&apos;s infrastructure for how hiring should work. Permissions, workflows, integrations, and analytics — all designed to give you control without complexity. Every feature exists because it needed to. Nothing more.
+            New Canadian Careers isn&apos;t just a job board. It&apos;s infrastructure for how hiring should work. Permissions, workflows, integrations, and analytics — all designed to give you control without complexity. Every feature exists because it needed to. Nothing more.
           </p>
         </MotionWrapper>
 

@@ -1,4 +1,4 @@
-const SESSION_KEY = 'orion_rum_session_id'
+const SESSION_KEY = 'ncc_rum_session_id'
 
 function generateUUID(): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {

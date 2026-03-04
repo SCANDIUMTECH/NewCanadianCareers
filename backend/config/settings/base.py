@@ -1,5 +1,5 @@
 """
-Base Django settings for Orion backend.
+Base Django settings for New Canadian Careers backend.
 """
 import os
 from pathlib import Path
@@ -168,7 +168,7 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
-    'AUTH_COOKIE': 'orion_access',
+    'AUTH_COOKIE': 'ncc_access',
     'AUTH_COOKIE_HTTP_ONLY': True,
     'AUTH_COOKIE_SECURE': not DEBUG,  # False in dev for http://localhost
     'AUTH_COOKIE_SAMESITE': 'Lax',
@@ -354,13 +354,13 @@ STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', '')
 # Email (Resend)
 RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
 RESEND_WEBHOOK_SECRET = os.environ.get('RESEND_WEBHOOK_SECRET', '')
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@orion.jobs')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@newcanadian.careers')
 
 # Frontend URL
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
 
 # API Base URL — used for generating webhook URLs and external-facing links.
-# In production, set to your HTTPS domain (e.g. https://api.orion.jobs).
+# In production, set to your HTTPS domain (e.g. https://api.newcanadian.careers).
 # Defaults to empty string; when unset, webhook URL is built from request.
 API_BASE_URL = os.environ.get('API_BASE_URL', '')
 
@@ -428,13 +428,13 @@ RUM_KAFKA_BOOTSTRAP = os.environ.get('RUM_KAFKA_BOOTSTRAP', 'kafka:9092')
 RUM_KAFKA_TOPIC = os.environ.get('RUM_KAFKA_TOPIC', 'rum.webvitals.v1')
 RUM_CLICKHOUSE_URL = os.environ.get('RUM_CLICKHOUSE_URL', 'http://clickhouse:8123')
 RUM_CLICKHOUSE_DB = os.environ.get('RUM_CLICKHOUSE_DB', 'default')
-RUM_CLICKHOUSE_USER = os.environ.get('RUM_CLICKHOUSE_USER', 'orion')
+RUM_CLICKHOUSE_USER = os.environ.get('RUM_CLICKHOUSE_USER', 'ncc')
 RUM_CLICKHOUSE_PASSWORD = os.environ.get('RUM_CLICKHOUSE_PASSWORD', '')
 
 # OpenTelemetry Settings
 OTEL_ENABLED = os.environ.get('OTEL_ENABLED', 'True').lower() in ('true', '1', 'yes')
 OTEL_EXPORTER_ENDPOINT = os.environ.get('OTEL_EXPORTER_ENDPOINT', 'http://otel-collector:4317')
-OTEL_SERVICE_NAME = os.environ.get('OTEL_SERVICE_NAME', 'orion-api')
+OTEL_SERVICE_NAME = os.environ.get('OTEL_SERVICE_NAME', 'ncc-api')
 
 # Slack Integration
 # OAuth App (preferred): Set SLACK_CLIENT_ID and SLACK_CLIENT_SECRET from api.slack.com.
@@ -459,7 +459,7 @@ SLACK_WEBHOOKS = {
 
 # GDPR Module Settings
 GDPR_BACKEND_URL = os.environ.get('GDPR_BACKEND_URL', 'http://localhost')
-GDPR_DPO_EMAIL = os.environ.get('GDPR_DPO_EMAIL', 'dpo@orion.jobs')
+GDPR_DPO_EMAIL = os.environ.get('GDPR_DPO_EMAIL', 'dpo@newcanadian.careers')
 GDPR_EXPORTS_DIR = BASE_DIR / 'gdpr_exports'
 GDPR_COOKIE_DOMAIN = os.environ.get('GDPR_COOKIE_DOMAIN', '')
 GDPR_DATA_RETENTION_DAYS = int(os.environ.get('GDPR_DATA_RETENTION_DAYS', '730'))

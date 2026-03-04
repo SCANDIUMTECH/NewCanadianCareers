@@ -62,7 +62,7 @@ export function HeroSection() {
           <MotionWrapper delay={300} className="relative">
             <div 
               className="relative aspect-square w-full max-w-[600px] mx-auto lg:ml-auto rounded-2xl overflow-hidden"
-              aria-label="Animated Orion Constellation"
+              aria-label="Animated NCC Constellation"
               role="img"
             >
               {/* Soft radial glow background */}

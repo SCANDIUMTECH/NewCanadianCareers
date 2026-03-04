@@ -97,13 +97,13 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=backend_frontend_net"
       # Django API + admin — path-based routing (higher priority than frontend catch-all)
-      - "traefik.http.routers.django.rule=(Host(`localhost`) || Host(`api.orion.jobs`)) && (PathPrefix(`/api`) || PathPrefix(`/health`))"
+      - "traefik.http.routers.django.rule=(Host(`localhost`) || Host(`api.newcanadian.careers`)) && (PathPrefix(`/api`) || PathPrefix(`/health`))"
       - "traefik.http.routers.django.entrypoints=websecure"
       - "traefik.http.routers.django.tls=true"
       - "traefik.http.routers.django.middlewares=rate-limit@file"
       - "traefik.http.services.django.loadbalancer.server.port=8000"
       # Apply security headers to Django admin
-      - "traefik.http.routers.django-admin.rule=(Host(`localhost`) || Host(`api.orion.jobs`)) && PathPrefix(`/django-admin`)"
+      - "traefik.http.routers.django-admin.rule=(Host(`localhost`) || Host(`api.newcanadian.careers`)) && PathPrefix(`/django-admin`)"
       - "traefik.http.routers.django-admin.entrypoints=websecure"
       - "traefik.http.routers.django-admin.tls=true"
       - "traefik.http.routers.django-admin.middlewares=secure-headers@file,rate-limit@file"
@@ -123,7 +123,7 @@ services:
       - frontend_net
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.static.rule=(Host(`localhost`) || Host(`api.orion.jobs`)) && PathPrefix(`/static`)"
+      - "traefik.http.routers.static.rule=(Host(`localhost`) || Host(`api.newcanadian.careers`)) && PathPrefix(`/static`)"
       - "traefik.http.routers.static.entrypoints=websecure"
       - "traefik.http.routers.static.tls=true"
       - "traefik.http.services.static.loadbalancer.server.port=80"
@@ -134,14 +134,14 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
-      POSTGRES_DB: ${DB_NAME:-orion}
-      POSTGRES_USER: ${DB_USER:-orion}
+      POSTGRES_DB: ${DB_NAME:-ncc}
+      POSTGRES_USER: ${DB_USER:-ncc}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
     restart: unless-stopped
     networks:
       - data_net       # Only app services on data_net can reach PostgreSQL
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-orion}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-ncc}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -175,9 +175,9 @@ services:
     image: rabbitmq:4.2-management-alpine
     restart: unless-stopped
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-orion}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-ncc}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD must be set}
-      RABBITMQ_DEFAULT_VHOST: orion
+      RABBITMQ_DEFAULT_VHOST: ncc
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
       - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
@@ -303,13 +303,13 @@ services:
       - ./clickhouse/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     environment:
       CLICKHOUSE_DB: ${CLICKHOUSE_DB:-default}
-      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-orion}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-ncc}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?CLICKHOUSE_PASSWORD must be set}
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
     networks:
       - data_net       # Only app services on data_net can reach ClickHouse
     healthcheck:
-      test: ["CMD", "clickhouse-client", "--user", "${CLICKHOUSE_USER:-orion}", "--password", "${CLICKHOUSE_PASSWORD:-}", "--query", "SELECT 1"]
+      test: ["CMD", "clickhouse-client", "--user", "${CLICKHOUSE_USER:-ncc}", "--password", "${CLICKHOUSE_PASSWORD:-}", "--query", "SELECT 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -398,7 +398,7 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=backend_frontend_net"
       # Media route: /media/* → MinIO bucket (path rewritten by middleware)
-      - "traefik.http.routers.media.rule=(Host(`localhost`) || Host(`api.orion.jobs`)) && PathPrefix(`/media/`)"
+      - "traefik.http.routers.media.rule=(Host(`localhost`) || Host(`api.newcanadian.careers`)) && PathPrefix(`/media/`)"
       - "traefik.http.routers.media.entrypoints=websecure"
       - "traefik.http.routers.media.tls=true"
       - "traefik.http.routers.media.middlewares=media-rewrite@file,media-headers@file"
@@ -419,9 +419,9 @@ services:
     command: >
       -c "
       mc alias set local http://minio:9000 $$MINIO_ACCESS_KEY $$MINIO_SECRET_KEY &&
-      mc mb --ignore-existing local/orion-media &&
-      mc anonymous set download local/orion-media &&
-      echo '==> MinIO bucket orion-media initialized with public-read policy'
+      mc mb --ignore-existing local/ncc-media &&
+      mc anonymous set download local/ncc-media &&
+      echo '==> MinIO bucket ncc-media initialized with public-read policy'
       "
     environment:
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY must be set}

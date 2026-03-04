@@ -1,5 +1,5 @@
 /**
- * Auth API functions for Orion.
+ * Auth API functions for New Canadian Careers.
  * Wraps backend auth endpoints.
  */
 

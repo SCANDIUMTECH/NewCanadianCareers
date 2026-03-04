@@ -51,20 +51,20 @@ const jetbrainsMonoItalic = localFont({
 });
 
 export const metadata: Metadata = {
-  title: 'Orion - Find the right people. Without the noise.',
-  description: 'Orion is a modern hiring platform built for clarity — for candidates, companies, and agencies.',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://orion.jobs'),
+  title: 'New Canadian Careers - Your Gateway to Canadian Employment',
+  description: 'New Canadian Careers helps newcomers to Canada find meaningful employment — connecting candidates, companies, and agencies.',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://newcanadian.careers'),
   openGraph: {
-    title: 'Orion - Find the right people. Without the noise.',
-    description: 'Orion is a modern hiring platform built for clarity — for candidates, companies, and agencies.',
-    siteName: 'Orion',
+    title: 'New Canadian Careers - Your Gateway to Canadian Employment',
+    description: 'New Canadian Careers helps newcomers to Canada find meaningful employment — connecting candidates, companies, and agencies.',
+    siteName: 'New Canadian Careers',
     type: 'website',
     images: [{ url: '/og-image.png', width: 1200, height: 630 }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Orion - Find the right people. Without the noise.',
-    description: 'Orion is a modern hiring platform built for clarity — for candidates, companies, and agencies.',
+    title: 'New Canadian Careers - Your Gateway to Canadian Employment',
+    description: 'New Canadian Careers helps newcomers to Canada find meaningful employment — connecting candidates, companies, and agencies.',
     images: ['/og-image.png'],
   },
   icons: {
@@ -87,7 +87,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#F9FAFB',
+  themeColor: '#F2F2F2',
 }
 
 const fontVariables = [

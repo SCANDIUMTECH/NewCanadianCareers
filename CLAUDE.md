@@ -1,8 +1,8 @@
 # CLAUDE.md
 
-## What is Orion
+## What is New Canadian Careers
 
-Orion is a job board platform. 4 user types: **Candidates**, **Companies**, **Agencies**, **Platform Admin**. Philosophy: search-first, trust over noise, minimal UI with deep UX, SEO-native (Google for Jobs), AI-assist not replacement.
+New Canadian Careers (NCC) is a job board platform focused on helping newcomers to Canada find meaningful employment. 4 user types: **Candidates**, **Companies**, **Agencies**, **Platform Admin**. Philosophy: search-first, trust over noise, minimal UI with deep UX, SEO-native (Google for Jobs), AI-assist not replacement.
 
 Monetization: job posting packages (one-time/bundle/subscription), sponsored banners, affiliate placements, featured jobs — all via Stripe.
 
@@ -52,7 +52,7 @@ Browser → Next.js Frontend (localhost:3000)
 
 - API base URL: `NEXT_PUBLIC_API_URL` env var, defaults to `http://localhost:8000` in `/lib/api/client.ts`
 - All API calls go through the typed client in `/lib/api/client.ts`
-- JWT stored in localStorage + cookie flag (`orion_access_token`) for middleware route protection
+- JWT stored in localStorage + cookie flag (`ncc_access_token`) for middleware route protection
 - Auto token refresh on 401, session expired event on refresh failure
 - Route protection middleware in `/proxy.ts` — checks cookie presence, redirects unauthenticated users
 
@@ -170,7 +170,7 @@ cd backend && docker-compose exec web python manage.py createsuperuser
 
 1. User POSTs credentials to `/api/auth/login/`
 2. Django returns user object + JWT tokens (access + refresh)
-3. Frontend stores tokens in localStorage, sets `orion_access_token` cookie for middleware
+3. Frontend stores tokens in localStorage, sets `ncc_access_token` cookie for middleware
 4. `/proxy.ts` middleware checks cookie → redirects unauthenticated users from protected routes
 5. `/lib/api/client.ts` injects `Authorization: Bearer <token>` on all API calls
 6. On 401 → auto-refresh token → on failure → session expired event → redirect to login
@@ -178,7 +178,7 @@ cd backend && docker-compose exec web python manage.py createsuperuser
 ## Code Conventions
 
 - **Imports**: Use `@/` aliases — `@/components`, `@/lib/utils`, `@/hooks`
-- **Styling**: `cn()` for conditional Tailwind classes. Glassmorphism: `bg-white/80 backdrop-blur-xl`. Primary: #3B5BDB. Rounded: `rounded-xl`/`rounded-2xl`.
+- **Styling**: `cn()` for conditional Tailwind classes. Glassmorphism: `bg-white/80 backdrop-blur-xl`. Brand: Crimson Carrot #FF4500, Jet Black #1F2833, Fresh Sky #00A2DF, White Smoke #F2F2F2, Hot Fuchsia #FF0056. Primary: #FF4500. Rounded: `rounded-xl`/`rounded-2xl`.
 - **Components**: UI primitives in `/components/ui`. Feature components in `/components`. Use existing shadcn/ui before creating new ones.
 - **Layouts**: Admin = collapsible sidebar. Company/Candidate/Agency = floating glassmorphism header. Auth = split screen.
 - **Animation**: Framer Motion staggered reveals. `initial` → `animate` → `transition` with `staggerChildren`.

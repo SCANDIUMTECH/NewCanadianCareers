@@ -109,7 +109,7 @@ export function CompanyOnboarding({ user, companyName, onComplete }: CompanyOnbo
           {/* Logo */}
           <div className="flex items-center">
             <span className="text-2xl font-semibold tracking-tight text-white">
-              Orion
+              NCC
             </span>
             <span className="ml-1.5 w-2 h-2 rounded-full bg-primary" />
           </div>
@@ -118,7 +118,7 @@ export function CompanyOnboarding({ user, companyName, onComplete }: CompanyOnbo
           <div className="max-w-md">
             <p className="text-2xl md:text-3xl font-medium leading-relaxed text-white/90">
               {step === 1 ? (
-                <>Welcome to Orion.<br />Let&apos;s set up your account.</>
+                <>Welcome to New Canadian Careers.<br />Let&apos;s set up your account.</>
               ) : (
                 <>Almost there.<br />Where is {companyName} based?</>
               )}
@@ -150,7 +150,7 @@ export function CompanyOnboarding({ user, companyName, onComplete }: CompanyOnbo
           {/* Mobile logo */}
           <div className="lg:hidden mb-12 flex items-center">
             <span className="text-xl font-semibold tracking-tight text-foreground">
-              Orion
+              NCC
             </span>
             <span className="ml-1 w-1.5 h-1.5 rounded-full bg-primary" />
           </div>
