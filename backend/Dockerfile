@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -27,12 +27,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Create log directory
-RUN mkdir -p /var/log/orion
+RUN mkdir -p /var/log/ncc
 
 # Create non-root user and media directory
 RUN adduser --disabled-password --gecos '' appuser && \
     mkdir -p /app/media /app/staticfiles && \
-    chown -R appuser:appuser /app /var/log/orion
+    chown -R appuser:appuser /app /var/log/ncc
 
 # Collect static files as non-root user (use throwaway key — real SECRET_KEY is injected at runtime)
 USER appuser
