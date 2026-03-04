@@ -43,7 +43,6 @@ services:
       - ../:/app
       - /app/node_modules    # Use container's node_modules, not host's
       - /app/.next           # Keep .next inside container
-      - ../.env.docker:/app/.env.local:ro  # Override host's .env.local with Docker-specific env
     environment:
       - NODE_ENV=development
     expose:
