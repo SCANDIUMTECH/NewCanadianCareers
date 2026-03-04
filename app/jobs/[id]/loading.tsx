@@ -1,3 +1,4 @@
+import Image from "next/image"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export default function Loading() {
@@ -8,8 +9,14 @@ export default function Loading() {
         <div className="max-w-[1400px] mx-auto px-6 md:px-12 lg:px-24">
           <div className="flex items-center justify-between h-16 md:h-20">
             <div className="flex items-center">
-              <span className="text-lg font-semibold text-foreground">NCC</span>
-              <span className="ml-1.5 w-2 h-2 rounded-full bg-primary/50" />
+              <Image
+                src="/logo.svg"
+                alt="New Canadian Careers Logo"
+                width={32}
+                height={32}
+                className="h-8 w-auto"
+                priority
+              />
             </div>
             <div className="flex items-center gap-3">
               <Skeleton className="h-10 w-10 rounded-xl" />

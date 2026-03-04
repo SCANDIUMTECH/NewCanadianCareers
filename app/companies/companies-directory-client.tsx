@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -478,8 +479,14 @@ export default function CompaniesDirectoryClient() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-foreground-muted text-sm">
               <Link href="/" className="flex items-center">
-                <span className="font-semibold text-foreground">NCC</span>
-                <span className="ml-1 w-1.5 h-1.5 rounded-full bg-primary/50" />
+                <Image
+                  src="/logo.svg"
+                  alt="New Canadian Careers Logo"
+                  width={28}
+                  height={28}
+                  className="h-7 w-auto"
+                  priority
+                />
               </Link>
               <span>·</span>
               <span>&copy; 2026 New Canadian Careers. All rights reserved.</span>
