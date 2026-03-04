@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
+import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -157,10 +158,14 @@ export function CompanyOnboarding({ user, companyName, onComplete }: CompanyOnbo
         <div className="w-full max-w-md">
           {/* Mobile logo */}
           <div className="lg:hidden mb-12 flex items-center">
-            <span className="text-xl font-semibold tracking-tight text-foreground">
-              NCC
-            </span>
-            <span className="ml-1 w-1.5 h-1.5 rounded-full bg-primary" />
+            <Image
+              src="/logo.svg"
+              alt="New Canadian Careers Logo"
+              width={32}
+              height={32}
+              className="h-8 w-auto"
+              priority
+            />
           </div>
 
           {/* Step 1: Your name */}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, Fragment, type ReactNode, type MouseEvent } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { LayoutGrid } from "lucide-react"
 import {
@@ -137,14 +138,13 @@ export function Header() {
           <Link href="/" className="flex items-center group relative">
             {/* Logo glow on hover */}
             <div className="absolute -inset-3 rounded-xl bg-primary/0 group-hover:bg-primary/5 transition-all duration-500" />
-            <span className="relative text-lg font-semibold tracking-tight text-foreground transition-all duration-300 group-hover:text-primary">
-              NCC
-            </span>
-            <span 
-              className={cn(
-                "relative ml-1.5 w-2 h-2 rounded-full transition-all duration-500",
-                "bg-primary/50 group-hover:bg-primary group-hover:shadow-lg group-hover:shadow-primary/50"
-              )} 
+            <Image
+              src="/logo.svg"
+              alt="New Canadian Careers Logo"
+              width={32}
+              height={32}
+              className="relative h-8 w-auto transition-all duration-300 group-hover:scale-110"
+              priority
             />
           </Link>
 

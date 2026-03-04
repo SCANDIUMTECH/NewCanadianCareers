@@ -229,7 +229,7 @@ export default function SearchSEOPage() {
   // Schema settings state
   const [schemaOrgName, setSchemaOrgName] = useState("New Canadian Careers")
   const [schemaOrgUrl, setSchemaOrgUrl] = useState("https://newcanadian.careers")
-  const [schemaLogoUrl, setSchemaLogoUrl] = useState("https://newcanadian.careers/logo.png")
+  const [schemaLogoUrl, setSchemaLogoUrl] = useState("https://newcanadian.careers/logo.svg")
   const [schemaIncludeSalary, setSchemaIncludeSalary] = useState(true)
   const [schemaIncludeDirectApply, setSchemaIncludeDirectApply] = useState(true)
   const [schemaIncludeRemote, setSchemaIncludeRemote] = useState(true)
@@ -283,7 +283,7 @@ export default function SearchSEOPage() {
         if (schemaSettings) {
           setSchemaOrgName(schemaSettings.organizationName || "New Canadian Careers")
           setSchemaOrgUrl(schemaSettings.organizationUrl || "https://newcanadian.careers")
-          setSchemaLogoUrl(schemaSettings.logoUrl || "https://newcanadian.careers/logo.png")
+          setSchemaLogoUrl(schemaSettings.logoUrl || "https://newcanadian.careers/logo.svg")
           setSchemaIncludeSalary(schemaSettings.includeSalary ?? true)
           setSchemaIncludeDirectApply(schemaSettings.includeDirectApply ?? true)
           setSchemaIncludeRemote(schemaSettings.includeRemoteFields ?? true)
