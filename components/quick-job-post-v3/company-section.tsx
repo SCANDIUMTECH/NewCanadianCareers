@@ -442,7 +442,7 @@ export function CompanySection({
                     <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       id="add-company-location"
-                      placeholder="e.g. San Francisco, CA"
+                      placeholder="e.g., Toronto, ON"
                       value={newCompany.location}
                       onChange={(e) => {
                         setNewCompany({ ...newCompany, location: e.target.value })

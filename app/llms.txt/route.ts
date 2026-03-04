@@ -10,13 +10,13 @@
 import { NextResponse } from 'next/server'
 
 export async function GET() {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://orion.jobs'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://newcanadian.careers'
 
-  const content = `# Orion Jobs
-> Orion is a modern job board platform connecting candidates with employers and recruitment agencies.
+  const content = `# New Canadian Careers
+> New Canadian Careers is a modern job board platform connecting candidates with employers and recruitment agencies.
 
 ## About
-Orion is a search-first job board platform. It supports four user types: Candidates, Companies, Agencies, and Platform Administrators. The platform is optimized for Google for Jobs with full structured data (JobPosting schema), and serves job listings across engineering, design, product, marketing, sales, data, finance, HR, operations, legal, and other categories.
+New Canadian Careers is a search-first job board platform. It supports four user types: Candidates, Companies, Agencies, and Platform Administrators. The platform is optimized for Google for Jobs with full structured data (JobPosting schema), and serves job listings across engineering, design, product, marketing, sales, data, finance, HR, operations, legal, and other categories.
 
 ## Available Content
 

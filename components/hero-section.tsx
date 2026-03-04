@@ -29,14 +29,14 @@ export function HeroSection() {
                 as="h1" 
                 className="text-[clamp(2.5rem,6vw,4rem)] font-medium leading-[1.1] tracking-[-0.02em] text-foreground"
               >
-                Find the right people. Without the noise.
+                Your Canadian Career Starts Here
               </TextReveal>
             </MotionWrapper>
 
             {/* Staggered reveal: subhead */}
             <MotionWrapper delay={200}>
               <p className="text-lg md:text-xl text-foreground-muted leading-relaxed max-w-md">
-                A hiring platform built for clarity — for candidates, companies, and agencies.
+                The trusted job platform connecting newcomers to Canada with employers who value diverse talent and global experience.
               </p>
             </MotionWrapper>
 

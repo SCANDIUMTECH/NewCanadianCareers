@@ -41,7 +41,7 @@ export function CompaniesSection() {
                 as="h2" 
                 className="text-[clamp(1.75rem,4vw,2.5rem)] font-medium leading-[1.2] tracking-[-0.01em] text-foreground"
               >
-                Built for Companies & Agencies
+                Hire Canada&apos;s Newest Talent
               </TextReveal>
             </MotionWrapper>
 
@@ -50,8 +50,8 @@ export function CompaniesSection() {
                 className="space-y-6 max-w-lg"
                 lineClassName="text-lg text-foreground-muted leading-relaxed"
                 lines={[
-                  "Post roles in minutes. Review candidates who actually match. Communicate directly — no middlemen, no noise.",
-                  "Whether you're hiring for one role or one hundred, New Canadian Careers scales with you. Built for speed without sacrificing depth."
+                  "Access a diverse pool of skilled professionals \u2014 engineers, healthcare workers, IT specialists, tradespeople, and more \u2014 all ready to contribute to your team. Post roles in minutes. Review candidates who match.",
+                  "Whether you\u2019re a startup in Vancouver or an enterprise in Toronto, New Canadian Careers connects you with motivated, qualified newcomers. Built for Canadian employers who see diversity as an advantage."
                 ]}
               />
             </MotionWrapper>

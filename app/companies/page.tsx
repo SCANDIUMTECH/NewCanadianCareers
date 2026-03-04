@@ -3,13 +3,13 @@ import type { Metadata } from "next"
 import CompaniesDirectoryClient from "./companies-directory-client"
 
 export const metadata: Metadata = {
-  title: "Company Directory | Orion",
+  title: "Canadian Employers | New Canadian Careers",
   description:
-    "Browse top companies hiring on Orion. Explore verified employers across every industry and find the organization that matches your values and career goals.",
+    "Browse Canadian companies hiring newcomers. Find employers who value international experience and diverse talent.",
   openGraph: {
-    title: "Company Directory | Orion",
+    title: "Canadian Employers | New Canadian Careers",
     description:
-      "Browse top companies hiring on Orion. Explore verified employers across every industry and find the organization that matches your values and career goals.",
+      "Browse Canadian companies hiring newcomers. Find employers who value international experience and diverse talent.",
     type: "website",
     url: "/companies",
   },

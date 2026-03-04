@@ -52,7 +52,7 @@ import type { JobListItem, JobStatus, PaginatedResponse, SocialAccount, Package 
 import { useCompanyContext } from "@/hooks/use-company"
 import { useCart } from "@/hooks/use-cart"
 
-const PENDING_PUBLISH_KEY = "orion-pending-publish"
+const PENDING_PUBLISH_KEY = "ncc-pending-publish"
 
 /**
  * Company Jobs Management

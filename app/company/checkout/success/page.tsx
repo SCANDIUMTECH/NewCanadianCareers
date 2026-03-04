@@ -34,7 +34,7 @@ import {
  * Handles pending-publish flow: auto-publishes draft jobs from the wizard
  */
 
-const PENDING_PUBLISH_KEY = "orion-pending-publish"
+const PENDING_PUBLISH_KEY = "ncc-pending-publish"
 
 interface PendingPublish {
   jobId: string

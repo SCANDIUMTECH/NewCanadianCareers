@@ -26,10 +26,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   try {
     const company = await getPublicCompany(id)
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://orion.jobs'
-    const description = company.tagline || company.description?.slice(0, 160) || `View ${company.name}'s company profile and open positions on Orion.`
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://newcanadian.careers'
+    const description = company.tagline || company.description?.slice(0, 160) || `View ${company.name}'s company profile and open positions on New Canadian Careers.`
     return {
-      title: `${company.name} - Company Profile | Orion`,
+      title: `${company.name} - Company Profile | New Canadian Careers`,
       description,
       alternates: {
         canonical: `${baseUrl}/companies/${id}`,
@@ -50,7 +50,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
   } catch {
     return {
-      title: 'Company Not Found | Orion',
+      title: 'Company Not Found | New Canadian Careers',
     }
   }
 }
@@ -177,7 +177,7 @@ export default async function PublicCompanyProfilePage({ params }: PageProps) {
         <div className="max-w-[1200px] mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center group">
             <span className="text-lg font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary">
-              Orion
+              NCC
             </span>
             <span className="ml-1.5 w-2 h-2 rounded-full bg-primary/50 transition-all group-hover:bg-primary" />
           </Link>
@@ -526,11 +526,11 @@ export default async function PublicCompanyProfilePage({ params }: PageProps) {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-foreground-muted text-sm">
               <Link href="/" className="flex items-center">
-                <span className="font-semibold text-foreground">Orion</span>
+                <span className="font-semibold text-foreground">NCC</span>
                 <span className="ml-1 w-1.5 h-1.5 rounded-full bg-primary/50" />
               </Link>
               <span>·</span>
-              <span>&copy; {new Date().getFullYear()} Orion. All rights reserved.</span>
+              <span>&copy; {new Date().getFullYear()} New Canadian Careers. All rights reserved.</span>
             </div>
             <div className="flex items-center gap-6 text-sm text-foreground-muted">
               <Link href="/companies" className="hover:text-foreground transition-colors">Companies</Link>

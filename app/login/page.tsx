@@ -69,11 +69,11 @@ function LoginContent() {
           {/* Logo */}
           <Link href="/" className="flex items-center">
             <span className="text-2xl font-semibold tracking-tight text-white">
-              Orion
+              NCC
             </span>
             <span className="ml-1.5 w-2 h-2 rounded-full bg-primary" />
           </Link>
-          
+
           {/* Quote */}
           <div className="max-w-md">
             <p className="text-2xl md:text-3xl font-medium leading-relaxed text-white/90">
@@ -85,10 +85,10 @@ function LoginContent() {
               Join thousands of companies and candidates building meaningful connections.
             </p>
           </div>
-          
+
           {/* Footer */}
           <p className="text-sm text-white/40">
-            &copy; {new Date().getFullYear()} Orion
+            &copy; {new Date().getFullYear()} New Canadian Careers
           </p>
         </div>
       </div>
@@ -100,7 +100,7 @@ function LoginContent() {
           <MotionWrapper delay={0} className="lg:hidden mb-12">
             <Link href="/" className="flex items-center">
               <span className="text-xl font-semibold tracking-tight text-foreground">
-                Orion
+                NCC
               </span>
               <span className="ml-1 w-1.5 h-1.5 rounded-full bg-primary" />
             </Link>

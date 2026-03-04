@@ -5,6 +5,14 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { PROVINCES, COUNTRY } from "@/lib/constants/canada"
 import { MotionWrapper } from "@/components/motion-wrapper"
 import {
   Combobox,
@@ -32,7 +40,7 @@ export function CompanyOnboarding({ user, companyName, onComplete }: CompanyOnbo
   const [address, setAddress] = useState("")
   const [city, setCity] = useState("")
   const [state, setState] = useState("")
-  const [country, setCountry] = useState("")
+  const [country] = useState(COUNTRY.name)
   const [postalCode, setPostalCode] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState("")
@@ -293,22 +301,25 @@ export function CompanyOnboarding({ user, companyName, onComplete }: CompanyOnbo
                         type="text"
                         value={city}
                         onChange={(e) => setCity(e.target.value)}
-                        placeholder="San Francisco"
+                        placeholder="Toronto"
                         autoComplete="address-level2"
                         className="h-12"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="state">State / Province</Label>
-                      <Input
-                        id="state"
-                        type="text"
-                        value={state}
-                        onChange={(e) => setState(e.target.value)}
-                        placeholder="California"
-                        autoComplete="address-level1"
-                        className="h-12"
-                      />
+                      <Label htmlFor="state">Province</Label>
+                      <Select value={state} onValueChange={setState}>
+                        <SelectTrigger className="h-12">
+                          <SelectValue placeholder="Select province" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PROVINCES.map((prov) => (
+                            <SelectItem key={prov.code} value={prov.code}>
+                              {prov.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
@@ -320,7 +331,7 @@ export function CompanyOnboarding({ user, companyName, onComplete }: CompanyOnbo
                         type="text"
                         value={postalCode}
                         onChange={(e) => setPostalCode(e.target.value)}
-                        placeholder="94105"
+                        placeholder="M5V 3L9"
                         autoComplete="postal-code"
                         className="h-12"
                       />
@@ -329,12 +340,9 @@ export function CompanyOnboarding({ user, companyName, onComplete }: CompanyOnbo
                       <Label htmlFor="country">Country</Label>
                       <Input
                         id="country"
-                        type="text"
-                        value={country}
-                        onChange={(e) => setCountry(e.target.value)}
-                        placeholder="United States"
-                        autoComplete="country-name"
-                        className="h-12"
+                        value={COUNTRY.name}
+                        disabled
+                        className="h-12 bg-muted"
                       />
                     </div>
                   </div>

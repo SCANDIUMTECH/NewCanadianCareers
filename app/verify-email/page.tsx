@@ -91,7 +91,7 @@ function VerifyEmailContent() {
           {/* Logo */}
           <Link href="/" className="flex items-center">
             <span className="text-2xl font-semibold tracking-tight text-white">
-              Orion
+              NCC
             </span>
             <span className="ml-1.5 w-2 h-2 rounded-full bg-primary" />
           </Link>
@@ -109,14 +109,14 @@ function VerifyEmailContent() {
               {isVerifying
                 ? "Please wait while we confirm your email address."
                 : isSuccess
-                  ? "Your email has been confirmed. You're all set to start using Orion."
+                  ? "Your email has been confirmed. You're all set to start using New Canadian Careers."
                   : "Your verification link may have expired. We can send you a new one."}
             </p>
           </div>
 
           {/* Footer */}
           <p className="text-sm text-white/40">
-            &copy; {new Date().getFullYear()} Orion
+            &copy; {new Date().getFullYear()} New Canadian Careers
           </p>
         </div>
       </div>
@@ -128,7 +128,7 @@ function VerifyEmailContent() {
           <MotionWrapper delay={0} className="lg:hidden mb-12">
             <Link href="/" className="flex items-center">
               <span className="text-xl font-semibold tracking-tight text-foreground">
-                Orion
+                NCC
               </span>
               <span className="ml-1 w-1.5 h-1.5 rounded-full bg-primary" />
             </Link>
@@ -296,8 +296,8 @@ function VerifyEmailContent() {
                   <p className="text-sm text-foreground-muted">
                     <strong className="text-foreground">Need help?</strong>{" "}
                     Contact our support team at{" "}
-                    <a href="mailto:support@orion.com" className="text-primary hover:text-primary-hover transition-colors">
-                      support@orion.com
+                    <a href="mailto:support@newcanadian.careers" className="text-primary hover:text-primary-hover transition-colors">
+                      support@newcanadian.careers
                     </a>
                   </p>
                 </div>

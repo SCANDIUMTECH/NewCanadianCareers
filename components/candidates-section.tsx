@@ -36,7 +36,7 @@ export function CandidatesSection() {
                 as="h2" 
                 className="text-[clamp(1.75rem,4vw,2.5rem)] font-medium leading-[1.2] tracking-[-0.01em] text-foreground"
               >
-                Designed for Candidates
+                Built for Newcomers to Canada
               </TextReveal>
             </MotionWrapper>
 
@@ -45,8 +45,8 @@ export function CandidatesSection() {
                 className="space-y-6 max-w-lg"
                 lineClassName="text-lg text-foreground-muted leading-relaxed"
                 lines={[
-                  "Your profile is your resume. Build it once, and let opportunities find you. No more reformatting for every application.",
-                  "Track every application in one place. Know where you stand. Get real responses — or know when to move on."
+                  "Your international experience matters here. Build your profile once \u2014 highlight your credentials, language skills, and global expertise. Let Canadian employers who value diversity find you.",
+                  "Track every application in real time. Know exactly where you stand. Get responses \u2014 not silence. Your journey to a Canadian career should be transparent from day one."
                 ]}
               />
             </MotionWrapper>

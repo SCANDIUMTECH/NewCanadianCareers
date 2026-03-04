@@ -300,7 +300,7 @@ export function JobDetailClient({ job }: JobDetailClientProps) {
               {/* Logo */}
               <Link href="/" className="flex items-center group">
                 <span className="text-lg font-semibold tracking-tight text-foreground transition-colors duration-300 group-hover:text-primary">
-                  Orion
+                  NCC
                 </span>
                 <span className="ml-1.5 w-2 h-2 rounded-full bg-primary/50 transition-all duration-500 group-hover:bg-primary" />
               </Link>
@@ -795,8 +795,8 @@ export function JobDetailClient({ job }: JobDetailClientProps) {
                 <div className="space-y-4">
                   {[
                     { title: "Product Designer", company: "Acme Corp", location: "Remote" },
-                    { title: "UX Designer", company: "Nova Inc", location: "New York, NY" },
-                    { title: "Design Lead", company: "Quantum", location: "San Francisco, CA" },
+                    { title: "UX Designer", company: "Nova Inc", location: "Toronto, ON" },
+                    { title: "Design Lead", company: "Quantum", location: "Vancouver, BC" },
                   ].map((similarJob, i) => (
                     <Link key={i} href="#" className="block group">
                       <div className="p-3 rounded-xl hover:bg-foreground/[0.02] transition-colors">
@@ -907,7 +907,7 @@ export function JobDetailClient({ job }: JobDetailClientProps) {
             <DialogHeader>
               <DialogTitle>Report this job</DialogTitle>
               <DialogDescription>
-                Help us keep Orion safe by reporting jobs that violate our policies.
+                Help us keep New Canadian Careers safe by reporting jobs that violate our policies.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">

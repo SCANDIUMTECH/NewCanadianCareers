@@ -414,7 +414,7 @@ export default function NewCampaignPage() {
                         <Label htmlFor="from-name">From Name</Label>
                         <Input
                           id="from-name"
-                          placeholder="e.g., Orion Jobs"
+                          placeholder="e.g., New Canadian Careers"
                           value={fromName}
                           onChange={(e) => setFromName(e.target.value)}
                         />
@@ -424,7 +424,7 @@ export default function NewCampaignPage() {
                         <Input
                           id="from-email"
                           type="email"
-                          placeholder="e.g., hello@orion.jobs"
+                          placeholder="e.g., hello@newcanadian.careers"
                           value={fromEmail}
                           onChange={(e) => setFromEmail(e.target.value)}
                         />
@@ -435,7 +435,7 @@ export default function NewCampaignPage() {
                       <Input
                         id="reply-to"
                         type="email"
-                        placeholder="e.g., support@orion.jobs"
+                        placeholder="e.g., support@newcanadian.careers"
                         value={replyTo}
                         onChange={(e) => setReplyTo(e.target.value)}
                       />

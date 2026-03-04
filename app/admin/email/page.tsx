@@ -80,7 +80,7 @@ const providers = [
     apiKey: "re_••••••••••••••••",
     status: "active",
     lastSync: "2 min ago",
-    sendingDomain: "mail.orion.com",
+    sendingDomain: "mail.newcanadian.careers",
     spf: "verified",
     dkim: "verified",
     dmarc: "warning",
@@ -1800,7 +1800,7 @@ function LogsTab() {
             <p className="font-semibold text-sm">These logs are automatically deleted over time</p>
           </div>
           <p className="text-xs text-muted-foreground">
-            Every email Orion sends is logged here — who it was sent to, whether it was delivered, bounced, or failed, and the full provider response.
+            Every email New Canadian Careers sends is logged here — who it was sent to, whether it was delivered, bounced, or failed, and the full provider response.
             To protect user privacy and meet legal requirements, the system automatically deletes old logs on a schedule.
             Not all logs are treated the same — they are split into two tiers based on what they contain and how long the law says we need to keep them.
           </p>
@@ -2022,7 +2022,7 @@ function LogsTab() {
                       <p className="text-sm font-medium text-amber-800">This log will be kept for up to 3 years</p>
                     </div>
                     <p className="text-xs text-amber-700">
-                      Because this email <strong>{selectedLog.status.toLowerCase()}</strong>, it counts as compliance evidence — it proves Orion
+                      Because this email <strong>{selectedLog.status.toLowerCase()}</strong>, it counts as compliance evidence — it proves New Canadian Careers
                       handled the delivery failure or bounce correctly. CAN-SPAM law requires keeping this kind of proof,
                       so it&apos;s retained for the longer <em>Compliance Retention</em> period (default 1,095 days).
                     </p>

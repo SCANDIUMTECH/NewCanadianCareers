@@ -25,13 +25,13 @@ export function FinalCTASection() {
               as="h2" 
               className="text-[clamp(2rem,5vw,3.5rem)] font-medium leading-[1.1] tracking-[-0.02em] text-foreground"
             >
-              Ready to see clearly?
+              Ready to start your Canadian career?
             </TextReveal>
           </MotionWrapper>
 
           <MotionWrapper delay={150}>
             <p className="mt-6 text-lg md:text-xl text-foreground-muted leading-relaxed">
-              Join the platform built for how hiring should work.
+              Join thousands of newcomers and employers building Canada&apos;s future workforce.
             </p>
           </MotionWrapper>
 

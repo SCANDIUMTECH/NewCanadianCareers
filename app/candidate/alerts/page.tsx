@@ -465,7 +465,7 @@ function CreateAlertForm({
         <Label htmlFor="location">Location</Label>
         <Input
           id="location"
-          placeholder="e.g., San Francisco, New York"
+          placeholder="e.g., Toronto, Vancouver"
           value={formData.location}
           onChange={(e) => setFormData({ ...formData, location: e.target.value })}
         />

@@ -183,7 +183,7 @@ export function JobForm({
                     <Input
                       id="location"
                       type="text"
-                      placeholder="e.g. San Francisco, CA"
+                      placeholder="e.g., Toronto, ON"
                       value={data.location || ""}
                       onChange={(e) => onFieldChange("location", e.target.value)}
                       className={cn(

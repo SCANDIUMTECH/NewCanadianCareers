@@ -940,7 +940,7 @@ export default function AgencyJobDetailPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="internal">Through Orion (Recommended)</SelectItem>
+                      <SelectItem value="internal">Through NCC (Recommended)</SelectItem>
                       <SelectItem value="email">Via Email</SelectItem>
                       <SelectItem value="external">External URL</SelectItem>
                     </SelectContent>

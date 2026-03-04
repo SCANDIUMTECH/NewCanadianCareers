@@ -61,7 +61,7 @@ export function TermsOfServiceClient() {
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center group">
               <span className="text-lg font-semibold tracking-tight text-foreground transition-colors duration-300 group-hover:text-primary">
-                Orion
+                NCC
               </span>
               <span className="ml-1.5 w-2 h-2 rounded-full bg-primary/50 transition-all duration-500 group-hover:bg-primary" />
             </Link>
@@ -163,7 +163,7 @@ export function TermsOfServiceClient() {
                       Acceptance of Terms
                     </h2>
                     <p className="text-foreground-muted leading-relaxed mb-4">
-                      By accessing or using Orion (&quot;the Service&quot;), you agree to be bound by these Terms of Service (&quot;Terms&quot;). If you disagree with any part of these terms, you may not access the Service.
+                      By accessing or using New Canadian Careers (&quot;the Service&quot;), you agree to be bound by these Terms of Service (&quot;Terms&quot;). If you disagree with any part of these terms, you may not access the Service.
                     </p>
                     <p className="text-foreground-muted leading-relaxed mb-8">
                       These Terms apply to all visitors, users, and others who access or use the Service, including candidates, employers, recruitment agencies, and administrators.
@@ -176,7 +176,7 @@ export function TermsOfServiceClient() {
                       Description of Service
                     </h2>
                     <p className="text-foreground-muted leading-relaxed mb-4">
-                      Orion is a hiring platform that connects job seekers with employers and recruitment agencies. Our services include:
+                      New Canadian Careers is a hiring platform that connects job seekers with employers and recruitment agencies. Our services include:
                     </p>
                     <ul className="space-y-2 mb-8">
                       <li className="flex items-start gap-3">
@@ -286,10 +286,10 @@ export function TermsOfServiceClient() {
                       Content Ownership
                     </h2>
                     <p className="text-foreground-muted leading-relaxed mb-4">
-                      <strong className="text-foreground">Your Content:</strong> You retain ownership of all content you submit to the Service, including resumes, job listings, and profile information. By posting content, you grant Orion a worldwide, non-exclusive, royalty-free license to use, display, and distribute your content in connection with the Service.
+                      <strong className="text-foreground">Your Content:</strong> You retain ownership of all content you submit to the Service, including resumes, job listings, and profile information. By posting content, you grant New Canadian Careers a worldwide, non-exclusive, royalty-free license to use, display, and distribute your content in connection with the Service.
                     </p>
                     <p className="text-foreground-muted leading-relaxed mb-4">
-                      <strong className="text-foreground">Our Content:</strong> The Service and its original content (excluding content provided by users), features, and functionality are and will remain the exclusive property of Orion and its licensors. The Service is protected by copyright, trademark, and other laws.
+                      <strong className="text-foreground">Our Content:</strong> The Service and its original content (excluding content provided by users), features, and functionality are and will remain the exclusive property of New Canadian Careers and its licensors. The Service is protected by copyright, trademark, and other laws.
                     </p>
                     <p className="text-foreground-muted leading-relaxed mb-8">
                       You may not copy, modify, distribute, sell, or lease any part of our Services without permission.
@@ -400,7 +400,7 @@ export function TermsOfServiceClient() {
                       Limitation of Liability
                     </h2>
                     <p className="text-foreground-muted leading-relaxed mb-4">
-                      TO THE MAXIMUM EXTENT PERMITTED BY LAW, ORION AND ITS AFFILIATES, OFFICERS, EMPLOYEES, AGENTS, AND PARTNERS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO:
+                      TO THE MAXIMUM EXTENT PERMITTED BY LAW, NEW CANADIAN CAREERS AND ITS AFFILIATES, OFFICERS, EMPLOYEES, AGENTS, AND PARTNERS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO:
                     </p>
                     <ul className="space-y-2 mb-4">
                       <li className="flex items-start gap-3">
@@ -427,10 +427,10 @@ export function TermsOfServiceClient() {
                       Governing Law
                     </h2>
                     <p className="text-foreground-muted leading-relaxed mb-4">
-                      These Terms shall be governed by and construed in accordance with the laws of the State of California, United States, without regard to its conflict of law provisions.
+                      These Terms shall be governed by and construed in accordance with the laws of the Province of Ontario, Canada, without regard to its conflict of law provisions.
                     </p>
                     <p className="text-foreground-muted leading-relaxed mb-8">
-                      Any disputes arising under these Terms shall be resolved exclusively in the state or federal courts located in San Francisco County, California. You consent to the personal jurisdiction of such courts.
+                      Any disputes arising under these Terms shall be resolved exclusively in the courts located in the Province of Ontario, Canada. You consent to the personal jurisdiction of such courts.
                     </p>
                   </section>
 
@@ -460,14 +460,14 @@ export function TermsOfServiceClient() {
                         <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                         </svg>
-                        <span className="text-foreground">legal@orion.com</span>
+                        <span className="text-foreground">legal@newcanadian.careers</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
-                        <span className="text-foreground">Orion Inc., 123 Innovation Way, San Francisco, CA 94102</span>
+                        <span className="text-foreground">New Canadian Careers, Toronto, ON, Canada</span>
                       </div>
                     </div>
                   </section>
@@ -483,7 +483,7 @@ export function TermsOfServiceClient() {
         <div className="max-w-[1200px] mx-auto px-6 md:px-12">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm text-foreground-muted">
-              &copy; {new Date().getFullYear()} Orion. All rights reserved.
+              &copy; {new Date().getFullYear()} New Canadian Careers. All rights reserved.
             </p>
             <div className="flex items-center gap-6">
               <Link href="/terms" className="text-sm text-primary font-medium">

@@ -148,7 +148,7 @@ function AdminLayoutContent({
 
   // Build user display info from auth state
   const userName = authUser ? (authUser.full_name || `${authUser.first_name} ${authUser.last_name}`) : "Super Admin"
-  const userEmail = authUser?.email || "admin@orion.io"
+  const userEmail = authUser?.email || "admin@newcanadian.careers"
   const userInitials = authUser ? getInitials(authUser.first_name, authUser.last_name) : "SA"
 
   const handleSignOut = async () => {
@@ -224,7 +224,7 @@ function AdminLayoutContent({
               </div>
               <div className="flex flex-col group-data-[collapsible=icon]:hidden">
                 <span className="text-sm font-bold tracking-tight font-secondary leading-none">
-                  Orion
+                  NCC
                 </span>
                 <span className="text-[10px] font-medium text-muted-foreground/60 tracking-wide uppercase">
                   Admin

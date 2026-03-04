@@ -116,7 +116,7 @@ export function ArticleDetailClient({ article }: ArticleDetailClientProps) {
       {article.affiliate_disclosure !== "none" && (
         <div className="max-w-4xl mx-auto px-6 pb-8">
           <p className="text-xs text-muted-foreground/60 text-center">
-            This article may contain affiliate links. Orion may earn a commission at no extra cost to you.
+            This article may contain affiliate links. New Canadian Careers may earn a commission at no extra cost to you.
           </p>
         </div>
       )}

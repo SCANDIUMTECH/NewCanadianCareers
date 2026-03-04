@@ -478,7 +478,7 @@ export function QuickJobPostV2({ initialCompanyId }: QuickJobPostV2Props) {
                     id="location"
                     value={data.location || ""}
                     onChange={(e) => updateField("location", e.target.value)}
-                    placeholder={data.remote === "remote" ? "Remote (timezone/region)" : "e.g. San Francisco, CA"}
+                    placeholder={data.remote === "remote" ? "Remote (Canadian timezone/region)" : "e.g., Toronto, ON"}
                     className={cn("pl-9", uiErrors.location && "border-destructive")}
                   />
                 </div>

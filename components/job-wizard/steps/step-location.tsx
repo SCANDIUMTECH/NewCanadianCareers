@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import { PROVINCES, COUNTRY } from "@/lib/constants/canada"
 import { type JobWizardData } from "@/lib/job-wizard-schema"
 import { type ValidationErrors } from "@/hooks/use-job-wizard"
 import { useCompanyContext } from "@/hooks/use-company"
@@ -21,24 +22,6 @@ interface StepLocationProps {
   errors?: ValidationErrors
   onBlur?: (field: keyof JobWizardData) => void
 }
-
-const countries = [
-  { code: "CA", name: "Canada" },
-  { code: "US", name: "United States" },
-  { code: "GB", name: "United Kingdom" },
-  { code: "DE", name: "Germany" },
-  { code: "FR", name: "France" },
-  { code: "AU", name: "Australia" },
-  { code: "IN", name: "India" },
-  { code: "SG", name: "Singapore" },
-  { code: "JP", name: "Japan" },
-  { code: "BR", name: "Brazil" },
-  { code: "NL", name: "Netherlands" },
-  { code: "ES", name: "Spain" },
-  { code: "IT", name: "Italy" },
-  { code: "SE", name: "Sweden" },
-  { code: "CH", name: "Switzerland" },
-]
 
 const remoteOptions = [
   {
@@ -87,16 +70,9 @@ export function StepLocation({ data, updateData, errors = {}, onBlur }: StepLoca
     if (!data.city && company.headquarters_city) updates.city = company.headquarters_city
     if (!data.state && company.headquarters_state) updates.state = company.headquarters_state
     if (!data.postalCode && company.headquarters_postal_code) updates.postalCode = company.headquarters_postal_code
-    if (company.headquarters_country) {
-      const match = countries.find(
-        (c) => c.name === company.headquarters_country || c.code === company.headquarters_country
-      )
-      if (match && data.country === "CA" && match.code !== "CA") {
-        // Only override default country if company has a different one
-        updates.country = match.code
-      } else if (match && !data.country) {
-        updates.country = match.code
-      }
+    // Country is always Canada
+    if (!data.country) {
+      updates.country = COUNTRY.code
     }
 
     if (Object.keys(updates).length > 0) {
@@ -180,7 +156,7 @@ export function StepLocation({ data, updateData, errors = {}, onBlur }: StepLoca
               <Input
                 id="city"
                 autoComplete="address-level2"
-                placeholder="e.g., Vancouver"
+                placeholder="e.g., Toronto"
                 value={data.city}
                 onChange={(e) => updateData({ city: e.target.value })}
                 onBlur={() => onBlur?.("city")}
@@ -191,16 +167,22 @@ export function StepLocation({ data, updateData, errors = {}, onBlur }: StepLoca
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="state">Province / State <span className="text-destructive">*</span></Label>
-              <Input
-                id="state"
-                autoComplete="address-level1"
-                placeholder="e.g., BC"
+              <Label htmlFor="state">Province <span className="text-destructive">*</span></Label>
+              <Select
                 value={data.state}
-                onChange={(e) => updateData({ state: e.target.value })}
-                onBlur={() => onBlur?.("state")}
-                className={errors.state ? "border-destructive" : ""}
-              />
+                onValueChange={(value) => { updateData({ state: value }); onBlur?.("state") }}
+              >
+                <SelectTrigger className={errors.state ? "border-destructive" : ""}>
+                  <SelectValue placeholder="Select province" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PROVINCES.map((prov) => (
+                    <SelectItem key={prov.code} value={prov.code}>
+                      {prov.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               {errors.state && (
                 <p className="text-xs text-destructive">{errors.state}</p>
               )}
@@ -214,7 +196,7 @@ export function StepLocation({ data, updateData, errors = {}, onBlur }: StepLoca
               <Input
                 id="postalCode"
                 autoComplete="postal-code"
-                placeholder="e.g., V6B 1A1"
+                placeholder="e.g., M5V 3L9"
                 value={data.postalCode}
                 onChange={(e) => updateData({ postalCode: e.target.value })}
                 onBlur={() => onBlur?.("postalCode")}
@@ -225,25 +207,13 @@ export function StepLocation({ data, updateData, errors = {}, onBlur }: StepLoca
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="country">Country <span className="text-destructive">*</span></Label>
-              <Select
-                value={data.country}
-                onValueChange={(value) => updateData({ country: value })}
-              >
-                <SelectTrigger className={errors.country ? "border-destructive" : ""}>
-                  <SelectValue placeholder="Select country" />
-                </SelectTrigger>
-                <SelectContent>
-                  {countries.map((country) => (
-                    <SelectItem key={country.code} value={country.code}>
-                      {country.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.country && (
-                <p className="text-xs text-destructive">{errors.country}</p>
-              )}
+              <Label htmlFor="country">Country</Label>
+              <Input
+                id="country"
+                value={COUNTRY.name}
+                disabled
+                className="bg-muted"
+              />
             </div>
           </div>
         </div>
@@ -265,23 +235,13 @@ export function StepLocation({ data, updateData, errors = {}, onBlur }: StepLoca
           </div>
           <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="country">Primary Region (Optional)</Label>
-              <Select
-                value={data.country || "any"}
-                onValueChange={(value) => updateData({ country: value === "any" ? "" : value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Any region" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="any">Any region</SelectItem>
-                  {countries.map((country) => (
-                    <SelectItem key={country.code} value={country.code}>
-                      {country.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="country">Country</Label>
+              <Input
+                id="country"
+                value={COUNTRY.name}
+                disabled
+                className="bg-muted"
+              />
             </div>
           </div>
         </div>

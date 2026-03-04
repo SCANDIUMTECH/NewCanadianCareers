@@ -244,7 +244,7 @@ export default function PreferenceCenterPage({
 
         {/* Footer */}
         <motion.p variants={itemVariants} className="text-center text-xs text-muted-foreground mt-4">
-          Powered by Orion
+          Powered by NCC
         </motion.p>
       </motion.div>
     </div>

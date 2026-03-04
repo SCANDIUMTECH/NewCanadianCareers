@@ -2,8 +2,8 @@ import type { Metadata } from "next"
 import { PrivacyPolicyClient } from "./privacy-client"
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | Orion",
-  description: "Learn how Orion collects, uses, and protects your personal information.",
+  title: "Privacy Policy | New Canadian Careers",
+  description: "Learn how New Canadian Careers collects, uses, and protects your personal information.",
 }
 
 export default function PrivacyPolicyPage() {

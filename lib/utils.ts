@@ -38,11 +38,7 @@ export function getUserInitials(input: string): string {
 // ---------------------------------------------------------------------------
 
 export const CURRENCY_OPTIONS = [
-  { value: "USD", label: "USD", symbol: "$" },
   { value: "CAD", label: "CAD", symbol: "C$" },
-  { value: "EUR", label: "EUR", symbol: "€" },
-  { value: "GBP", label: "GBP", symbol: "£" },
-  { value: "AUD", label: "AUD", symbol: "A$" },
 ] as const
 
 export type CurrencyCode = (typeof CURRENCY_OPTIONS)[number]["value"]

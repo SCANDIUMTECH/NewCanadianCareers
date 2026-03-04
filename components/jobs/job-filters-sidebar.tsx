@@ -102,7 +102,7 @@ export function JobFiltersSidebar({
           </AccordionTrigger>
           <AccordionContent className="pt-2 pb-4">
             <Input
-              placeholder="City, state, or country"
+              placeholder="City or province (e.g., Toronto, ON)"
               value={filters.location}
               onChange={(e) => updateFilter("location", e.target.value)}
             />

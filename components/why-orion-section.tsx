@@ -32,7 +32,7 @@ export function WhyOrionSection() {
             as="h2" 
             className="text-[clamp(1.75rem,4vw,2.75rem)] font-medium leading-[1.2] tracking-[-0.01em] text-foreground max-w-3xl"
           >
-            Hiring is broken. Not because of a lack of tools — but because of too many of them.
+            Because newcomers deserve better than starting over.
           </TextReveal>
         </MotionWrapper>
 
@@ -43,15 +43,15 @@ export function WhyOrionSection() {
             className="space-y-8"
             lineClassName="text-lg text-foreground-muted leading-relaxed"
             lines={[
-              "Job boards are cluttered. Applicant tracking systems are bloated. Candidates apply to hundreds of roles and hear nothing back. Companies drown in resumes they never read.",
-              "New Canadian Careers is different. We strip away the noise to surface what matters: the right connection between talent and opportunity. No gamification. No dark patterns. No wasted time."
+              "Moving to Canada is bold. But finding your first Canadian job shouldn\u2019t mean starting from scratch. Too many newcomers face invisible barriers \u2014 unrecognized credentials, the \u2018Canadian experience\u2019 catch-22, and job boards that weren\u2019t built with them in mind.",
+              "New Canadian Careers changes that. We connect skilled newcomers directly with Canadian employers who understand the value of international experience. No hidden barriers. No wasted applications. No noise."
             ]}
           />
           
           {/* Emphasis line */}
           <MotionWrapper delay={600}>
             <p className="mt-8 text-xl text-foreground leading-relaxed font-medium">
-              Just clarity.
+              Just opportunity.
             </p>
           </MotionWrapper>
         </div>

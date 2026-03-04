@@ -79,7 +79,7 @@ const baseCompanies: QuickJobCompany[] = [
     verified: true,
     industry: "Technology",
     applyEmail: "careers@acme.com",
-    location: "San Francisco, CA",
+    location: "Toronto, ON",
   },
   {
     id: 2,

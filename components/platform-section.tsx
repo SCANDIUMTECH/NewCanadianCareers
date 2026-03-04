@@ -32,14 +32,14 @@ export function PlatformSection() {
             as="h2" 
             className="text-[clamp(1.75rem,4vw,2.75rem)] font-medium leading-[1.2] tracking-[-0.01em] text-foreground max-w-4xl"
           >
-            Platform-Level Control
+            Built for the Canadian Market
           </TextReveal>
         </MotionWrapper>
 
         {/* The statement paragraph */}
         <MotionWrapper delay={300}>
           <p className="mt-12 md:mt-16 text-xl md:text-2xl text-foreground-muted leading-relaxed max-w-3xl">
-            New Canadian Careers isn&apos;t just a job board. It&apos;s infrastructure for how hiring should work. Permissions, workflows, integrations, and analytics — all designed to give you control without complexity. Every feature exists because it needed to. Nothing more.
+            New Canadian Careers isn&apos;t just a job board — it&apos;s infrastructure designed for how Canadian hiring should work. LMIA-friendly job categorization, credential recognition tools, and analytics that help you build a diverse workforce. Every feature exists because Canadian employers and newcomers needed it.
           </p>
         </MotionWrapper>
 

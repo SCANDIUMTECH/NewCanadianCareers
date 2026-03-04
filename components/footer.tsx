@@ -56,26 +56,29 @@ function LogoWordmark() {
   const [isHovered, setIsHovered] = useState(false)
   
   return (
-    <div 
-      className="flex items-center cursor-default"
+    <div
+      className="flex flex-col cursor-default"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <span 
-        className={cn(
-          "text-xl font-semibold tracking-tight transition-colors duration-300",
-          isHovered ? "text-primary" : "text-foreground"
-        )}
-      >
-        NCC
-      </span>
-      {/* Subtle dot accent */}
-      <span 
-        className={cn(
-          "ml-1 w-1.5 h-1.5 rounded-full transition-all duration-500",
-          isHovered ? "bg-primary scale-100" : "bg-primary/40 scale-75"
-        )}
-      />
+      <div className="flex items-center">
+        <span
+          className={cn(
+            "text-xl font-semibold tracking-tight transition-colors duration-300",
+            isHovered ? "text-primary" : "text-foreground"
+          )}
+        >
+          NCC
+        </span>
+        {/* Subtle dot accent */}
+        <span
+          className={cn(
+            "ml-1 w-1.5 h-1.5 rounded-full transition-all duration-500",
+            isHovered ? "bg-primary scale-100" : "bg-primary/40 scale-75"
+          )}
+        />
+      </div>
+      <span className="text-xs text-foreground-muted/60 mt-1">Canadian jobs for newcomers</span>
     </div>
   )
 }

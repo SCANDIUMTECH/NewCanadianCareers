@@ -3,13 +3,13 @@ import type { Metadata } from "next"
 import JobsSearchClient from "./jobs-search-client"
 
 export const metadata: Metadata = {
-  title: "Browse Jobs | Orion",
+  title: "Browse Canadian Jobs | New Canadian Careers",
   description:
-    "Search thousands of jobs across top companies. Filter by location, salary, job type, and more. Find your next opportunity on Orion.",
+    "Search jobs across Canada. Filter by province, city, salary, and job type. Find your next Canadian career opportunity.",
   openGraph: {
-    title: "Browse Jobs | Orion",
+    title: "Browse Canadian Jobs | New Canadian Careers",
     description:
-      "Search thousands of jobs across top companies. Filter by location, salary, job type, and more. Find your next opportunity on Orion.",
+      "Search jobs across Canada. Filter by province, city, salary, and job type. Find your next Canadian career opportunity.",
     type: "website",
     url: "/jobs",
   },

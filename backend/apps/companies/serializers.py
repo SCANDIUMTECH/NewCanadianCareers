@@ -41,6 +41,13 @@ class CompanySerializer(serializers.ModelSerializer):
     def validate_industry(self, value):
         return validate_dynamic_industry(value)
 
+    def validate_headquarters_country(self, value):
+        if value and value.lower() not in ('canada', 'ca', ''):
+            raise serializers.ValidationError(
+                "Companies must be headquartered in Canada."
+            )
+        return "Canada" if value else value
+
     class Meta:
         model = Company
         fields = [

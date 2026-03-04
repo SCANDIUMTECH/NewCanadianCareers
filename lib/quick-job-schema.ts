@@ -69,7 +69,7 @@ export const quickJobSchema = z.object({
   wageMin: z.number().positive().optional(),
   wageMax: z.number().positive().optional(),
   wagePeriod: z.enum(["hour", "month", "year"]).default("year"),
-  currency: z.enum(["USD", "EUR", "GBP", "CAD", "AUD"]).default("CAD"),
+  currency: z.enum(["CAD"]).default("CAD"),
   hoursPerWeek: z.number().min(1).max(168).optional(),
   postDate: z.string().min(1, "Post date is required"),
   description: z.string().refine((value) => getVisibleTextLength(value) >= 50, {

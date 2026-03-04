@@ -25,19 +25,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!article) {
     return {
-      title: "Article Not Found | Orion Jobs",
+      title: "Article Not Found | New Canadian Careers",
       description: "The article you are looking for could not be found.",
     }
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://orion.jobs"
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://newcanadian.careers"
   const articleUrl = `${baseUrl}/news/${article.slug}`
 
   const shouldNoIndex = article.status !== "published"
 
   return {
-    title: `${article.title} | Orion Jobs`,
-    description: article.meta_description || article.excerpt || `Read ${article.title} on Orion Jobs`,
+    title: `${article.title} | New Canadian Careers`,
+    description: article.meta_description || article.excerpt || `Read ${article.title} on New Canadian Careers`,
     keywords: article.tags?.join(", "),
     robots: shouldNoIndex ? { index: false, follow: false } : undefined,
     openGraph: {
@@ -76,7 +76,7 @@ export default async function ArticlePage({ params }: Props) {
     notFound()
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://orion.jobs"
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://newcanadian.careers"
 
   return (
     <>

@@ -59,7 +59,7 @@ export function PrivacyPolicyClient() {
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center group">
               <span className="text-lg font-semibold tracking-tight text-foreground transition-colors duration-300 group-hover:text-primary">
-                Orion
+                NCC
               </span>
               <span className="ml-1.5 w-2 h-2 rounded-full bg-primary/50 transition-all duration-500 group-hover:bg-primary" />
             </Link>
@@ -161,10 +161,10 @@ export function PrivacyPolicyClient() {
                       Introduction
                     </h2>
                     <p className="text-foreground-muted leading-relaxed mb-4">
-                      Welcome to Orion (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;). We are committed to protecting your privacy and ensuring the security of your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our hiring platform.
+                      Welcome to New Canadian Careers (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;). We are committed to protecting your privacy and ensuring the security of your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our hiring platform.
                     </p>
                     <p className="text-foreground-muted leading-relaxed mb-8">
-                      By accessing or using Orion, you agree to the terms of this Privacy Policy. If you do not agree with our policies and practices, please do not use our services.
+                      By accessing or using New Canadian Careers, you agree to the terms of this Privacy Policy. If you do not agree with our policies and practices, please do not use our services.
                     </p>
                   </section>
 
@@ -336,7 +336,7 @@ export function PrivacyPolicyClient() {
                       </li>
                     </ul>
                     <p className="text-foreground-muted leading-relaxed mb-8">
-                      To exercise these rights, please contact us at privacy@orion.com. We will respond to your request within 30 days.
+                      To exercise these rights, please contact us at privacy@newcanadian.careers. We will respond to your request within 30 days.
                     </p>
                   </section>
 
@@ -427,14 +427,14 @@ export function PrivacyPolicyClient() {
                         <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                         </svg>
-                        <span className="text-foreground">privacy@orion.com</span>
+                        <span className="text-foreground">privacy@newcanadian.careers</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
-                        <span className="text-foreground">Orion Inc., 123 Innovation Way, San Francisco, CA 94102</span>
+                        <span className="text-foreground">New Canadian Careers, Toronto, ON, Canada</span>
                       </div>
                     </div>
                   </section>
@@ -450,7 +450,7 @@ export function PrivacyPolicyClient() {
         <div className="max-w-[1200px] mx-auto px-6 md:px-12">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm text-foreground-muted">
-              &copy; {new Date().getFullYear()} Orion. All rights reserved.
+              &copy; {new Date().getFullYear()} New Canadian Careers. All rights reserved.
             </p>
             <div className="flex items-center gap-6">
               <Link href="/terms" className="text-sm text-foreground-muted hover:text-foreground transition-colors">

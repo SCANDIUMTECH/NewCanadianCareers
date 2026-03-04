@@ -32,7 +32,7 @@ function JobsPageSkeleton() {
         <div className="max-w-[1400px] mx-auto px-6 md:px-12">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
-              <span className="text-lg font-semibold text-foreground">Orion</span>
+              <span className="text-lg font-semibold text-foreground">NCC</span>
               <span className="ml-1.5 w-2 h-2 rounded-full bg-primary/50" />
             </div>
           </div>
@@ -324,7 +324,7 @@ function JobsPageContent() {
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center group">
               <span className="text-lg font-semibold tracking-tight text-foreground transition-colors duration-300 group-hover:text-primary">
-                Orion
+                NCC
               </span>
               <span className="ml-1.5 w-2 h-2 rounded-full bg-primary/50 transition-all duration-500 group-hover:bg-primary" />
             </Link>
@@ -558,7 +558,7 @@ function JobsPageContent() {
         <div className="max-w-[1400px] mx-auto px-6 md:px-12">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <span className="text-lg font-semibold text-foreground">Orion</span>
+              <span className="text-lg font-semibold text-foreground">NCC</span>
               <span className="w-1.5 h-1.5 rounded-full bg-primary" />
             </div>
             <div className="flex items-center gap-6 text-sm text-foreground-muted">
@@ -568,7 +568,7 @@ function JobsPageContent() {
               <Link href="/privacy" className="hover:text-foreground transition-colors">
                 Privacy
               </Link>
-              <span>&copy; {new Date().getFullYear()} Orion</span>
+              <span>&copy; {new Date().getFullYear()} New Canadian Careers</span>
             </div>
           </div>
         </div>

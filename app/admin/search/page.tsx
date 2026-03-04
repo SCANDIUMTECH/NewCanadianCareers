@@ -227,9 +227,9 @@ export default function SearchSEOPage() {
   const [sitemapIncludeCategories, setSitemapIncludeCategories] = useState(true)
 
   // Schema settings state
-  const [schemaOrgName, setSchemaOrgName] = useState("Orion Jobs")
-  const [schemaOrgUrl, setSchemaOrgUrl] = useState("https://orion.jobs")
-  const [schemaLogoUrl, setSchemaLogoUrl] = useState("https://orion.jobs/logo.png")
+  const [schemaOrgName, setSchemaOrgName] = useState("New Canadian Careers")
+  const [schemaOrgUrl, setSchemaOrgUrl] = useState("https://newcanadian.careers")
+  const [schemaLogoUrl, setSchemaLogoUrl] = useState("https://newcanadian.careers/logo.png")
   const [schemaIncludeSalary, setSchemaIncludeSalary] = useState(true)
   const [schemaIncludeDirectApply, setSchemaIncludeDirectApply] = useState(true)
   const [schemaIncludeRemote, setSchemaIncludeRemote] = useState(true)
@@ -281,9 +281,9 @@ export default function SearchSEOPage() {
 
         // Populate schema settings form with persisted values
         if (schemaSettings) {
-          setSchemaOrgName(schemaSettings.organizationName || "Orion Jobs")
-          setSchemaOrgUrl(schemaSettings.organizationUrl || "https://orion.jobs")
-          setSchemaLogoUrl(schemaSettings.logoUrl || "https://orion.jobs/logo.png")
+          setSchemaOrgName(schemaSettings.organizationName || "New Canadian Careers")
+          setSchemaOrgUrl(schemaSettings.organizationUrl || "https://newcanadian.careers")
+          setSchemaLogoUrl(schemaSettings.logoUrl || "https://newcanadian.careers/logo.png")
           setSchemaIncludeSalary(schemaSettings.includeSalary ?? true)
           setSchemaIncludeDirectApply(schemaSettings.includeDirectApply ?? true)
           setSchemaIncludeRemote(schemaSettings.includeRemoteFields ?? true)

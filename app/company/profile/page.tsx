@@ -540,7 +540,7 @@ export default function CompanyProfilePage() {
                       <Input
                         value={formData.headquarters_city || ""}
                         onChange={(e) => updateField("headquarters_city", e.target.value || null)}
-                        placeholder="San Francisco"
+                        placeholder="Toronto"
                       />
                     ) : (
                       <p className="text-sm font-medium text-foreground">{company?.headquarters_city || "—"}</p>

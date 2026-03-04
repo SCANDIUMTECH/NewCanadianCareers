@@ -149,7 +149,7 @@ export function JobFormFields({
             placeholder={
               data.remote === "remote"
                 ? "Remote (Timezone or region)"
-                : "e.g. San Francisco, CA"
+                : "e.g., Toronto, ON"
             }
             value={data.location || ""}
             onChange={(e) => onFieldChange("location", e.target.value)}

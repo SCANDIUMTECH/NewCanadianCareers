@@ -407,8 +407,8 @@ export default function CompanyInvoicesPage() {
                 <h3 className="text-sm font-medium text-foreground mb-1">Need help with billing?</h3>
                 <p className="text-sm text-foreground-muted">
                   Contact our support team at{" "}
-                  <a href="mailto:billing@orion.com" className="text-primary hover:underline">
-                    billing@orion.com
+                  <a href="mailto:billing@newcanadian.careers" className="text-primary hover:underline">
+                    billing@newcanadian.careers
                   </a>{" "}
                   for questions about invoices or payments.
                 </p>

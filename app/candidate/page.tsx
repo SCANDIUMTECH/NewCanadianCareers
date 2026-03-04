@@ -33,7 +33,7 @@ interface RecentlyViewedJob {
 function getRecentlyViewed(): RecentlyViewedJob[] {
   if (typeof window === "undefined") return []
   try {
-    const stored = localStorage.getItem("orion_recently_viewed_jobs")
+    const stored = localStorage.getItem("ncc_recently_viewed_jobs")
     if (stored) {
       return JSON.parse(stored).slice(0, 5)
     }

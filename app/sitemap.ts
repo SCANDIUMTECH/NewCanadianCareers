@@ -30,7 +30,7 @@ async function getSitemapData(): Promise<SitemapData> {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://orion.jobs'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://newcanadian.careers'
 
   // Fetch real data from backend
   const data = await getSitemapData()

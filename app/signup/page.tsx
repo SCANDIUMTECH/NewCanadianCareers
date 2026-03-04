@@ -123,11 +123,11 @@ export default function SignupPage() {
           {/* Logo */}
           <Link href="/" className="flex items-center">
             <span className="text-2xl font-semibold tracking-tight text-white">
-              Orion
+              NCC
             </span>
             <span className="ml-1.5 w-2 h-2 rounded-full bg-primary" />
           </Link>
-          
+
           {/* Quote - Dynamic based on account type */}
           <div className="max-w-md">
             <p className="text-2xl md:text-3xl font-medium leading-relaxed text-white/90">
@@ -147,10 +147,10 @@ export default function SignupPage() {
                 : "For candidates, companies, and agencies."}
             </p>
           </div>
-          
+
           {/* Footer */}
           <p className="text-sm text-white/40">
-            &copy; {new Date().getFullYear()} Orion
+            &copy; {new Date().getFullYear()} New Canadian Careers
           </p>
         </div>
       </div>
@@ -162,7 +162,7 @@ export default function SignupPage() {
           <MotionWrapper delay={0} className="lg:hidden mb-12">
             <Link href="/" className="flex items-center">
               <span className="text-xl font-semibold tracking-tight text-foreground">
-                Orion
+                NCC
               </span>
               <span className="ml-1 w-1.5 h-1.5 rounded-full bg-primary" />
             </Link>
@@ -176,7 +176,7 @@ export default function SignupPage() {
                   Create your account
                 </h1>
                 <p className="mt-3 text-foreground-muted">
-                  Choose how you want to use Orion
+                  Choose how you want to use New Canadian Careers
                 </p>
               </MotionWrapper>
 

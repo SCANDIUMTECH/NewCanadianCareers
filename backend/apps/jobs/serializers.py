@@ -9,6 +9,18 @@ from apps.companies.serializers import CompanySerializer
 from apps.companies.models import Company, Agency
 from .models import Job, JobReport, JobView
 
+CANADIAN_PROVINCES = [
+    'AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'NT', 'NU', 'ON', 'PE', 'QC', 'SK', 'YT'
+]
+
+PROVINCE_NAME_TO_CODE = {
+    'alberta': 'AB', 'british columbia': 'BC', 'manitoba': 'MB',
+    'new brunswick': 'NB', 'newfoundland and labrador': 'NL',
+    'nova scotia': 'NS', 'northwest territories': 'NT', 'nunavut': 'NU',
+    'ontario': 'ON', 'prince edward island': 'PE', 'quebec': 'QC',
+    'saskatchewan': 'SK', 'yukon': 'YT',
+}
+
 
 def _get_valid_category_slugs():
     """Return set of active category slugs from the Category table.
@@ -114,6 +126,27 @@ class JobCreateSerializer(serializers.ModelSerializer):
 
     def validate_category(self, value):
         return validate_dynamic_category(value)
+
+    def validate_country(self, value):
+        if value and value.lower() not in ('canada', 'ca'):
+            raise serializers.ValidationError("Jobs must be located in Canada.")
+        return "Canada"  # Normalize to full name
+
+    def validate_state(self, value):
+        if value and value.upper() not in CANADIAN_PROVINCES:
+            if value.lower() in PROVINCE_NAME_TO_CODE:
+                return PROVINCE_NAME_TO_CODE[value.lower()]
+            raise serializers.ValidationError(
+                "Must be a valid Canadian province or territory code."
+            )
+        return value.upper() if value else value
+
+    def validate_salary_currency(self, value):
+        if value and value.upper() != 'CAD':
+            raise serializers.ValidationError(
+                "Currency must be CAD for Canadian jobs."
+            )
+        return 'CAD'
 
     def validate(self, attrs):
         # Validate salary range

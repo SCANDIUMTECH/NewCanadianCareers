@@ -23,7 +23,7 @@ import { CompanyOnboarding } from "@/components/company-onboarding"
 
 /**
  * Company Dashboard Layout
- * Premium glassmorphism design matching Orion's visual language
+ * Premium glassmorphism design matching NCC's visual language
  * Uses shared DashboardHeader with company-specific extensions
  * Integrated with CompanyProvider for real API data
  */

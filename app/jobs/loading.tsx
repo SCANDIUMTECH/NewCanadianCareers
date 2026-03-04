@@ -8,7 +8,7 @@ export default function Loading() {
         <div className="max-w-[1400px] mx-auto px-6 md:px-12">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
-              <span className="text-lg font-semibold text-foreground">Orion</span>
+              <span className="text-lg font-semibold text-foreground">NCC</span>
               <span className="ml-1.5 w-2 h-2 rounded-full bg-primary/50" />
             </div>
             <div className="flex items-center gap-3">

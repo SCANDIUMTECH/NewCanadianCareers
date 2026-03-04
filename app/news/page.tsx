@@ -4,11 +4,11 @@ import { Loader2 } from "lucide-react"
 import { NewsIndexClient } from "./news-index-client"
 
 export const metadata: Metadata = {
-  title: "News & Insights | Orion Jobs",
-  description: "Career advice, industry insights, and hiring trends from Orion Jobs.",
+  title: "News & Insights | New Canadian Careers",
+  description: "Career advice, industry insights, and hiring trends from New Canadian Careers.",
   openGraph: {
-    title: "News & Insights | Orion Jobs",
-    description: "Career advice, industry insights, and hiring trends from Orion Jobs.",
+    title: "News & Insights | New Canadian Careers",
+    description: "Career advice, industry insights, and hiring trends from New Canadian Careers.",
     type: "website",
   },
 }

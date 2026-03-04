@@ -76,12 +76,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!job) {
     return {
-      title: 'Job Not Found | Orion Jobs',
+      title: 'Job Not Found | New Canadian Careers',
       description: 'The job you are looking for could not be found.',
     }
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://orion.jobs'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://newcanadian.careers'
   const jobUrl = `${baseUrl}/jobs/${job.job_id}`
 
   const plainDescription = job.description.replace(/<[^>]*>/g, '').replace(/&\w+;/g, ' ').replace(/\s+/g, ' ').trim()
@@ -105,7 +105,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const shouldNoIndex = noIndexStatuses.includes(job.status)
 
   return {
-    title: `${job.title} at ${job.company.name} | Orion Jobs`,
+    title: `${job.title} at ${job.company.name} | New Canadian Careers`,
     description: metaDescription,
     keywords: [...(job.skills || []), job.category, job.company.name, locationText].join(', '),
     authors: [{ name: job.company.name }],
@@ -117,7 +117,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url: jobUrl,
       title: `${job.title} at ${job.company.name}`,
       description: metaDescription,
-      siteName: 'Orion Jobs',
+      siteName: 'New Canadian Careers',
       images: [
         {
           url: job.company.logo || `${baseUrl}/og-job.png`,
