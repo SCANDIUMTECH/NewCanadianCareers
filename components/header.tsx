@@ -132,8 +132,8 @@ export function Header() {
           }}
         />
 
-        <nav className="relative flex items-center justify-between h-14 md:h-16 px-4 md:px-6">
-          
+        <nav className="relative flex items-center justify-between h-16 md:h-20 px-4 md:px-8">
+
           {/* Logo with glow effect */}
           <Link href="/" className="flex items-center group relative">
             {/* Logo glow on hover */}
@@ -141,9 +141,9 @@ export function Header() {
             <Image
               src="/logo.svg"
               alt="New Canadian Careers Logo"
-              width={32}
-              height={32}
-              className="relative h-8 w-auto transition-all duration-300 group-hover:scale-110"
+              width={48}
+              height={48}
+              className="relative h-12 w-auto transition-all duration-300 group-hover:scale-110"
               priority
             />
           </Link>
@@ -153,7 +153,7 @@ export function Header() {
             {/* Active indicator background */}
             <div
               className={cn(
-                "absolute h-8 rounded-full bg-foreground/5 transition-all duration-300 ease-out",
+                "absolute h-10 rounded-full bg-foreground/5 transition-all duration-300 ease-out",
                 activeLink ? "opacity-100" : "opacity-0"
               )}
             />
@@ -227,7 +227,7 @@ export function Header() {
                 <Link
                   href="/login"
                   className={cn(
-                    "hidden sm:flex items-center justify-center px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300",
+                    "hidden sm:flex items-center justify-center px-6 py-3 rounded-xl text-sm font-medium transition-all duration-300",
                     "text-foreground-muted hover:text-foreground hover:bg-foreground/5"
                   )}
                 >
@@ -263,7 +263,7 @@ function NavLink({
     <Link
       href={href}
       className={cn(
-        "relative px-4 py-2 text-sm font-medium transition-all duration-300",
+        "relative px-5 py-3 text-sm font-medium transition-all duration-300",
         isActive ? "text-foreground" : "text-foreground-muted hover:text-foreground"
       )}
       onMouseEnter={() => onHover(label)}
@@ -352,9 +352,9 @@ function PremiumButton({ href, children }: { href: string; children: ReactNode }
       />
       
       {/* Button body */}
-      <div 
+      <div
         className={cn(
-          "relative overflow-hidden px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-300",
+          "relative overflow-hidden px-6 py-3 rounded-xl text-sm font-medium transition-all duration-300",
           "bg-primary text-primary-foreground"
         )}
         style={{
