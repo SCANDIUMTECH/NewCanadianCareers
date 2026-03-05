@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react"
 import { Share2, Copy, Check, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
 import { getPublicArticles } from "@/lib/api/articles"
 import { TEMPLATE_COMPONENTS } from "@/components/articles/templates"
 import type { PublicArticleDetail, PublicArticle } from "@/lib/admin/types"
@@ -69,19 +68,15 @@ export function ArticleDetailClient({ article }: ArticleDetailClientProps) {
 
   return (
     <div className="relative">
-      {/* Back nav */}
-      <div className="fixed top-4 left-4 z-40">
-        <Button
-          variant="secondary"
-          size="sm"
-          asChild
-          className="bg-white/80 backdrop-blur-sm shadow-sm"
+      {/* Inline breadcrumb */}
+      <div className="max-w-4xl mx-auto px-6 pt-6 pb-2">
+        <Link
+          href="/news"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
-          <Link href="/news">
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back
-          </Link>
-        </Button>
+          <ArrowLeft className="h-3.5 w-3.5" />
+          <span className="font-secondary">Back to News</span>
+        </Link>
       </div>
 
       {/* Share floating pill */}
@@ -115,7 +110,7 @@ export function ArticleDetailClient({ article }: ArticleDetailClientProps) {
       {/* Affiliate disclosure */}
       {article.affiliate_disclosure !== "none" && (
         <div className="max-w-4xl mx-auto px-6 pb-8">
-          <p className="text-xs text-muted-foreground/60 text-center">
+          <p className="font-secondary text-xs text-muted-foreground/60 text-center">
             This article may contain affiliate links. New Canadian Careers may earn a commission at no extra cost to you.
           </p>
         </div>

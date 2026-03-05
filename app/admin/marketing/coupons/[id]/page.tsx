@@ -321,10 +321,10 @@ export default function CouponDetailPage() {
             </CardContent>
           </Card>
           <Card className="relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 -translate-y-1/2 translate-x-1/2 opacity-[0.08]" />
+            <div className="absolute top-0 right-0 w-20 h-20 rounded-full bg-gradient-to-br from-sky to-sky-deep -translate-y-1/2 translate-x-1/2 opacity-[0.08]" />
             <CardContent className="pt-6 relative">
               <div className="flex items-center gap-2 mb-3">
-                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-sky to-sky-deep flex items-center justify-center">
                   <Users className="h-4 w-4 text-white" />
                 </div>
                 <span className="text-sm text-muted-foreground">Unique Users</span>
@@ -347,10 +347,10 @@ export default function CouponDetailPage() {
             </CardContent>
           </Card>
           <Card className="relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 -translate-y-1/2 translate-x-1/2 opacity-[0.08]" />
+            <div className="absolute top-0 right-0 w-20 h-20 rounded-full bg-gradient-to-br from-primary to-destructive -translate-y-1/2 translate-x-1/2 opacity-[0.08]" />
             <CardContent className="pt-6 relative">
               <div className="flex items-center gap-2 mb-3">
-                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-destructive flex items-center justify-center">
                   <BarChart3 className="h-4 w-4 text-white" />
                 </div>
                 <span className="text-sm text-muted-foreground">Remaining</span>

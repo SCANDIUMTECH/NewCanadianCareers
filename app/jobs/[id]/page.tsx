@@ -1,6 +1,8 @@
 import { cache } from 'react'
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { Header } from '@/components/header'
+import { Footer } from '@/components/footer'
 import { JobPostingJsonLd } from '@/components/seo/job-posting-schema'
 import { BreadcrumbJsonLd } from '@/components/seo/breadcrumb-schema'
 import { FAQPageJsonLd, generateJobFAQItems } from '@/components/seo/faq-schema'
@@ -212,13 +214,17 @@ export default async function JobViewPage({ params }: Props) {
 
   return (
     <>
-      {/* SEO Schema Markup */}
-      <JobPostingJsonLd job={schemaJob} />
-      <BreadcrumbJsonLd items={breadcrumbItems} />
-      <FAQPageJsonLd items={faqItems} />
+      <Header />
+      <main className="pt-24 md:pt-28">
+        {/* SEO Schema Markup */}
+        <JobPostingJsonLd job={schemaJob} />
+        <BreadcrumbJsonLd items={breadcrumbItems} />
+        <FAQPageJsonLd items={faqItems} />
 
-      {/* Client-side interactive component */}
-      <JobDetailClient job={clientJob} />
+        {/* Client-side interactive component */}
+        <JobDetailClient job={clientJob} />
+      </main>
+      <Footer />
     </>
   )
 }

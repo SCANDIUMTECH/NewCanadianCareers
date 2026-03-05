@@ -604,7 +604,7 @@ export default function SearchSEOPage() {
       <motion.div variants={itemVariants} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-sky to-sky-deep flex items-center justify-center shadow-lg shadow-sky/20">
               <Globe className="h-6 w-6 text-white" />
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-green-500 border-2 border-background" />
@@ -636,11 +636,11 @@ export default function SearchSEOPage() {
         animate="show"
       >
         {[
-          { label: "SEO Score", value: `${seoHealthMetrics.overallScore}/100`, icon: Activity, gradient: "from-indigo-500 to-blue-600", bgAccent: "bg-indigo-500" },
+          { label: "SEO Score", value: `${seoHealthMetrics.overallScore}/100`, icon: Activity, gradient: "from-primary to-primary-hover", bgAccent: "bg-primary" },
           { label: "Indexed Pages", value: seoHealthMetrics.indexedPages.toLocaleString(), icon: Database, gradient: "from-emerald-500 to-teal-600", bgAccent: "bg-emerald-500" },
-          { label: "Crawl Errors", value: seoHealthMetrics.crawlErrors.toString(), icon: AlertTriangle, gradient: seoHealthMetrics.crawlErrors > 10 ? "from-red-500 to-rose-600" : "from-amber-500 to-orange-600", bgAccent: seoHealthMetrics.crawlErrors > 10 ? "bg-red-500" : "bg-amber-500", highlight: seoHealthMetrics.crawlErrors > 10 },
+          { label: "Crawl Errors", value: seoHealthMetrics.crawlErrors.toString(), icon: AlertTriangle, gradient: seoHealthMetrics.crawlErrors > 10 ? "from-red-500 to-red-600" : "from-amber-500 to-orange-600", bgAccent: seoHealthMetrics.crawlErrors > 10 ? "bg-red-500" : "bg-amber-500", highlight: seoHealthMetrics.crawlErrors > 10 },
           { label: "Schema Errors", value: seoHealthMetrics.schemaErrors.toString(), icon: Code, gradient: seoHealthMetrics.schemaErrors > 0 ? "from-amber-500 to-orange-600" : "from-emerald-500 to-teal-600", bgAccent: seoHealthMetrics.schemaErrors > 0 ? "bg-amber-500" : "bg-emerald-500" },
-          { label: "AI Visibility", value: `${seoHealthMetrics.aiVisibilityScore}%`, icon: Bot, gradient: "from-violet-500 to-purple-600", bgAccent: "bg-violet-500" },
+          { label: "AI Visibility", value: `${seoHealthMetrics.aiVisibilityScore}%`, icon: Bot, gradient: "from-primary-light to-primary", bgAccent: "bg-primary" },
         ].map((stat) => (
           <motion.div key={stat.label} variants={itemVariants}>
             <Card className={cn("relative overflow-hidden group", stat.highlight && "border-red-200 bg-red-50/30")}>
@@ -711,7 +711,7 @@ export default function SearchSEOPage() {
             {/* Quick Actions */}
             <Card className="relative overflow-hidden group">
               <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-teal-500 opacity-[0.04] transition-opacity duration-300 group-hover:opacity-[0.08]" />
-              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-teal-500 via-emerald-500 to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-teal-500 via-emerald-500 to-sky opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2.5">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-teal-500 to-emerald-600 text-white shadow-sm">
@@ -767,7 +767,7 @@ export default function SearchSEOPage() {
                       size="sm"
                       onClick={() => handleAutoFix('fill_all_meta')}
                       disabled={isAutoFixing}
-                      className="bg-gradient-to-r from-violet-500 to-purple-600 text-white hover:from-violet-600 hover:to-purple-700"
+                      className="bg-gradient-to-r from-primary-light to-primary text-white hover:from-primary hover:to-primary-hover"
                     >
                       {isAutoFixing ? (
                         <>
@@ -855,7 +855,7 @@ export default function SearchSEOPage() {
                       critical: { bg: "bg-red-100", text: "text-red-600", badge: "bg-red-500/10 text-red-600 border-red-500/20" },
                       error: { bg: "bg-red-100", text: "text-red-600", badge: "bg-red-500/10 text-red-600 border-red-500/20" },
                       warning: { bg: "bg-amber-100", text: "text-amber-600", badge: "bg-amber-500/10 text-amber-600 border-amber-500/20" },
-                      info: { bg: "bg-blue-100", text: "text-blue-600", badge: "bg-blue-500/10 text-blue-600 border-blue-500/20" },
+                      info: { bg: "bg-sky/10", text: "text-sky", badge: "bg-sky/10 text-sky border-sky/20" },
                     }[rec.severity]
                     const isExpanded = expandedRecs.includes(rec.id)
                     const hasItems = rec.affected_items && rec.affected_items.length > 0
@@ -893,7 +893,7 @@ export default function SearchSEOPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="text-xs shrink-0 border-violet-200 text-violet-600 hover:bg-violet-50"
+                              className="text-xs shrink-0 border-primary/20 text-primary hover:bg-primary/10"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleAutoFix(rec.fix_action as 'fill_meta_titles' | 'fill_meta_descriptions' | 'fill_all_meta' | 'expire_overdue')
@@ -979,12 +979,12 @@ export default function SearchSEOPage() {
           {/* Index Status */}
           <motion.div variants={itemVariants} initial="hidden" animate="show">
             <Card className="relative overflow-hidden group">
-              <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-blue-500 opacity-[0.04] transition-opacity duration-300 group-hover:opacity-[0.08]" />
-              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-sky opacity-[0.04] transition-opacity duration-300 group-hover:opacity-[0.08]" />
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-sky via-primary-light to-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-sky to-sky-deep text-white shadow-sm">
                       <Database className="h-4 w-4" />
                     </div>
                     <div>
@@ -1052,11 +1052,11 @@ export default function SearchSEOPage() {
           {/* Scheduled Reindex */}
           <motion.div variants={itemVariants} initial="hidden" animate="show">
             <Card className="relative overflow-hidden group">
-              <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-cyan-500 opacity-[0.04] transition-opacity duration-300 group-hover:opacity-[0.08]" />
-              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-sky opacity-[0.04] transition-opacity duration-300 group-hover:opacity-[0.08]" />
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-sky via-teal-500 to-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-teal-600 text-white shadow-sm">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-sky to-sky-deep text-white shadow-sm">
                     <Clock className="h-4 w-4" />
                   </div>
                   <div>
@@ -1097,11 +1097,11 @@ export default function SearchSEOPage() {
           <motion.div variants={itemVariants} initial="hidden" animate="show">
             <Card className="relative overflow-hidden group">
               <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-red-500 opacity-[0.04] transition-opacity duration-300 group-hover:opacity-[0.08]" />
-              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-red-500 via-rose-500 to-pink-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-destructive via-destructive to-destructive-deep opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-sm">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-red-500 to-red-600 text-white shadow-sm">
                       <AlertTriangle className="h-4 w-4" />
                     </div>
                     <div>
@@ -1163,12 +1163,12 @@ export default function SearchSEOPage() {
           {/* Core Web Vitals */}
           <motion.div variants={itemVariants} initial="hidden" animate="show">
             <Card className="relative overflow-hidden group">
-              <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-violet-500 opacity-[0.04] transition-opacity duration-300 group-hover:opacity-[0.08]" />
-              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-violet-500 via-purple-500 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-primary opacity-[0.04] transition-opacity duration-300 group-hover:opacity-[0.08]" />
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary-light via-primary to-sky opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-sm">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary-light to-primary text-white shadow-sm">
                       <Gauge className="h-4 w-4" />
                     </div>
                     <div>
@@ -1214,7 +1214,7 @@ export default function SearchSEOPage() {
           <motion.div variants={itemVariants} initial="hidden" animate="show">
             <Card className="relative overflow-hidden group">
               <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-emerald-500 opacity-[0.04] transition-opacity duration-300 group-hover:opacity-[0.08]" />
-              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-sky opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2.5">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm">
@@ -1360,12 +1360,12 @@ export default function SearchSEOPage() {
         <TabsContent value="google" className="space-y-6">
           <motion.div variants={itemVariants} initial="hidden" animate="show">
             <Card className="relative overflow-hidden group">
-              <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-blue-500 opacity-[0.04] transition-opacity duration-300 group-hover:opacity-[0.08]" />
-              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-blue-500 via-sky-500 to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-sky opacity-[0.04] transition-opacity duration-300 group-hover:opacity-[0.08]" />
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-sky via-sky-deep to-sky opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-sky-600 text-white shadow-sm">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-sky to-sky-deep text-white shadow-sm">
                       <Search className="h-4 w-4" />
                     </div>
                     <div>
@@ -1508,11 +1508,11 @@ export default function SearchSEOPage() {
           {/* Required Fields Reference */}
           <motion.div variants={itemVariants} initial="hidden" animate="show">
             <Card className="relative overflow-hidden group">
-              <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-indigo-500 opacity-[0.04] transition-opacity duration-300 group-hover:opacity-[0.08]" />
-              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-indigo-500 via-blue-500 to-sky-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-primary opacity-[0.04] transition-opacity duration-300 group-hover:opacity-[0.08]" />
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary via-primary-light to-sky opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-blue-600 text-white shadow-sm">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary-hover text-white shadow-sm">
                     <FileCode className="h-4 w-4" />
                   </div>
                   <div>
@@ -1555,12 +1555,12 @@ export default function SearchSEOPage() {
         <TabsContent value="ai" className="space-y-6">
           <motion.div variants={itemVariants} initial="hidden" animate="show">
             <Card className="relative overflow-hidden group">
-              <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-purple-500 opacity-[0.04] transition-opacity duration-300 group-hover:opacity-[0.08]" />
-              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-purple-500 via-violet-500 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-primary opacity-[0.04] transition-opacity duration-300 group-hover:opacity-[0.08]" />
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary via-primary-light to-sky opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-violet-600 text-white shadow-sm">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary-hover text-white shadow-sm">
                       <Bot className="h-4 w-4" />
                     </div>
                     <div>
@@ -1705,11 +1705,11 @@ Disallow: /`}
           <motion.div variants={itemVariants} initial="hidden" animate="show">
             <Card className="relative overflow-hidden group">
               <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-teal-500 opacity-[0.04] transition-opacity duration-300 group-hover:opacity-[0.08]" />
-              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-teal-500 via-cyan-500 to-sky-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-teal-500 via-sky to-sky-deep opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow-sm">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-sky to-sky-deep text-white shadow-sm">
                       <Globe className="h-4 w-4" />
                     </div>
                     <div>
@@ -1860,12 +1860,12 @@ Disallow: /`}
         <TabsContent value="schema" className="space-y-6">
           <motion.div variants={itemVariants} initial="hidden" animate="show">
             <Card className="relative overflow-hidden group">
-              <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-indigo-500 opacity-[0.04] transition-opacity duration-300 group-hover:opacity-[0.08]" />
-              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-primary opacity-[0.04] transition-opacity duration-300 group-hover:opacity-[0.08]" />
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary via-primary-light to-sky opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-sm">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary-hover text-white shadow-sm">
                       <Code className="h-4 w-4" />
                     </div>
                     <div>
@@ -1948,11 +1948,11 @@ Disallow: /`}
           {/* Schema Template Configuration */}
           <motion.div variants={itemVariants} initial="hidden" animate="show">
             <Card className="relative overflow-hidden group">
-              <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-cyan-500 opacity-[0.04] transition-opacity duration-300 group-hover:opacity-[0.08]" />
-              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-sky opacity-[0.04] transition-opacity duration-300 group-hover:opacity-[0.08]" />
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-sky via-teal-500 to-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-teal-600 text-white shadow-sm">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-sky to-sky-deep text-white shadow-sm">
                     <Settings className="h-4 w-4" />
                   </div>
                   <div>

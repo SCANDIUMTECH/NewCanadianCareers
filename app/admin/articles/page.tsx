@@ -75,7 +75,7 @@ import type {
 
 const statusConfig: Record<string, { label: string; color: string }> = {
   draft: { label: "Draft", color: "bg-gray-100 text-gray-700" },
-  scheduled: { label: "Scheduled", color: "bg-purple-100 text-purple-700" },
+  scheduled: { label: "Scheduled", color: "bg-primary/10 text-primary" },
   published: { label: "Published", color: "bg-emerald-100 text-emerald-700" },
   archived: { label: "Archived", color: "bg-amber-100 text-amber-700" },
 }
@@ -390,7 +390,7 @@ function ArticlesContent() {
       <motion.div variants={itemVariants} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary-light to-primary flex items-center justify-center shadow-lg shadow-primary/20">
               <Newspaper className="h-6 w-6 text-white" />
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-green-500 border-2 border-background" />
@@ -462,7 +462,7 @@ function ArticlesContent() {
               title="Total Articles"
               value={stats?.total || 0}
               icon={<BookOpen className="h-4 w-4" />}
-              gradient="from-violet-500 to-purple-600"
+              gradient="from-primary-light to-primary"
               active={activeTab === "all"}
               onClick={() => setActiveTab("all")}
               subtitle={stats ? `${stats.total_views.toLocaleString()} total views` : undefined}
@@ -489,7 +489,7 @@ function ArticlesContent() {
               value={stats?.scheduled || 0}
               color="purple"
               icon={<Clock className="h-4 w-4" />}
-              gradient="from-purple-500 to-fuchsia-600"
+              gradient="from-destructive to-destructive-deep"
               active={activeTab === "scheduled"}
               onClick={() => setActiveTab("scheduled")}
             />
@@ -905,7 +905,7 @@ function StatCard({
         <>
           <div className={cn(
             "absolute -top-6 -right-6 w-24 h-24 rounded-full opacity-[0.06] transition-opacity duration-300 group-hover:opacity-[0.10]",
-            color === "green" ? "bg-green-500" : color === "purple" ? "bg-purple-500" : "bg-slate-500"
+            color === "green" ? "bg-green-500" : color === "purple" ? "bg-primary" : "bg-slate-500"
           )} />
           <div className={cn("absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-300", gradient)} />
         </>
@@ -922,7 +922,7 @@ function StatCard({
         <p className={cn(
           "text-2xl font-bold mt-2 tabular-nums",
           color === "green" && "text-emerald-600",
-          color === "purple" && "text-purple-600",
+          color === "purple" && "text-primary",
         )}>
           {value.toLocaleString()}
         </p>

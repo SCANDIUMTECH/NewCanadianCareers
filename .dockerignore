@@ -1,4 +1,11 @@
 node_modules
 .next
 .git
-backend
+backend/__pycache__
+backend/*.pyc
+backend/.DS_Store
+backend/logs
+backend/media
+backend/staticfiles
+backend/.env
+backend/venv

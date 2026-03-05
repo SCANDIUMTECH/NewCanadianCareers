@@ -20,7 +20,7 @@ def _get_turnstile_settings():
     return PlatformSettings.get_settings()
 
 
-def verify_turnstile_token(token, ip_address=None, feature='auth'):
+def verify_turnstile_token(token, ip_address=None, feature='auth', fail_closed=False):
     """
     Verify a Cloudflare Turnstile token.
 
@@ -28,11 +28,13 @@ def verify_turnstile_token(token, ip_address=None, feature='auth'):
         token: The cf-turnstile-response token from the frontend.
         ip_address: Optional client IP for enhanced validation.
         feature: Which feature group to check — 'auth', 'jobs', or 'applications'.
+        fail_closed: If True, reject requests when Cloudflare API is unreachable.
+            Use for critical auth endpoints (login, register, password reset).
 
     Returns:
         (is_valid, error_message):
         - (True, None)  if valid, disabled, or Cloudflare unreachable (fail-open).
-        - (False, str)  if invalid or missing when required.
+        - (False, str)  if invalid, missing when required, or API unreachable (fail-closed).
     """
     settings = _get_turnstile_settings()
 
@@ -78,8 +80,10 @@ def verify_turnstile_token(token, ip_address=None, feature='auth'):
         return (False, 'Human verification failed. Please try again.')
 
     except requests.exceptions.RequestException as exc:
-        # Fail open on network errors — don't block legitimate users
         logger.error('Turnstile API request failed: %s', exc)
+        if fail_closed:
+            return (False, 'Verification service temporarily unavailable. Please try again.')
+        # Fail open on network errors for non-critical paths
         return (True, None)
 
 

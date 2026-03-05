@@ -120,15 +120,15 @@ const STEP_ICONS: Record<JourneyStepType, React.ReactNode> = {
 }
 
 const STEP_COLORS: Record<JourneyStepType, string> = {
-  send_email: "bg-blue-50 text-blue-700 border-l-blue-500",
+  send_email: "bg-sky/5 text-sky border-l-sky",
   wait: "bg-amber-50 text-amber-700 border-l-amber-500",
-  condition: "bg-purple-50 text-purple-700 border-l-purple-500",
+  condition: "bg-primary/5 text-primary border-l-primary",
   issue_coupon: "bg-green-50 text-green-700 border-l-green-500",
   add_tag: "bg-teal-50 text-teal-700 border-l-teal-500",
   remove_tag: "bg-orange-50 text-orange-700 border-l-orange-500",
   update_attribute: "bg-gray-50 text-gray-700 border-l-gray-500",
-  add_to_segment: "bg-indigo-50 text-indigo-700 border-l-indigo-500",
-  webhook: "bg-pink-50 text-pink-700 border-l-pink-500",
+  add_to_segment: "bg-sky/5 text-sky border-l-sky",
+  webhook: "bg-destructive/10 text-destructive border-l-destructive",
 }
 
 const STEP_LABELS: Record<JourneyStepType, string> = {
@@ -326,7 +326,7 @@ export default function JourneyDetailPage({ params }: { params: Promise<{ id: st
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm shadow-violet-500/20 flex-shrink-0">
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary-light to-primary flex items-center justify-center shadow-sm shadow-primary/20 flex-shrink-0">
             <GitBranch className="h-5 w-5 text-white" />
           </div>
           <div>
@@ -400,10 +400,10 @@ export default function JourneyDetailPage({ params }: { params: Promise<{ id: st
             </CardContent>
           </Card>
           <Card className="relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500 rounded-full -translate-y-1/2 translate-x-1/2 opacity-[0.08]" />
+            <div className="absolute top-0 right-0 w-20 h-20 bg-sky rounded-full -translate-y-1/2 translate-x-1/2 opacity-[0.08]" />
             <CardContent className="pt-4 pb-4 relative">
               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                <div className="h-8 w-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
+                <div className="h-8 w-8 rounded-lg bg-sky/10 text-sky flex items-center justify-center">
                   <CheckCircle2 className="h-4 w-4" />
                 </div>
                 Completed
@@ -412,10 +412,10 @@ export default function JourneyDetailPage({ params }: { params: Promise<{ id: st
             </CardContent>
           </Card>
           <Card className="relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500 rounded-full -translate-y-1/2 translate-x-1/2 opacity-[0.08]" />
+            <div className="absolute top-0 right-0 w-20 h-20 bg-primary rounded-full -translate-y-1/2 translate-x-1/2 opacity-[0.08]" />
             <CardContent className="pt-4 pb-4 relative">
               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                <div className="h-8 w-8 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center">
+                <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
                   <Mail className="h-4 w-4" />
                 </div>
                 Emails Sent

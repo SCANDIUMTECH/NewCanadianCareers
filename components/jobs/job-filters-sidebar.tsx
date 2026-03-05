@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -17,11 +18,13 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
+import { getJobCategories } from "@/lib/api/public"
 
 export interface JobFilters {
   location: string
   remote: string[]
   type: string[]
+  category: string
   salaryMin: number
   salaryMax: number
   datePosted: string
@@ -43,6 +46,8 @@ const typeOptions = [
   { value: "full-time", label: "Full-time" },
   { value: "part-time", label: "Part-time" },
   { value: "contract", label: "Contract" },
+  { value: "temporary", label: "Temporary" },
+  { value: "freelance", label: "Freelance" },
   { value: "internship", label: "Internship" },
 ]
 
@@ -58,6 +63,14 @@ export function JobFiltersSidebar({
   onFiltersChange,
   onReset,
 }: JobFiltersSidebarProps) {
+  const [categories, setCategories] = useState<Array<{ slug: string; name: string; count: number }>>([])
+
+  useEffect(() => {
+    getJobCategories()
+      .then(setCategories)
+      .catch(() => {})
+  }, [])
+
   const updateFilter = <K extends keyof JobFilters>(key: K, value: JobFilters[K]) => {
     onFiltersChange({ ...filters, [key]: value })
   }
@@ -74,6 +87,7 @@ export function JobFiltersSidebar({
     filters.location ||
     filters.remote.length > 0 ||
     filters.type.length > 0 ||
+    filters.category ||
     filters.salaryMin > 0 ||
     filters.salaryMax > 0 ||
     filters.datePosted
@@ -81,7 +95,7 @@ export function JobFiltersSidebar({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="font-semibold text-foreground">Filters</h2>
+        <h2 className="font-secondary font-semibold text-foreground">Filters</h2>
         {hasActiveFilters && (
           <Button
             variant="ghost"
@@ -94,11 +108,38 @@ export function JobFiltersSidebar({
         )}
       </div>
 
-      <Accordion type="multiple" defaultValue={["location", "remote", "type", "salary", "date"]} className="space-y-2">
+      <Accordion type="multiple" defaultValue={["category", "location", "remote", "type", "salary", "date"]} className="space-y-2">
+        {/* Category */}
+        {categories.length > 0 && (
+          <AccordionItem value="category" className="border-none">
+            <AccordionTrigger className="py-3 px-0 hover:no-underline">
+              <span className="font-secondary text-sm font-medium">Category</span>
+            </AccordionTrigger>
+            <AccordionContent className="pt-2 pb-4">
+              <Select
+                value={filters.category || "all"}
+                onValueChange={(value) => updateFilter("category", value === "all" ? "" : value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="All categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem key="all" value="all">All categories</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.slug} value={cat.slug}>
+                      {cat.name} {cat.count > 0 && `(${cat.count})`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </AccordionContent>
+          </AccordionItem>
+        )}
+
         {/* Location */}
         <AccordionItem value="location" className="border-none">
           <AccordionTrigger className="py-3 px-0 hover:no-underline">
-            <span className="text-sm font-medium">Location</span>
+            <span className="font-secondary text-sm font-medium">Location</span>
           </AccordionTrigger>
           <AccordionContent className="pt-2 pb-4">
             <Input
@@ -112,7 +153,7 @@ export function JobFiltersSidebar({
         {/* Remote */}
         <AccordionItem value="remote" className="border-none">
           <AccordionTrigger className="py-3 px-0 hover:no-underline">
-            <span className="text-sm font-medium">Work Type</span>
+            <span className="font-secondary text-sm font-medium">Work Type</span>
           </AccordionTrigger>
           <AccordionContent className="pt-2 pb-4">
             <div className="space-y-3">
@@ -135,7 +176,7 @@ export function JobFiltersSidebar({
         {/* Employment Type */}
         <AccordionItem value="type" className="border-none">
           <AccordionTrigger className="py-3 px-0 hover:no-underline">
-            <span className="text-sm font-medium">Employment Type</span>
+            <span className="font-secondary text-sm font-medium">Employment Type</span>
           </AccordionTrigger>
           <AccordionContent className="pt-2 pb-4">
             <div className="space-y-3">
@@ -158,7 +199,7 @@ export function JobFiltersSidebar({
         {/* Salary */}
         <AccordionItem value="salary" className="border-none">
           <AccordionTrigger className="py-3 px-0 hover:no-underline">
-            <span className="text-sm font-medium">Salary Range</span>
+            <span className="font-secondary text-sm font-medium">Salary Range</span>
           </AccordionTrigger>
           <AccordionContent className="pt-2 pb-4">
             <div className="grid grid-cols-2 gap-3">
@@ -195,7 +236,7 @@ export function JobFiltersSidebar({
         {/* Date Posted */}
         <AccordionItem value="date" className="border-none">
           <AccordionTrigger className="py-3 px-0 hover:no-underline">
-            <span className="text-sm font-medium">Date Posted</span>
+            <span className="font-secondary text-sm font-medium">Date Posted</span>
           </AccordionTrigger>
           <AccordionContent className="pt-2 pb-4">
             <Select

@@ -1,5 +1,6 @@
 import { Suspense } from "react"
 import type { Metadata } from "next"
+import { PublicPageShell } from "@/components/public-page-shell"
 import JobsSearchClient from "./jobs-search-client"
 
 export const metadata: Metadata = {
@@ -25,8 +26,10 @@ function JobsLoadingSpinner() {
 
 export default function JobsPage() {
   return (
-    <Suspense fallback={<JobsLoadingSpinner />}>
-      <JobsSearchClient />
-    </Suspense>
+    <PublicPageShell>
+      <Suspense fallback={<JobsLoadingSpinner />}>
+        <JobsSearchClient />
+      </Suspense>
+    </PublicPageShell>
   )
 }

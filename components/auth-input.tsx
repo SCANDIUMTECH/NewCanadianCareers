@@ -54,9 +54,9 @@ export function AuthInput({ label, error, className, id, ...props }: AuthInputPr
         htmlFor={inputId}
         className={cn(
           "absolute left-4 transition-all duration-300 pointer-events-none",
-          "text-foreground-muted",
+          "font-secondary text-foreground-muted",
           (isFocused || hasValue || props.value)
-            ? "top-2 text-xs" 
+            ? "top-2 text-xs"
             : "top-1/2 -translate-y-1/2 text-base",
           isFocused && "text-primary",
           error && "text-destructive"
@@ -67,7 +67,7 @@ export function AuthInput({ label, error, className, id, ...props }: AuthInputPr
 
       {/* Error message */}
       {error && (
-        <p role="alert" className="mt-2 text-sm text-destructive">{error}</p>
+        <p role="alert" className="font-secondary mt-2 text-sm text-destructive">{error}</p>
       )}
     </div>
   )

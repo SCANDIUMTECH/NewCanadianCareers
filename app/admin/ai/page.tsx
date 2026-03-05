@@ -420,7 +420,7 @@ export default function AISettingsPage() {
 
     return (
       <Card key={provider.id} className={cn("relative overflow-hidden group", provider.is_active && "border-primary/30")}>
-        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-violet-500 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary-light to-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         <CardHeader className="px-5 pt-4 pb-3 space-y-1.5">
           <div className="flex items-center justify-between gap-2">
             <CardTitle className="text-base font-semibold leading-snug">{provider.name}</CardTitle>
@@ -547,8 +547,8 @@ export default function AISettingsPage() {
     <Card className="border-dashed">
       <CardContent className="flex flex-col items-center justify-center py-16">
         <div className="relative mb-4">
-          <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-violet-500/10 to-purple-600/10 flex items-center justify-center">
-            <Sparkles className="h-8 w-8 text-violet-600" />
+          <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-primary/10 to-primary-hover/10 flex items-center justify-center">
+            <Sparkles className="h-8 w-8 text-primary" />
           </div>
         </div>
         <h3 className="text-lg font-semibold mb-2">No AI Providers Configured</h3>
@@ -597,7 +597,7 @@ export default function AISettingsPage() {
       <div className="space-y-6">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary-light to-primary flex items-center justify-center shadow-lg shadow-primary/20">
               <Sparkles className="h-6 w-6 text-white" />
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-green-500 border-2 border-background" />
@@ -642,7 +642,7 @@ export default function AISettingsPage() {
       <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary-light to-primary flex items-center justify-center shadow-lg shadow-primary/20">
               <Sparkles className="h-6 w-6 text-white" />
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-green-500 border-2 border-background" />
@@ -707,8 +707,8 @@ export default function AISettingsPage() {
                   "Total Requests",
                   stats.total_requests.toLocaleString(),
                   <Activity className="h-4 w-4" />,
-                  "from-violet-500 to-purple-600",
-                  "bg-violet-500",
+                  "from-primary-light to-primary",
+                  "bg-primary",
                   "Last 30 days"
                 )}
                 {renderStatsCard(
@@ -731,8 +731,8 @@ export default function AISettingsPage() {
                   "Total Cost",
                   `$${stats.total_cost.toFixed(2)}`,
                   <DollarSign className="h-4 w-4" />,
-                  "from-blue-500 to-indigo-600",
-                  "bg-blue-500",
+                  "from-sky to-sky-deep",
+                  "bg-sky",
                   "Last 30 days"
                 )}
               </div>
@@ -747,23 +747,23 @@ export default function AISettingsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid gap-4 md:grid-cols-4">
-                    <div className="relative overflow-hidden group flex items-center justify-between p-4 border rounded-xl transition-colors hover:border-blue-200">
-                      <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full bg-blue-500 opacity-[0.06] transition-opacity duration-300 group-hover:opacity-[0.10]" />
+                    <div className="relative overflow-hidden group flex items-center justify-between p-4 border rounded-xl transition-colors hover:border-sky/20">
+                      <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full bg-sky opacity-[0.06] transition-opacity duration-300 group-hover:opacity-[0.10]" />
                       <div>
                         <p className="text-sm text-muted-foreground">SEO Generation</p>
                         <p className="text-2xl font-bold tracking-tight tabular-nums">{stats.seo_requests.toLocaleString()}</p>
                       </div>
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-sky to-sky-deep text-white shadow-sm">
                         <TrendingUp className="h-5 w-5" />
                       </div>
                     </div>
-                    <div className="relative overflow-hidden group flex items-center justify-between p-4 border rounded-xl transition-colors hover:border-violet-200">
-                      <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full bg-violet-500 opacity-[0.06] transition-opacity duration-300 group-hover:opacity-[0.10]" />
+                    <div className="relative overflow-hidden group flex items-center justify-between p-4 border rounded-xl transition-colors hover:border-primary/20">
+                      <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full bg-primary opacity-[0.06] transition-opacity duration-300 group-hover:opacity-[0.10]" />
                       <div>
                         <p className="text-sm text-muted-foreground">Bulk SEO</p>
                         <p className="text-2xl font-bold tracking-tight tabular-nums">{stats.seo_bulk_requests.toLocaleString()}</p>
                       </div>
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-sm">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary-light to-primary text-white shadow-sm">
                         <RefreshCw className="h-5 w-5" />
                       </div>
                     </div>
@@ -821,8 +821,8 @@ export default function AISettingsPage() {
                   </div>
                 ) : logs.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12">
-                    <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-violet-500/10 to-purple-600/10 flex items-center justify-center mb-3">
-                      <Activity className="h-6 w-6 text-violet-600" />
+                    <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary/10 to-primary-hover/10 flex items-center justify-center mb-3">
+                      <Activity className="h-6 w-6 text-primary" />
                     </div>
                     <p className="text-sm font-medium mb-1">No usage logs yet</p>
                     <p className="text-xs text-muted-foreground">Logs will appear here once AI features are used</p>

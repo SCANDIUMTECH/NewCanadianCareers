@@ -256,7 +256,7 @@ export default function SupportToolsPage() {
       <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-sky-500 to-cyan-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-sky to-sky-deep flex items-center justify-center shadow-lg shadow-sky/20">
               <LifeBuoy className="h-6 w-6 text-white" />
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-green-500 border-2 border-background" />
@@ -479,7 +479,7 @@ export default function SupportToolsPage() {
               <>
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 to-cyan-600 text-white shadow-sm">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-sky to-sky-deep text-white shadow-sm">
                       {selectedEntity.type === "user" ? (
                         <User className="w-5 h-5" />
                       ) : (
@@ -572,8 +572,8 @@ export default function SupportToolsPage() {
         <TabsContent value="export" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
-              { title: "User Report", description: "Export all user data as CSV", icon: User, gradient: "from-sky-500 to-cyan-600", accent: "bg-sky-500", onClick: () => setActiveTab("lookup") },
-              { title: "Company Report", description: "Export company data and metrics", icon: Building2, gradient: "from-violet-500 to-purple-600", accent: "bg-violet-500", onClick: () => setActiveTab("lookup") },
+              { title: "User Report", description: "Export all user data as CSV", icon: User, gradient: "from-sky to-sky-deep", accent: "bg-sky", onClick: () => setActiveTab("lookup") },
+              { title: "Company Report", description: "Export company data and metrics", icon: Building2, gradient: "from-primary-light to-primary", accent: "bg-primary", onClick: () => setActiveTab("lookup") },
               { title: "Activity Report", description: "Platform-wide activity log", icon: Activity, gradient: "from-emerald-500 to-teal-600", accent: "bg-emerald-500", onClick: () => window.open("/admin/audit", "_blank") },
             ].map((report) => (
               <Card key={report.title} className="relative overflow-hidden group">
@@ -612,7 +612,7 @@ export default function SupportToolsPage() {
                     <div key={job.id} className="flex items-center justify-between rounded-lg border p-3">
                       <div className="flex items-center gap-3">
                         {job.status === "completed" && <CheckCircle className="h-4 w-4 text-emerald-500" />}
-                        {job.status === "processing" && <Loader2 className="h-4 w-4 animate-spin text-blue-500" />}
+                        {job.status === "processing" && <Loader2 className="h-4 w-4 animate-spin text-sky" />}
                         {job.status === "pending" && <Clock className="h-4 w-4 text-amber-500" />}
                         {job.status === "failed" && <XCircle className="h-4 w-4 text-red-500" />}
                         <div>

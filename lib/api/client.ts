@@ -104,7 +104,7 @@ export async function apiClient<T>(
   try {
     response = await fetch(url, { ...options, headers, credentials: 'include' })
   } catch (networkError) {
-    console.error('Network error fetching', url, networkError)
+    // Don't log here — let callers decide whether to log or silently handle
     throw { message: 'Network error: Unable to connect to server. Please check your connection.', status: 0 } as ApiError
   }
 

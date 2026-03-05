@@ -73,8 +73,8 @@ const COLOR_GRADIENTS: Record<string, { gradient: string; bgAccent: string }> = 
   green: { gradient: "from-emerald-500 to-teal-600", bgAccent: "bg-emerald-500" },
   amber: { gradient: "from-amber-500 to-orange-600", bgAccent: "bg-amber-500" },
   red: { gradient: "from-red-500 to-rose-600", bgAccent: "bg-red-500" },
-  blue: { gradient: "from-blue-500 to-indigo-600", bgAccent: "bg-blue-500" },
-  purple: { gradient: "from-violet-500 to-purple-600", bgAccent: "bg-violet-500" },
+  blue: { gradient: "from-sky to-sky-deep", bgAccent: "bg-sky" },
+  purple: { gradient: "from-primary-light to-primary", bgAccent: "bg-primary" },
   default: { gradient: "from-slate-600 to-slate-800", bgAccent: "bg-slate-500" },
 }
 
@@ -104,7 +104,7 @@ export default function MarketingReportsPage() {
       <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-sky-500 to-cyan-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-sky to-sky-deep flex items-center justify-center shadow-lg shadow-sky/20">
               <BarChart3 className="h-6 w-6 text-white" />
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-green-500 border-2 border-background" />
@@ -751,8 +751,8 @@ function AudienceHealthTab() {
                             reason === "bounce_soft" && "bg-amber-500",
                             reason === "complaint" && "bg-red-700",
                             reason === "unsubscribe" && "bg-gray-400",
-                            reason === "admin" && "bg-blue-500",
-                            reason === "compliance" && "bg-purple-500",
+                            reason === "admin" && "bg-sky",
+                            reason === "compliance" && "bg-primary",
                           )}
                         />
                         <span className="text-sm capitalize">
@@ -1024,7 +1024,7 @@ function RateBadge({
 function CampaignStatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
     sent: "bg-green-100 text-green-700",
-    sending: "bg-blue-100 text-blue-700",
+    sending: "bg-sky/10 text-sky",
     scheduled: "bg-amber-100 text-amber-700",
     draft: "bg-gray-100 text-gray-600",
     failed: "bg-red-100 text-red-700",
@@ -1086,7 +1086,7 @@ function DailyBarChart({
   const barColor = {
     green: "bg-green-500",
     red: "bg-red-500",
-    blue: "bg-blue-500",
+    blue: "bg-sky",
     amber: "bg-amber-500",
   }[color]
 

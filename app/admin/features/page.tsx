@@ -96,8 +96,8 @@ const envConfig: Record<string, { label: string; icon: React.ReactNode; bgClass:
   development: {
     label: "Development",
     icon: <Code2 className="h-3 w-3" />,
-    bgClass: "bg-blue-50 text-blue-600 border border-blue-100",
-    badgeClass: "border-blue-200 bg-blue-50 text-blue-700",
+    bgClass: "bg-sky/10 text-sky border border-sky/20",
+    badgeClass: "border-sky/20 bg-sky/10 text-sky",
   },
   all: {
     label: "All",
@@ -306,9 +306,9 @@ export default function FeatureFlagsPage() {
               title="Partial Rollout"
               value={stats.partialRollout}
               icon={<Zap className="h-4 w-4" />}
-              gradient="from-violet-500 to-purple-600"
-              bgAccent="bg-violet-500"
-              valueColor="text-violet-600"
+              gradient="from-primary-light to-primary"
+              bgAccent="bg-primary"
+              valueColor="text-primary"
             />
           </>
         )}

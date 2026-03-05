@@ -68,10 +68,10 @@ const itemVariants = {
 
 const STATUS_COLORS: Record<CampaignStatus, string> = {
   draft: "border-slate-200 text-slate-600 bg-slate-50",
-  scheduled: "border-blue-200 text-blue-600 bg-blue-50",
+  scheduled: "border-sky/20 text-sky bg-sky/10",
   pending_approval: "border-amber-200 text-amber-600 bg-amber-50",
   approved: "border-emerald-200 text-emerald-600 bg-emerald-50",
-  sending: "border-violet-200 text-violet-600 bg-violet-50",
+  sending: "border-primary/20 text-primary bg-primary/5",
   sent: "border-green-200 text-green-700 bg-green-50",
   paused: "border-amber-200 text-amber-700 bg-amber-50",
   canceled: "border-slate-200 text-slate-500 bg-slate-50",
@@ -80,10 +80,10 @@ const STATUS_COLORS: Record<CampaignStatus, string> = {
 
 const STATUS_DOTS: Record<CampaignStatus, string> = {
   draft: "bg-slate-400",
-  scheduled: "bg-blue-500",
+  scheduled: "bg-sky",
   pending_approval: "bg-amber-500",
   approved: "bg-emerald-500",
-  sending: "bg-violet-500 animate-pulse",
+  sending: "bg-primary animate-pulse",
   sent: "bg-green-600",
   paused: "bg-amber-600",
   canceled: "bg-slate-400",
@@ -178,7 +178,7 @@ export default function CampaignsPage() {
       <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-sky to-sky-deep flex items-center justify-center shadow-lg shadow-sky/20">
               <Send className="h-6 w-6 text-white" />
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-green-500 border-2 border-background" />
@@ -263,8 +263,8 @@ export default function CampaignsPage() {
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-16">
                     <div className="flex flex-col items-center justify-center text-muted-foreground">
-                      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-100 mb-4">
-                        <Megaphone className="h-8 w-8 text-blue-400" />
+                      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-sky/10 to-sky/5 mb-4">
+                        <Megaphone className="h-8 w-8 text-sky/60" />
                       </div>
                       <p className="font-semibold text-foreground text-lg">No campaigns yet</p>
                       <p className="text-sm mt-1 mb-6 max-w-sm">Create your first email campaign to start engaging with your audience</p>
@@ -288,7 +288,7 @@ export default function CampaignsPage() {
                         {campaign.name}
                       </Link>
                       {campaign.is_ab_test && (
-                        <Badge variant="outline" className="ml-2 text-[10px] border-violet-200 text-violet-600 bg-violet-50">
+                        <Badge variant="outline" className="ml-2 text-[10px] border-primary/20 text-primary bg-primary/5">
                           A/B
                         </Badge>
                       )}

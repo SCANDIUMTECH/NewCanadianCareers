@@ -1,7 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import type { User, AuthState, LoginCredentials, RegisterData } from './types'
+import type { User, AuthState, LoginCredentials, LoginCodeCredentials, RegisterData } from './types'
 import {
   hasSession,
   clearSessionCookie,
@@ -12,6 +12,7 @@ import * as authApi from '@/lib/api/auth'
 
 interface AuthContextValue extends AuthState {
   login: (credentials: LoginCredentials) => Promise<User>
+  loginWithCode: (credentials: LoginCodeCredentials) => Promise<User>
   register: (data: RegisterData) => Promise<User>
   logout: () => Promise<void>
   refreshUser: () => Promise<void>
@@ -73,6 +74,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return response.user
   }, [])
 
+  const loginWithCode = useCallback(async (credentials: LoginCodeCredentials): Promise<User> => {
+    resetSessionExpiredFlag()
+    const response = await authApi.verifyLoginCode(credentials)
+    setUser(response.user)
+    return response.user
+  }, [])
+
   const register = useCallback(async (data: RegisterData): Promise<User> => {
     resetSessionExpiredFlag()
     const response = await authApi.register(data)
@@ -101,6 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoading,
     isAuthenticated,
     login,
+    loginWithCode,
     register,
     logout,
     refreshUser,

@@ -1,14 +1,14 @@
 "use client"
 
-import { useState, useEffect, useRef, Fragment, type ReactNode, type MouseEvent } from "react"
+import { useState, useEffect, useRef, type ReactNode } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { LayoutGrid } from "lucide-react"
+import { Menu, X, ChevronDown } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -18,63 +18,60 @@ import { UserAvatar } from "@/components/user-avatar"
 import { useAuth } from "@/hooks/use-auth"
 import { ROLE_REDIRECTS } from "@/lib/auth/types"
 
-const navLinks = [
-  { label: "Find Jobs", href: "/jobs" },
-  { label: "For Companies", href: "/company" },
-  { label: "For Candidates", href: "/candidate" },
+// ---------------------------------------------------------------------------
+// Navigation data
+// ---------------------------------------------------------------------------
+
+type NavItem =
+  | { type: "link"; label: string; href: string }
+  | { type: "dropdown"; label: string; id: string; items: DropdownItem[] }
+
+interface DropdownItem {
+  title: string
+  subtitle: string
+  href: string
+}
+
+const navItems: NavItem[] = [
+  { type: "link", label: "Find Jobs", href: "/jobs" },
+  {
+    type: "dropdown",
+    label: "For Employers",
+    id: "employers",
+    items: [
+      { title: "Pricing", subtitle: "Plans & packages", href: "/pricing" },
+      { title: "Companies", subtitle: "Browse employers", href: "/companies" },
+      { title: "Post a Job", subtitle: "Start hiring", href: "/signup" },
+      { title: "Dashboard", subtitle: "Manage your jobs", href: "/company" },
+    ],
+  },
+  {
+    type: "dropdown",
+    label: "Resources",
+    id: "resources",
+    items: [
+      { title: "News", subtitle: "Industry updates", href: "/news" },
+      { title: "About Us", subtitle: "Our mission", href: "/about" },
+      { title: "Contact", subtitle: "Get in touch", href: "/contact" },
+      { title: "Help Center", subtitle: "FAQs & support", href: "/help" },
+    ],
+  },
 ]
 
-const devMenuPages = {
-  "Public": [
-    { label: "Home", href: "/" },
-    { label: "Jobs", href: "/jobs" },
-    { label: "Login", href: "/login" },
-    { label: "Signup", href: "/signup" },
-    { label: "Forgot Password", href: "/forgot-password" },
-    { label: "Terms", href: "/terms" },
-    { label: "Privacy", href: "/privacy" },
-  ],
-  "Candidate": [
-    { label: "Dashboard", href: "/candidate" },
-    { label: "Profile", href: "/candidate/profile" },
-    { label: "Saved Jobs", href: "/candidate/saved" },
-    { label: "Applications", href: "/candidate/applications" },
-    { label: "Job Alerts", href: "/candidate/alerts" },
-    { label: "Settings", href: "/candidate/settings" },
-  ],
-  "Company": [
-    { label: "Dashboard", href: "/company" },
-    { label: "Jobs", href: "/company/jobs" },
-    { label: "Create Job", href: "/company/jobs/new" },
-    { label: "Analytics", href: "/company/analytics" },
-    { label: "Team", href: "/company/team" },
-    { label: "Billing", href: "/company/billing" },
-    { label: "Packages", href: "/company/packages" },
-    { label: "Settings", href: "/company/settings" },
-  ],
-  "Agency": [
-    { label: "Dashboard", href: "/agency" },
-    { label: "Companies", href: "/agency/companies" },
-    { label: "Jobs", href: "/agency/jobs" },
-    { label: "Team", href: "/agency/team" },
-    { label: "Billing", href: "/agency/billing" },
-  ],
-  "Admin": [
-    { label: "Dashboard", href: "/admin" },
-    { label: "Users", href: "/admin/users" },
-    { label: "Companies", href: "/admin/companies" },
-    { label: "Jobs", href: "/admin/jobs" },
-    { label: "Moderation", href: "/admin/moderation" },
-    { label: "Settings", href: "/admin/settings" },
-  ],
-}
+// ---------------------------------------------------------------------------
+// Header
+// ---------------------------------------------------------------------------
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
-  const [activeLink, setActiveLink] = useState<string | null>(null)
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const pathname = usePathname()
   const { user, isLoading, isAuthenticated, logout } = useAuth()
+  const dropdownTimeout = useRef<NodeJS.Timeout | null>(null)
 
+  // Scroll listener + initial reveal
   useEffect(() => {
     const timer = setTimeout(() => setIsVisible(true), 300)
 
@@ -89,6 +86,33 @@ export function Header() {
     }
   }, [])
 
+  // Close mobile menu on resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) setMobileMenuOpen(false)
+    }
+    window.addEventListener("resize", handleResize)
+    return () => window.removeEventListener("resize", handleResize)
+  }, [])
+
+  // Close dropdown on route change
+  useEffect(() => {
+    setOpenDropdown(null)
+    setMobileMenuOpen(false)
+  }, [pathname])
+
+  const handleDropdownOpen = (id: string) => {
+    if (dropdownTimeout.current) clearTimeout(dropdownTimeout.current)
+    setOpenDropdown(id)
+  }
+
+  const handleDropdownClose = () => {
+    dropdownTimeout.current = setTimeout(() => setOpenDropdown(null), 150)
+  }
+
+  const isDropdownCurrent = (item: Extract<NavItem, { type: "dropdown" }>) =>
+    item.items.some((i) => pathname.startsWith(i.href))
+
   return (
     <header
       className={cn(
@@ -98,16 +122,16 @@ export function Header() {
       )}
     >
       {/* Floating container with glassmorphism */}
-      <div 
+      <div
         className={cn(
           "relative max-w-[1100px] mx-auto rounded-2xl transition-all duration-700 ease-out",
-          isScrolled 
-            ? "bg-card/70 backdrop-blur-2xl shadow-2xl shadow-black/5 border border-white/20" 
+          isScrolled
+            ? "bg-card/70 backdrop-blur-2xl shadow-2xl shadow-black/5 border border-white/20"
             : "bg-transparent"
         )}
       >
         {/* Inner glow effect */}
-        <div 
+        <div
           className={cn(
             "absolute inset-0 rounded-2xl transition-opacity duration-700 pointer-events-none",
             isScrolled ? "opacity-100" : "opacity-0"
@@ -116,9 +140,9 @@ export function Header() {
             background: "linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 50%)",
           }}
         />
-        
+
         {/* Subtle border glow on scroll */}
-        <div 
+        <div
           className={cn(
             "absolute -inset-px rounded-2xl transition-opacity duration-700 pointer-events-none",
             isScrolled ? "opacity-100" : "opacity-0"
@@ -135,7 +159,7 @@ export function Header() {
         <nav className="relative flex items-center justify-between h-16 md:h-20 px-4 md:px-8">
 
           {/* Logo with glow effect */}
-          <Link href="/" className="flex items-center group relative">
+          <Link href="/" className="flex items-center group relative" onClick={() => setMobileMenuOpen(false)}>
             {/* Logo glow on hover */}
             <div className="absolute -inset-3 rounded-xl bg-primary/0 group-hover:bg-primary/5 transition-all duration-500" />
             <Image
@@ -148,32 +172,38 @@ export function Header() {
             />
           </Link>
 
-          {/* Center Navigation - Pill style */}
-          <div className="hidden md:flex items-center relative">
-            {/* Active indicator background */}
-            <div
-              className={cn(
-                "absolute h-10 rounded-full bg-foreground/5 transition-all duration-300 ease-out",
-                activeLink ? "opacity-100" : "opacity-0"
-              )}
-            />
+          {/* Divider after logo */}
+          <div className="hidden md:block w-px h-5 bg-foreground/10 mx-2" />
 
-            {navLinks.map((link) => (
-              <NavLink
-                key={link.label}
-                href={link.href}
-                label={link.label}
-                onHover={setActiveLink}
-                isActive={activeLink === link.label}
-              />
-            ))}
-
-            {/* Dev Menu — only in development */}
-            {process.env.NODE_ENV === "development" && <DevMenu />}
+          {/* Center Navigation — Desktop */}
+          <div className="hidden md:flex items-center">
+            {navItems.map((item) =>
+              item.type === "link" ? (
+                <NavLink
+                  key={item.label}
+                  href={item.href}
+                  label={item.label}
+                  isCurrent={pathname.startsWith(item.href)}
+                />
+              ) : (
+                <NavDropdownTrigger
+                  key={item.id}
+                  item={item}
+                  isOpen={openDropdown === item.id}
+                  isCurrent={isDropdownCurrent(item)}
+                  onOpen={() => handleDropdownOpen(item.id)}
+                  onClose={handleDropdownClose}
+                  align={item.id === "resources" ? "right" : "center"}
+                />
+              )
+            )}
           </div>
 
-          {/* Auth Buttons */}
-          <div className="flex items-center gap-2 md:gap-3">
+          {/* Right side: Auth + Mobile toggle */}
+          <div className="flex items-center gap-1 md:gap-2">
+            {/* Divider before auth */}
+            <div className="hidden sm:block w-px h-5 bg-foreground/10 mx-2" />
+
             {isLoading ? (
               <div className="w-20 h-9 rounded-lg bg-foreground/5 animate-pulse" />
             ) : isAuthenticated && user ? (
@@ -226,12 +256,12 @@ export function Header() {
               <>
                 <Link
                   href="/login"
-                  className={cn(
-                    "hidden sm:flex items-center justify-center px-6 py-3 rounded-xl text-sm font-medium transition-all duration-300",
-                    "text-foreground-muted hover:text-foreground hover:bg-foreground/5"
-                  )}
+                  className="group hidden sm:flex items-center justify-center px-4 py-2 text-sm font-medium whitespace-nowrap text-foreground-muted/70 hover:text-foreground transition-colors duration-200"
                 >
-                  Sign in
+                  <span className="relative inline-block">
+                    Sign in
+                    <span className="absolute -bottom-1 left-0 right-0 h-[2px] rounded-full bg-primary/40 scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-center" />
+                  </span>
                 </Link>
 
                 {/* Premium CTA Button */}
@@ -240,156 +270,289 @@ export function Header() {
                 </PremiumButton>
               </>
             )}
+
+            {/* Mobile menu toggle */}
+            <button
+              className={cn(
+                "md:hidden flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-300",
+                "text-foreground-muted hover:text-foreground hover:bg-foreground/5"
+              )}
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={mobileMenuOpen}
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
 
         </nav>
+
+        {/* Mobile Navigation Dropdown */}
+        <div
+          className={cn(
+            "md:hidden overflow-hidden transition-all duration-300 ease-out",
+            mobileMenuOpen ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"
+          )}
+        >
+          <div className="px-4 pb-4 space-y-1">
+            {navItems.map((item) =>
+              item.type === "link" ? (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className={cn(
+                    "block px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200",
+                    pathname.startsWith(item.href)
+                      ? "text-foreground bg-foreground/5"
+                      : "text-foreground-muted hover:text-foreground hover:bg-foreground/5"
+                  )}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  {item.label}
+                </Link>
+              ) : (
+                <MobileDropdownSection
+                  key={item.id}
+                  item={item}
+                  pathname={pathname}
+                  onNavigate={() => setMobileMenuOpen(false)}
+                />
+              )
+            )}
+
+            {/* Mobile-only auth links when not visible in header */}
+            {!isAuthenticated && !isLoading && (
+              <Link
+                href="/login"
+                className="block sm:hidden px-4 py-3 rounded-xl text-sm font-medium text-foreground-muted hover:text-foreground hover:bg-foreground/5 transition-all duration-200"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Sign in
+              </Link>
+            )}
+
+            {isAuthenticated && user && (
+              <Link
+                href={ROLE_REDIRECTS[user.role]}
+                className="block sm:hidden px-4 py-3 rounded-xl text-sm font-medium text-foreground-muted hover:text-foreground hover:bg-foreground/5 transition-all duration-200"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Dashboard
+              </Link>
+            )}
+          </div>
+        </div>
       </div>
     </header>
   )
 }
 
+// ---------------------------------------------------------------------------
+// NavLink (simple flat link — same as before)
+// ---------------------------------------------------------------------------
+
 function NavLink({
   href,
   label,
-  onHover,
-  isActive,
+  isCurrent,
 }: {
   href: string
   label: string
-  onHover: (label: string | null) => void
-  isActive: boolean
+  isCurrent: boolean
 }) {
   return (
     <Link
       href={href}
       className={cn(
-        "relative px-5 py-3 text-sm font-medium transition-all duration-300",
-        isActive ? "text-foreground" : "text-foreground-muted hover:text-foreground"
+        "relative px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors duration-200",
+        isCurrent ? "text-foreground" : "text-foreground-muted/70 hover:text-foreground"
       )}
-      onMouseEnter={() => onHover(label)}
-      onMouseLeave={() => onHover(null)}
     >
-      {label}
+      <span className="relative inline-block">
+        {label}
+        <span
+          className={cn(
+            "absolute -bottom-1 left-0 right-0 h-[2px] rounded-full transition-all duration-200 origin-center",
+            isCurrent ? "scale-x-100 bg-primary" : "scale-x-0 bg-primary/40 group-hover:scale-x-100"
+          )}
+        />
+      </span>
     </Link>
   )
 }
 
-function DevMenu() {
+// ---------------------------------------------------------------------------
+// NavDropdownTrigger (hover-triggered mega menu)
+// ---------------------------------------------------------------------------
+
+function NavDropdownTrigger({
+  item,
+  isOpen,
+  isCurrent,
+  onOpen,
+  onClose,
+  align = "center",
+}: {
+  item: Extract<NavItem, { type: "dropdown" }>
+  isOpen: boolean
+  isCurrent: boolean
+  onOpen: () => void
+  onClose: () => void
+  align?: "center" | "right"
+}) {
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          className={cn(
-            "ml-2 flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-300",
-            "text-foreground-muted hover:text-foreground hover:bg-foreground/5"
-          )}
-          aria-label="All Pages"
-        >
-          <LayoutGrid className="w-4 h-4" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="end"
-        className="w-56 bg-card/95 backdrop-blur-xl border-white/20"
+    <div
+      className="relative"
+      onMouseEnter={onOpen}
+      onMouseLeave={onClose}
+    >
+      {/* Trigger */}
+      <button
+        className={cn(
+          "relative px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors duration-200 flex items-center gap-1",
+          isCurrent || isOpen ? "text-foreground" : "text-foreground-muted/70 hover:text-foreground"
+        )}
       >
-        {Object.entries(devMenuPages).map(([section, pages], index) => (
-          <Fragment key={section}>
-            {index > 0 && <DropdownMenuSeparator />}
-            <DropdownMenuGroup>
-              <DropdownMenuLabel className="text-xs text-foreground-muted uppercase tracking-wider">
-                {section}
-              </DropdownMenuLabel>
-              {pages.map((page) => (
-                <DropdownMenuItem key={page.href} asChild>
-                  <Link
-                    href={page.href}
-                    className="cursor-pointer"
-                  >
-                    {page.label}
-                  </Link>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuGroup>
-          </Fragment>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+        <span className="relative inline-block">
+          {item.label}
+          <span
+            className={cn(
+              "absolute -bottom-1 left-0 right-0 h-[2px] rounded-full transition-all duration-200 origin-center",
+              isOpen || isCurrent ? "scale-x-100 bg-primary" : "scale-x-0 bg-primary/40"
+            )}
+          />
+        </span>
+        <ChevronDown
+          className={cn(
+            "w-3 h-3 transition-transform duration-200",
+            isOpen && "rotate-180"
+          )}
+        />
+      </button>
+
+      {/* Dropdown panel */}
+      <div
+        className={cn(
+          "absolute top-full pt-2 z-50",
+          "transition-all duration-200 ease-out",
+          align === "right" ? "right-0" : "left-1/2 -translate-x-1/2",
+          isOpen
+            ? "opacity-100 translate-y-0 pointer-events-auto"
+            : "opacity-0 -translate-y-1 pointer-events-none"
+        )}
+      >
+        <div className="w-[420px] grid grid-cols-2 gap-1 p-3 rounded-xl bg-card/95 backdrop-blur-xl border border-white/20 shadow-2xl shadow-black/10">
+          {item.items.map((dropdownItem) => (
+            <MegaMenuItem key={dropdownItem.href} item={dropdownItem} />
+          ))}
+        </div>
+      </div>
+    </div>
   )
 }
 
-function PremiumButton({ href, children }: { href: string; children: ReactNode }) {
-  const buttonRef = useRef<HTMLAnchorElement>(null)
-  const [position, setPosition] = useState({ x: 0, y: 0 })
-  const [isHovered, setIsHovered] = useState(false)
+// ---------------------------------------------------------------------------
+// MegaMenuItem (single item inside dropdown panel)
+// ---------------------------------------------------------------------------
 
-  const handleMouseMove = (e: MouseEvent) => {
-    if (!buttonRef.current) return
-    const rect = buttonRef.current.getBoundingClientRect()
-    setPosition({
-      x: e.clientX - rect.left - rect.width / 2,
-      y: e.clientY - rect.top - rect.height / 2,
-    })
-  }
-
+function MegaMenuItem({ item }: { item: DropdownItem }) {
   return (
     <Link
-      ref={buttonRef}
-      href={href}
-      className="relative group"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => {
-        setIsHovered(false)
-        setPosition({ x: 0, y: 0 })
-      }}
-      onMouseMove={handleMouseMove}
+      href={item.href}
+      className="group flex flex-col gap-0.5 px-3 py-2.5 rounded-lg hover:bg-foreground/5 transition-colors duration-150"
     >
-      {/* Glow effect */}
-      <div 
+      <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors duration-150">
+        {item.title}
+      </span>
+      <span className="text-xs text-foreground-muted/60">
+        {item.subtitle}
+      </span>
+    </Link>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// MobileDropdownSection (accordion in mobile drawer)
+// ---------------------------------------------------------------------------
+
+function MobileDropdownSection({
+  item,
+  pathname,
+  onNavigate,
+}: {
+  item: Extract<NavItem, { type: "dropdown" }>
+  pathname: string
+  onNavigate: () => void
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const isCurrent = item.items.some((i) => pathname.startsWith(i.href))
+
+  return (
+    <div>
+      <button
         className={cn(
-          "absolute -inset-1 rounded-xl bg-primary/20 blur-xl transition-all duration-500",
-          isHovered ? "opacity-100 scale-110" : "opacity-0 scale-100"
+          "flex items-center justify-between w-full px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200",
+          isCurrent
+            ? "text-foreground bg-foreground/5"
+            : "text-foreground-muted hover:text-foreground hover:bg-foreground/5"
         )}
-      />
-      
-      {/* Button body */}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        {item.label}
+        <ChevronDown
+          className={cn(
+            "w-4 h-4 transition-transform duration-200",
+            isOpen && "rotate-180"
+          )}
+        />
+      </button>
+
       <div
         className={cn(
-          "relative overflow-hidden px-6 py-3 rounded-xl text-sm font-medium transition-all duration-300",
-          "bg-primary text-primary-foreground"
+          "overflow-hidden transition-all duration-200 ease-out",
+          isOpen ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
         )}
-        style={{
-          transform: isHovered 
-            ? `translate(${position.x * 0.1}px, ${position.y * 0.1}px)` 
-            : "translate(0, 0)",
-        }}
       >
-        {/* Shine effect */}
-        <div 
-          className={cn(
-            "absolute inset-0 transition-transform duration-700",
-            isHovered ? "translate-x-full" : "-translate-x-full"
-          )}
-          style={{
-            background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)",
-          }}
-        />
-        
-        <span className="relative z-10 flex items-center gap-2">
-          {children}
-          {/* Arrow that appears on hover */}
-          <svg 
-            className={cn(
-              "w-4 h-4 transition-all duration-300",
-              isHovered ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-2"
-            )}
-            fill="none" 
-            viewBox="0 0 24 24" 
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-          </svg>
-        </span>
+        <div className="pl-4 space-y-0.5 pb-1">
+          {item.items.map((child) => (
+            <Link
+              key={child.href}
+              href={child.href}
+              className={cn(
+                "block px-4 py-2.5 rounded-xl text-sm transition-all duration-200",
+                pathname.startsWith(child.href)
+                  ? "text-foreground font-medium"
+                  : "text-foreground-muted hover:text-foreground hover:bg-foreground/5"
+              )}
+              onClick={onNavigate}
+            >
+              <span className="block">{child.title}</span>
+              <span className="block text-xs text-foreground-muted/60">{child.subtitle}</span>
+            </Link>
+          ))}
+        </div>
       </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// PremiumButton
+// ---------------------------------------------------------------------------
+
+function PremiumButton({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "h-9 px-5 rounded-md text-sm font-medium inline-flex items-center justify-center",
+        "bg-primary text-primary-foreground",
+        "hover:bg-primary/90",
+        "active:scale-[0.97]",
+        "transition-all duration-200"
+      )}
+    >
+      {children}
     </Link>
   )
 }

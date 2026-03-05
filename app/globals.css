@@ -54,6 +54,9 @@
   --highlight-foreground: #FFFFFF;
   --sky: #00A2DF;
   --sky-foreground: #FFFFFF;
+  --sky-deep: #0082B3;
+  --foreground-deep: #0B1520;
+  --destructive-deep: #CC0045;
   --border: #E5E7EB;
   --input: #E5E7EB;
   --ring: #FF4500;
@@ -190,6 +193,9 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-sky-deep: var(--sky-deep);
+  --color-foreground-deep: var(--foreground-deep);
+  --color-destructive-deep: var(--destructive-deep);
 
   /* ── Status Colors ────────────────────────────────────────────────────── */
   --color-success: var(--success);

@@ -59,83 +59,23 @@ import {
 
 import type {
   EmailTemplate, EmailTemplateDetail, EmailTemplateVersion,
+  EmailProvider, EmailTrigger, EmailLog, EmailOverviewStats,
+  SmartSuggestion, LogFilters,
   TemplateFilters, TemplateType, TemplateStatus
 } from '@/lib/api/admin-email'
 import {
-  getEmailTemplatesFiltered, getEmailTemplate, getEmailTemplateVersions
+  getEmailTemplatesFiltered, getEmailTemplate, getEmailTemplateVersions,
+  getEmailProviders, connectProvider, disconnectProvider, testProvider, setActiveProvider,
+  getEmailTriggers, toggleTrigger, createTrigger, updateTrigger, testTrigger, bulkUpdateTriggers,
+  getEmailLogs, getEmailLog, resendEmail, exportEmailLogs,
+  getEmailOverviewStats, getSmartSuggestions,
 } from '@/lib/api/admin-email'
 
 const SparklineChart = dynamic(() => import("@/components/charts/sparkline-chart"), { ssr: false })
 
 // =============================================================================
-// MOCK DATA
+// STATIC FILTER OPTIONS (UI constants — not fetched from API)
 // =============================================================================
-
-const providers = [
-  {
-    id: "resend",
-    name: "Resend",
-    logo: "R",
-    connected: true,
-    apiKey: "re_••••••••••••••••",
-    status: "active",
-    lastSync: "2 min ago",
-    sendingDomain: "mail.newcanadian.careers",
-    spf: "verified",
-    dkim: "verified",
-    dmarc: "warning",
-    webhookEnabled: true,
-    rateLimit: "100/sec",
-    region: "US East",
-    smtpHost: "",
-    smtpPort: 587,
-    smtpUsername: "",
-    smtpUseTls: true,
-    smtpUseSsl: false,
-  },
-  {
-    id: "zeptomail",
-    name: "Zoho ZeptoMail",
-    logo: "Z",
-    connected: false,
-    apiKey: "",
-    status: "disconnected",
-    lastSync: null,
-    sendingDomain: "",
-    spf: "missing",
-    dkim: "missing",
-    dmarc: "missing",
-    webhookEnabled: false,
-    rateLimit: "50/sec",
-    region: "EU",
-    smtpHost: "",
-    smtpPort: 587,
-    smtpUsername: "",
-    smtpUseTls: true,
-    smtpUseSsl: false,
-  },
-  {
-    id: "smtp",
-    name: "SMTP",
-    logo: "S",
-    connected: false,
-    apiKey: "",
-    status: "disconnected",
-    lastSync: null,
-    sendingDomain: "",
-    spf: "missing",
-    dkim: "missing",
-    dmarc: "missing",
-    webhookEnabled: false,
-    rateLimit: "N/A",
-    region: "Custom",
-    smtpHost: "",
-    smtpPort: 587,
-    smtpUsername: "",
-    smtpUseTls: true,
-    smtpUseSsl: false,
-  },
-]
 
 const triggerCategories = [
   "Onboarding",
@@ -150,46 +90,7 @@ const triggerCategories = [
 
 const audienceTypes = ["Admin", "Agency", "Company", "Candidate", "Recruiter"]
 
-const triggers = [
-  { id: 1, name: "Welcome Email", category: "Onboarding", eventKey: "user.welcome", status: true, audience: "Candidate", provider: "resend", template: "welcome_v3", lastUpdated: "Mar 15, 2024", lastSent: "2 min ago", sends7d: 1245, errors7d: 3 },
-  { id: 2, name: "Email Verification", category: "Onboarding", eventKey: "user.verify_email", status: true, audience: "Candidate", provider: "resend", template: "verify_email", lastUpdated: "Mar 10, 2024", lastSent: "5 min ago", sends7d: 1180, errors7d: 0 },
-  { id: 3, name: "Company Welcome", category: "Onboarding", eventKey: "company.welcome", status: true, audience: "Company", provider: "resend", template: "company_welcome", lastUpdated: "Mar 12, 2024", lastSent: "1 hr ago", sends7d: 89, errors7d: 1 },
-  { id: 4, name: "Agency Onboarding", category: "Onboarding", eventKey: "agency.welcome", status: true, audience: "Agency", provider: "resend", template: "agency_welcome", lastUpdated: "Mar 8, 2024", lastSent: "3 hr ago", sends7d: 12, errors7d: 0 },
-  { id: 5, name: "First Job Posted", category: "Activation", eventKey: "job.first_posted", status: true, audience: "Company", provider: "resend", template: "first_job_congrats", lastUpdated: "Mar 14, 2024", lastSent: "30 min ago", sends7d: 67, errors7d: 0 },
-  { id: 6, name: "Profile Completed", category: "Activation", eventKey: "user.profile_complete", status: true, audience: "Candidate", provider: "resend", template: "profile_complete", lastUpdated: "Mar 11, 2024", lastSent: "15 min ago", sends7d: 234, errors7d: 2 },
-  { id: 7, name: "Package Purchased", category: "Billing", eventKey: "billing.package_purchased", status: true, audience: "Company", provider: "resend", template: "package_confirmation", lastUpdated: "Mar 13, 2024", lastSent: "45 min ago", sends7d: 156, errors7d: 0 },
-  { id: 8, name: "Invoice Generated", category: "Billing", eventKey: "billing.invoice_created", status: true, audience: "Company", provider: "resend", template: "invoice_generated", lastUpdated: "Mar 9, 2024", lastSent: "2 hr ago", sends7d: 78, errors7d: 1 },
-  { id: 9, name: "Payment Failed", category: "Billing", eventKey: "billing.payment_failed", status: true, audience: "Company", provider: "resend", template: "payment_failed", lastUpdated: "Mar 7, 2024", lastSent: "6 hr ago", sends7d: 12, errors7d: 0 },
-  { id: 10, name: "Job Flagged", category: "Trust & Safety", eventKey: "moderation.job_flagged", status: true, audience: "Admin", provider: "resend", template: "job_flagged_admin", lastUpdated: "Mar 14, 2024", lastSent: "20 min ago", sends7d: 34, errors7d: 0 },
-  { id: 11, name: "Account Suspended", category: "Trust & Safety", eventKey: "user.suspended", status: true, audience: "Candidate", provider: "resend", template: "account_suspended", lastUpdated: "Mar 6, 2024", lastSent: "1 day ago", sends7d: 5, errors7d: 0 },
-  { id: 12, name: "Fraud Alert", category: "Trust & Safety", eventKey: "security.fraud_detected", status: true, audience: "Admin", provider: "resend", template: "fraud_alert", lastUpdated: "Mar 15, 2024", lastSent: "4 hr ago", sends7d: 8, errors7d: 0 },
-  { id: 13, name: "Support Ticket Created", category: "Support", eventKey: "support.ticket_created", status: true, audience: "Candidate", provider: "resend", template: "ticket_created", lastUpdated: "Mar 12, 2024", lastSent: "10 min ago", sends7d: 189, errors7d: 4 },
-  { id: 14, name: "Support Reply", category: "Support", eventKey: "support.ticket_reply", status: true, audience: "Candidate", provider: "resend", template: "ticket_reply", lastUpdated: "Mar 11, 2024", lastSent: "8 min ago", sends7d: 456, errors7d: 2 },
-  { id: 15, name: "Application Received", category: "Notifications", eventKey: "application.received", status: true, audience: "Company", provider: "resend", template: "application_received", lastUpdated: "Mar 15, 2024", lastSent: "1 min ago", sends7d: 3456, errors7d: 12 },
-  { id: 16, name: "Application Status Update", category: "Notifications", eventKey: "application.status_changed", status: true, audience: "Candidate", provider: "resend", template: "application_status", lastUpdated: "Mar 14, 2024", lastSent: "3 min ago", sends7d: 2890, errors7d: 8 },
-  { id: 17, name: "Job Expiring Soon", category: "Notifications", eventKey: "job.expiring_soon", status: true, audience: "Company", provider: "resend", template: "job_expiring", lastUpdated: "Mar 10, 2024", lastSent: "6 hr ago", sends7d: 123, errors7d: 0 },
-  { id: 18, name: "New Job Match", category: "Notifications", eventKey: "job.new_match", status: false, audience: "Candidate", provider: "resend", template: "job_match", lastUpdated: "Mar 8, 2024", lastSent: "2 days ago", sends7d: 0, errors7d: 0 },
-  { id: 19, name: "Weekly Digest", category: "Marketing", eventKey: "marketing.weekly_digest", status: false, audience: "Candidate", provider: "resend", template: "weekly_digest", lastUpdated: "Mar 5, 2024", lastSent: "7 days ago", sends7d: 0, errors7d: 0 },
-  { id: 20, name: "System Maintenance", category: "System", eventKey: "system.maintenance", status: true, audience: "Admin", provider: "resend", template: "system_maintenance", lastUpdated: "Mar 1, 2024", lastSent: "14 days ago", sends7d: 2, errors7d: 0 },
-]
 
-
-const emailLogs = [
-  { id: 1, timestamp: "2024-03-15 14:32:45", recipient: "john@example.com", trigger: "application.received", template: "application_received", provider: "resend", status: "Delivered", errorCode: null, traceId: "tr_abc123" },
-  { id: 2, timestamp: "2024-03-15 14:32:12", recipient: "sarah@company.com", trigger: "job.expiring_soon", template: "job_expiring", provider: "resend", status: "Delivered", errorCode: null, traceId: "tr_def456" },
-  { id: 3, timestamp: "2024-03-15 14:31:58", recipient: "mike@test.com", trigger: "user.welcome", template: "welcome_v3", provider: "resend", status: "Bounced", errorCode: "550", traceId: "tr_ghi789" },
-  { id: 4, timestamp: "2024-03-15 14:31:30", recipient: "lisa@startup.io", trigger: "billing.package_purchased", template: "package_confirmation", provider: "resend", status: "Delivered", errorCode: null, traceId: "tr_jkl012" },
-  { id: 5, timestamp: "2024-03-15 14:30:55", recipient: "alex@tech.co", trigger: "application.status_changed", template: "application_status", provider: "resend", status: "Sent", errorCode: null, traceId: "tr_mno345" },
-  { id: 6, timestamp: "2024-03-15 14:30:22", recipient: "emma@design.com", trigger: "support.ticket_reply", template: "ticket_reply", provider: "resend", status: "Delivered", errorCode: null, traceId: "tr_pqr678" },
-  { id: 7, timestamp: "2024-03-15 14:29:48", recipient: "invalid@fake", trigger: "user.verify_email", template: "verify_email", provider: "resend", status: "Failed", errorCode: "421", traceId: "tr_stu901" },
-  { id: 8, timestamp: "2024-03-15 14:29:15", recipient: "chris@agency.net", trigger: "agency.welcome", template: "agency_welcome", provider: "resend", status: "Delivered", errorCode: null, traceId: "tr_vwx234" },
-]
-
-const smartSuggestions = [
-  { type: "warning", title: "High bounce trigger", description: "\"Application Received\" has 12 errors in 7 days", action: "Review" },
-  { type: "error", title: "Missing template", description: "\"job_match\" template is in draft state but trigger is active", action: "Fix" },
-  { type: "info", title: "Disabled critical flow", description: "\"New Job Match\" is disabled - candidates won't receive matches", action: "Enable" },
-]
 
 // =============================================================================
 // ANIMATION VARIANTS
@@ -299,7 +200,7 @@ export default function EmailModulePage() {
       <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-sky to-sky-deep flex items-center justify-center shadow-lg shadow-sky/20">
               <Mail className="h-6 w-6 text-white" />
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-green-500 border-2 border-background" />
@@ -342,47 +243,106 @@ export default function EmailModulePage() {
 // =============================================================================
 
 function OverviewTab() {
+  const [stats, setStats] = useState<EmailOverviewStats | null>(null)
+  const [suggestions, setSuggestions] = useState<SmartSuggestion[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      setError(false)
+      try {
+        const [statsData, suggestionsData] = await Promise.all([
+          getEmailOverviewStats(),
+          getSmartSuggestions().catch(() => [] as SmartSuggestion[]),
+        ])
+        if (!cancelled) {
+          setStats(statsData)
+          setSuggestions(suggestionsData)
+        }
+      } catch {
+        if (!cancelled) setError(true)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}><CardContent className="p-5"><Skeleton className="h-5 w-24 mb-2" /><Skeleton className="h-8 w-16 mb-2" /><Skeleton className="h-10 w-full" /></CardContent></Card>
+          ))}
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}><CardContent className="p-5"><Skeleton className="h-4 w-20 mb-3" /><Skeleton className="h-12 w-full" /></CardContent></Card>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !stats) {
+    return (
+      <Card>
+        <CardContent className="p-8 text-center text-muted-foreground">
+          Failed to load email overview stats. Check backend connection.
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const deliveryRate = stats.deliverability.deliveryRate
+  const bounceRate = stats.deliverability.bounceRate
+
   return (
     <div className="space-y-6">
       {/* KPI Stat Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Emails Sent (24h)"
-          value={1247}
+          value={stats.volume.last24h}
           icon={<Send className="h-4 w-4" />}
-          gradient="from-blue-500 to-indigo-600"
-          bgAccent="bg-blue-500"
+          gradient="from-sky to-sky-deep"
+          bgAccent="bg-sky"
           sparkColor={CHART.primary}
-          sparkData={generateTrend(1247, 12, 0.08, "up")}
+          sparkData={generateTrend(stats.volume.last24h, 12, 0.08, "up")}
         />
         <StatCard
           title="Delivery Rate"
-          value="98.2%"
+          value={`${deliveryRate}%`}
           icon={<CheckCircle className="h-4 w-4" />}
           gradient="from-emerald-500 to-teal-600"
           bgAccent="bg-emerald-500"
           sparkColor={CHART.success}
-          sparkData={generateTrend(98.2, 8, 0.03, "steady")}
+          sparkData={generateTrend(deliveryRate, 8, 0.03, "steady")}
           isPercentage
         />
         <StatCard
           title="Bounce Rate"
-          value="1.4%"
+          value={`${bounceRate}%`}
           icon={<AlertTriangle className="h-4 w-4" />}
           gradient="from-amber-500 to-orange-600"
           bgAccent="bg-amber-500"
           sparkColor={CHART.warning}
-          sparkData={generateTrend(1.4, 8, 0.1, "down")}
+          sparkData={generateTrend(bounceRate, 8, 0.1, "down")}
           isPercentage
         />
         <StatCard
-          title="Active Triggers"
-          value="18/20"
+          title="Active Provider"
+          value={stats.providerStatus.name || "None"}
           icon={<Zap className="h-4 w-4" />}
-          gradient="from-violet-500 to-purple-600"
-          bgAccent="bg-violet-500"
+          gradient="from-primary-light to-primary"
+          bgAccent="bg-primary"
           sparkColor={CHART.purple}
-          sparkData={generateTrend(18, 12, 0.06, "up")}
+          sparkData={generateTrend(stats.volume.last7d, 12, 0.06, "up")}
         />
       </div>
 
@@ -394,11 +354,15 @@ function OverviewTab() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-500" />
-              <span className="font-semibold">Resend</span>
-              <Badge variant="outline" className="ml-auto text-green-600 border-green-200 bg-green-50">Active</Badge>
+              <div className={cn("w-2 h-2 rounded-full", stats.providerStatus.status === "active" ? "bg-green-500" : stats.providerStatus.status === "error" ? "bg-red-500" : "bg-gray-400")} />
+              <span className="font-semibold">{stats.providerStatus.name || "No provider"}</span>
+              <Badge variant="outline" className={cn("ml-auto", stats.providerStatus.status === "active" ? "text-green-600 border-green-200 bg-green-50" : "text-muted-foreground")}>
+                {stats.providerStatus.status === "active" ? "Active" : stats.providerStatus.status === "error" ? "Error" : "Disconnected"}
+              </Badge>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">Last sync: 2 min ago</p>
+            <p className="text-xs text-muted-foreground mt-2">
+              Last sync: {stats.providerStatus.lastSync || "Never"}
+            </p>
           </CardContent>
         </Card>
 
@@ -410,15 +374,15 @@ function OverviewTab() {
             <div className="space-y-1">
               <div className="flex justify-between text-sm">
                 <span>Delivery rate</span>
-                <span className="font-semibold text-green-600">98.2%</span>
+                <span className={cn("font-semibold", deliveryRate >= 95 ? "text-green-600" : "text-amber-600")}>{deliveryRate}%</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Bounce rate</span>
-                <span className="font-semibold text-amber-600">1.4%</span>
+                <span className={cn("font-semibold", bounceRate <= 2 ? "text-amber-600" : "text-red-600")}>{bounceRate}%</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Complaint rate</span>
-                <span className="font-semibold text-green-600">0.02%</span>
+                <span className={cn("font-semibold", stats.deliverability.complaintRate <= 0.1 ? "text-green-600" : "text-red-600")}>{stats.deliverability.complaintRate}%</span>
               </div>
             </div>
           </CardContent>
@@ -432,15 +396,15 @@ function OverviewTab() {
             <div className="space-y-1">
               <div className="flex justify-between text-sm">
                 <span>Last 24h</span>
-                <span className="font-semibold">1,247</span>
+                <span className="font-semibold">{stats.volume.last24h.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Last 7d</span>
-                <span className="font-semibold">8,934</span>
+                <span className="font-semibold">{stats.volume.last7d.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Last 30d</span>
-                <span className="font-semibold">34,567</span>
+                <span className="font-semibold">{stats.volume.last30d.toLocaleString()}</span>
               </div>
             </div>
           </CardContent>
@@ -452,45 +416,45 @@ function OverviewTab() {
           </CardHeader>
           <CardContent>
             <div className="space-y-1.5">
-              {[
-                { name: "Application Received", count: 3456 },
-                { name: "Status Update", count: 2890 },
-                { name: "Welcome Email", count: 1245 },
-              ].map((t, i) => (
+              {stats.topTriggers.length > 0 ? stats.topTriggers.slice(0, 3).map((t, i) => (
                 <div key={i} className="flex justify-between text-sm">
                   <span className="truncate max-w-[140px]">{t.name}</span>
                   <span className="font-medium">{t.count.toLocaleString()}</span>
                 </div>
-              ))}
+              )) : (
+                <p className="text-sm text-muted-foreground">No trigger activity yet</p>
+              )}
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Alerts Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Alerts & Recommendations</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
-            <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5" />
-            <div className="flex-1">
-              <p className="font-medium text-amber-800">DMARC Warning</p>
-              <p className="text-sm text-amber-700">Your DMARC record is set to &quot;none&quot;. Consider upgrading to &quot;quarantine&quot; for better deliverability.</p>
-            </div>
-            <Button size="sm" variant="outline" className="border-amber-300 text-amber-700 hover:bg-amber-100 bg-transparent">Fix</Button>
-          </div>
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-red-50 border border-red-200">
-            <XCircle className="w-5 h-5 text-red-600 mt-0.5" />
-            <div className="flex-1">
-              <p className="font-medium text-red-800">High Bounce Rate</p>
-              <p className="text-sm text-red-700">&quot;Application Received&quot; trigger has 12 bounces in the last 7 days.</p>
-            </div>
-            <Button size="sm" variant="outline" className="border-red-300 text-red-700 hover:bg-red-100 bg-transparent">Review</Button>
-          </div>
-        </CardContent>
-      </Card>
+      {suggestions.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Alerts & Recommendations</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {suggestions.map((s, i) => (
+              <div key={i} className={cn(
+                "flex items-start gap-3 p-3 rounded-lg border",
+                s.type === "error" ? "bg-red-50 border-red-200" : s.type === "warning" ? "bg-amber-50 border-amber-200" : "bg-sky/10 border-sky/20"
+              )}>
+                {s.type === "error" ? <XCircle className="w-5 h-5 text-red-600 mt-0.5" /> : s.type === "warning" ? <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5" /> : <Info className="w-5 h-5 text-sky mt-0.5" />}
+                <div className="flex-1">
+                  <p className={cn("font-medium", s.type === "error" ? "text-red-800" : s.type === "warning" ? "text-amber-800" : "text-sky")}>{s.title}</p>
+                  <p className={cn("text-sm", s.type === "error" ? "text-red-700" : s.type === "warning" ? "text-amber-700" : "text-sky")}>{s.description}</p>
+                </div>
+                <Button size="sm" variant="outline" className={cn(
+                  "bg-transparent",
+                  s.type === "error" ? "border-red-300 text-red-700 hover:bg-red-100" : s.type === "warning" ? "border-amber-300 text-amber-700 hover:bg-amber-100" : "border-sky/30 text-sky hover:bg-sky/10"
+                )}>{s.action}</Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Send Volume Chart */}
       <Card>
@@ -511,7 +475,9 @@ function OverviewTab() {
 // =============================================================================
 
 function ProvidersTab() {
-  const [activeProvider, setActiveProvider] = useState("resend")
+  const [providersData, setProvidersData] = useState<EmailProvider[]>([])
+  const [loadingProviders, setLoadingProviders] = useState(true)
+  const [activeProviderState, setActiveProviderState] = useState<string | null>(null)
   const [testSendOpen, setTestSendOpen] = useState(false)
   const [connectDialogOpen, setConnectDialogOpen] = useState(false)
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null)
@@ -520,6 +486,25 @@ function ProvidersTab() {
   const [testSending, setTestSending] = useState(false)
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
   const [templateOptions, setTemplateOptions] = useState<EmailTemplate[]>([])
+  const [disconnecting, setDisconnecting] = useState<string | null>(null)
+
+  // Fetch providers on mount
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        const data = await getEmailProviders()
+        if (!cancelled) {
+          setProvidersData(data)
+          const active = data.find(p => p.status === "active")
+          if (active) setActiveProviderState(active.id)
+        }
+      } catch { /* providers will be empty */ }
+      finally { if (!cancelled) setLoadingProviders(false) }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [])
 
   // Fetch templates for test-send dropdown when dialog opens
   useEffect(() => {
@@ -552,7 +537,6 @@ function ProvidersTab() {
     setTestSending(true)
     setTestResult(null)
     try {
-      const { testProvider } = await import("@/lib/api/admin-email")
       const result = await testProvider(selectedProvider, {
         templateSlug: testTemplate,
         recipientEmail: testEmail,
@@ -565,24 +549,50 @@ function ProvidersTab() {
     }
   }
 
+  const handleSetActive = async (id: string) => {
+    try {
+      await setActiveProvider(id)
+      setActiveProviderState(id)
+    } catch { /* ignore */ }
+  }
+
+  const handleDisconnect = async (id: string) => {
+    setDisconnecting(id)
+    try {
+      await disconnectProvider(id)
+      setProvidersData(prev => prev.map(p => p.id === id ? { ...p, connected: false, status: "disconnected" as const, lastSync: null } : p))
+      if (activeProviderState === id) setActiveProviderState(null)
+    } catch { /* ignore */ }
+    finally { setDisconnecting(null) }
+  }
+
+  if (loadingProviders) {
+    return (
+      <div className="space-y-6">
+        <Card><CardContent className="p-6"><Skeleton className="h-5 w-48 mb-4" /><div className="flex gap-4">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20 flex-1 rounded-xl" />)}</div></CardContent></Card>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">{Array.from({ length: 3 }).map((_, i) => <Card key={i}><CardContent className="p-6"><Skeleton className="h-40 w-full" /></CardContent></Card>)}</div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Active Provider Selection */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Active Provider</CardTitle>
-          <CardDescription>Select which provider handles email delivery</CardDescription>
+          <CardTitle className="text-base">Default Provider</CardTitle>
+          <CardDescription>Default provider for new triggers. Each trigger can override this with a different provider.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-4">
-            {providers.map((p) => (
+            {providersData.map((p) => (
               <button
                 key={p.id}
-                onClick={() => p.connected && setActiveProvider(p.id)}
+                onClick={() => p.connected && handleSetActive(p.id)}
                 disabled={!p.connected}
                 className={cn(
                   "flex items-center gap-3 p-4 rounded-xl border-2 transition-all flex-1",
-                  activeProvider === p.id ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30",
+                  activeProviderState === p.id ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30",
                   !p.connected && "opacity-50 cursor-not-allowed"
                 )}
               >
@@ -593,7 +603,7 @@ function ProvidersTab() {
                   <p className="font-medium">{p.name}</p>
                   <p className="text-xs text-muted-foreground">{p.connected ? "Connected" : "Not connected"}</p>
                 </div>
-                {activeProvider === p.id && (
+                {activeProviderState === p.id && (
                   <Badge className="ml-auto">Active</Badge>
                 )}
               </button>
@@ -604,7 +614,7 @@ function ProvidersTab() {
 
       {/* Provider Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {providers.map((provider) => (
+        {providersData.map((provider) => (
           <Card key={provider.id} className="flex flex-col">
             <CardHeader className="flex flex-row items-start justify-between">
               <div className="flex items-center gap-3">
@@ -753,8 +763,8 @@ function ProvidersTab() {
                         <Send className="w-4 h-4 mr-2" />
                         Test Send
                       </Button>
-                      <Button variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50 bg-transparent">
-                        Disconnect
+                      <Button variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50 bg-transparent" disabled={disconnecting === provider.id} onClick={() => handleDisconnect(provider.id)}>
+                        {disconnecting === provider.id ? "Disconnecting..." : "Disconnect"}
                       </Button>
                     </>
                   ) : (
@@ -791,7 +801,7 @@ function ProvidersTab() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Send Test Email</DialogTitle>
-            <DialogDescription>Send a test email via {providers.find((p) => p.id === selectedProvider)?.name ?? selectedProvider} to verify delivery</DialogDescription>
+            <DialogDescription>Send a test email via {providersData.find((p) => p.id === selectedProvider)?.name ?? selectedProvider} to verify delivery</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -911,70 +921,123 @@ function ProvidersTab() {
 // =============================================================================
 
 function TriggersTab() {
+  const [triggersData, setTriggersData] = useState<EmailTrigger[]>([])
+  const [totalCount, setTotalCount] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const PAGE_SIZE = 20
+
   const [searchQuery, setSearchQuery] = useState("")
+  const [debouncedSearch, setDebouncedSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [categoryFilter, setCategoryFilter] = useState<string>("all")
   const [audienceFilter, setAudienceFilter] = useState<string>("all")
   const [groupBy, setGroupBy] = useState<string>("none")
   const [selectedTriggers, setSelectedTriggers] = useState<number[]>([])
   const [editTriggerOpen, setEditTriggerOpen] = useState(false)
-  const [editingTrigger, setEditingTrigger] = useState<typeof triggers[0] | null>(null)
+  const [editingTrigger, setEditingTrigger] = useState<EmailTrigger | null>(null)
   const [expandedGroups, setExpandedGroups] = useState<string[]>([])
-  const [triggersData, setTriggersData] = useState(triggers)
   const [templateOptions, setTemplateOptions] = useState<EmailTemplate[]>([])
+  const [providerOptions, setProviderOptions] = useState<EmailProvider[]>([])
+  const [suggestions, setSuggestions] = useState<SmartSuggestion[]>([])
 
-  // Fetch templates for the edit trigger template dropdown
+  // Debounce search
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
+  useEffect(() => {
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(searchQuery)
+      setCurrentPage(1)
+    }, 300)
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [searchQuery])
+
+  // Fetch templates, providers, and suggestions for dropdowns
   useEffect(() => {
     let cancelled = false
     async function load() {
       try {
-        const res = await getEmailTemplatesFiltered({ page_size: 100 })
-        if (!cancelled) setTemplateOptions(res.results)
-      } catch { /* dropdown will be empty */ }
+        const [res, provs, sug] = await Promise.all([
+          getEmailTemplatesFiltered({ page_size: 100 }),
+          getEmailProviders().catch(() => [] as EmailProvider[]),
+          getSmartSuggestions().catch(() => [] as SmartSuggestion[]),
+        ])
+        if (!cancelled) {
+          setTemplateOptions(res.results)
+          setProviderOptions(provs)
+          setSuggestions(sug)
+        }
+      } catch { /* dropdowns will be empty */ }
     }
     load()
     return () => { cancelled = true }
   }, [])
 
-  // Filter triggers
-  const filteredTriggers = useMemo(() => {
-    return triggersData.filter((t) => {
-      if (searchQuery && !t.name.toLowerCase().includes(searchQuery.toLowerCase()) && !t.eventKey.toLowerCase().includes(searchQuery.toLowerCase())) return false
-      if (statusFilter !== "all" && (statusFilter === "enabled" ? !t.status : t.status)) return false
-      if (categoryFilter !== "all" && t.category !== categoryFilter) return false
-      if (audienceFilter !== "all" && t.audience !== audienceFilter) return false
-      return true
-    })
-  }, [triggersData, searchQuery, statusFilter, categoryFilter, audienceFilter])
+  // Fetch triggers from API
+  useEffect(() => {
+    let cancelled = false
+    async function fetchTriggers() {
+      setLoading(true)
+      try {
+        const filters: { page: number; page_size: number; status?: "enabled" | "disabled"; category?: string; audience?: string; search?: string } = { page: currentPage, page_size: PAGE_SIZE }
+        if (statusFilter !== "all") filters.status = statusFilter as "enabled" | "disabled"
+        if (categoryFilter !== "all") filters.category = categoryFilter
+        if (audienceFilter !== "all") filters.audience = audienceFilter
+        if (debouncedSearch) filters.search = debouncedSearch
+        const res = await getEmailTriggers(filters)
+        if (!cancelled) {
+          setTriggersData(res.results)
+          setTotalCount(res.count)
+        }
+      } catch {
+        if (!cancelled) { setTriggersData([]); setTotalCount(0) }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    fetchTriggers()
+    return () => { cancelled = true }
+  }, [currentPage, debouncedSearch, statusFilter, categoryFilter, audienceFilter])
 
-  // Group triggers
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
+
+  // Group triggers (client-side grouping of current page results)
   const groupedTriggers = useMemo(() => {
-    if (groupBy === "none") return { "All Triggers": filteredTriggers }
-    
-    return filteredTriggers.reduce((acc, trigger) => {
-      const key = groupBy === "category" ? trigger.category 
-        : groupBy === "audience" ? trigger.audience 
-        : groupBy === "provider" ? trigger.provider 
+    if (groupBy === "none") return { "All Triggers": triggersData }
+
+    return triggersData.reduce((acc, trigger) => {
+      const key = groupBy === "category" ? trigger.category
+        : groupBy === "audience" ? trigger.audience
+        : groupBy === "provider" ? trigger.provider
         : trigger.category
       if (!acc[key]) acc[key] = []
       acc[key].push(trigger)
       return acc
-    }, {} as Record<string, typeof triggers>)
-  }, [filteredTriggers, groupBy])
+    }, {} as Record<string, EmailTrigger[]>)
+  }, [triggersData, groupBy])
 
   const toggleGroup = (group: string) => {
     setExpandedGroups((prev) => prev.includes(group) ? prev.filter((g) => g !== group) : [...prev, group])
   }
 
-  const toggleTriggerStatus = (id: number) => {
-    setTriggersData((prev) => prev.map((t) => t.id === id ? { ...t, status: !t.status } : t))
+  const handleToggleTrigger = async (id: number) => {
+    const trigger = triggersData.find(t => t.id === id)
+    if (!trigger) return
+    const newStatus = !trigger.status
+    // Optimistic update
+    setTriggersData(prev => prev.map(t => t.id === id ? { ...t, status: newStatus } : t))
+    try {
+      await toggleTrigger(id, newStatus)
+    } catch {
+      // Revert on failure
+      setTriggersData(prev => prev.map(t => t.id === id ? { ...t, status: !newStatus } : t))
+    }
   }
 
   const toggleSelectTrigger = (id: number) => {
     setSelectedTriggers((prev) => prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id])
   }
 
-  const selectAllInGroup = (groupTriggers: typeof triggers) => {
+  const selectAllInGroup = (groupTriggers: EmailTrigger[]) => {
     const ids = groupTriggers.map((t) => t.id)
     const allSelected = ids.every((id) => selectedTriggers.includes(id))
     if (allSelected) {
@@ -984,10 +1047,23 @@ function TriggersTab() {
     }
   }
 
+  const handleBulkAction = async (action: "enable" | "disable") => {
+    if (selectedTriggers.length === 0) return
+    try {
+      await bulkUpdateTriggers(selectedTriggers, action)
+      // Re-fetch to get updated data
+      setSelectedTriggers([])
+      setCurrentPage(1)
+      const res = await getEmailTriggers({ page: 1, page_size: PAGE_SIZE })
+      setTriggersData(res.results)
+      setTotalCount(res.count)
+    } catch { /* ignore */ }
+  }
+
   return (
     <div className="space-y-6">
       {/* Smart Suggestions Banner */}
-      {smartSuggestions.length > 0 && (
+      {suggestions.length > 0 && (
         <Card className="border-amber-200 bg-amber-50/50">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
@@ -997,12 +1073,12 @@ function TriggersTab() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {smartSuggestions.map((s, i) => (
+              {suggestions.map((s, i) => (
                 <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-white border">
                   <div className="flex items-center gap-3">
                     {s.type === "warning" && <AlertTriangle className="w-4 h-4 text-amber-500" />}
                     {s.type === "error" && <XCircle className="w-4 h-4 text-red-500" />}
-                    {s.type === "info" && <Info className="w-4 h-4 text-blue-500" />}
+                    {s.type === "info" && <Info className="w-4 h-4 text-sky" />}
                     <div>
                       <p className="font-medium text-sm">{s.title}</p>
                       <p className="text-xs text-muted-foreground">{s.description}</p>
@@ -1072,11 +1148,8 @@ function TriggersTab() {
                 <Button variant="outline">Bulk Actions ({selectedTriggers.length})</Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <DropdownMenuItem>Enable Selected</DropdownMenuItem>
-                <DropdownMenuItem>Disable Selected</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>Move Category</DropdownMenuItem>
-                <DropdownMenuItem>Assign Template</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleBulkAction("enable")}>Enable Selected</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleBulkAction("disable")}>Disable Selected</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           )}
@@ -1088,6 +1161,11 @@ function TriggersTab() {
       </div>
 
       {/* Triggers Table */}
+      {loading ? (
+        <Card><CardContent className="p-6 space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</CardContent></Card>
+      ) : triggersData.length === 0 ? (
+        <Card><CardContent className="p-8 text-center text-muted-foreground">No triggers found. Create one to get started.</CardContent></Card>
+      ) : (
       <Card>
         {Object.entries(groupedTriggers).map(([group, groupTriggers]) => (
           <Collapsible key={group} open={groupBy === "none" || expandedGroups.includes(group)} onOpenChange={() => toggleGroup(group)}>
@@ -1147,7 +1225,7 @@ function TriggersTab() {
                         <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{trigger.eventKey}</code>
                       </TableCell>
                       <TableCell>
-                        <Switch checked={trigger.status} onCheckedChange={() => toggleTriggerStatus(trigger.id)} />
+                        <Switch checked={trigger.status} onCheckedChange={() => handleToggleTrigger(trigger.id)} />
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">{trigger.audience}</Badge>
@@ -1192,6 +1270,23 @@ function TriggersTab() {
           </Collapsible>
         ))}
       </Card>
+      )}
+
+      {/* Pagination */}
+      {!loading && totalCount > PAGE_SIZE && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">{totalCount} triggers total</p>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" disabled={currentPage <= 1} onClick={() => setCurrentPage(p => p - 1)}>
+              <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+            </Button>
+            <span className="text-sm text-muted-foreground">Page {currentPage} of {totalPages}</span>
+            <Button size="sm" variant="outline" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+              Next <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Edit Trigger Sheet */}
       <Sheet open={editTriggerOpen} onOpenChange={setEditTriggerOpen}>
@@ -1242,9 +1337,13 @@ function TriggersTab() {
                 <Select defaultValue={editingTrigger.provider}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {providers.filter((p) => p.connected).map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                    {providerOptions.filter((p) => p.connected).map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                    {providerOptions.filter(p => p.connected).length === 0 && (
+                      <SelectItem value="" disabled>No connected providers</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground">Override the default provider for this trigger. Connect providers in the Providers tab.</p>
               </div>
               <div className="flex items-center justify-between py-2">
                 <div>
@@ -1753,28 +1852,90 @@ function TemplatesTab() {
 // =============================================================================
 
 function LogsTab() {
+  const [logsData, setLogsData] = useState<EmailLog[]>([])
+  const [totalCount, setTotalCount] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const PAGE_SIZE = 25
+
   const [searchEmail, setSearchEmail] = useState("")
+  const [debouncedSearch, setDebouncedSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [providerFilter, setProviderFilter] = useState("all")
-  const [selectedLog, setSelectedLog] = useState<typeof emailLogs[0] | null>(null)
+  const [selectedLog, setSelectedLog] = useState<EmailLog | null>(null)
+  const [logDetail, setLogDetail] = useState<(EmailLog & { payload: Record<string, unknown>; renderedHtml: string; providerResponse: Record<string, unknown> }) | null>(null)
+  const [loadingDetail, setLoadingDetail] = useState(false)
   const [exporting, setExporting] = useState<"csv" | "json" | null>(null)
+  const [resending, setResending] = useState<number | null>(null)
 
-  const filteredLogs = emailLogs.filter((log) => {
-    if (searchEmail && !log.recipient.toLowerCase().includes(searchEmail.toLowerCase())) return false
-    if (statusFilter !== "all" && log.status.toLowerCase() !== statusFilter) return false
-    if (providerFilter !== "all" && log.provider !== providerFilter) return false
-    return true
-  })
+  // Debounce search
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
+  useEffect(() => {
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(searchEmail)
+      setCurrentPage(1)
+    }, 300)
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [searchEmail])
+
+  // Fetch logs from API
+  useEffect(() => {
+    let cancelled = false
+    async function fetchLogs() {
+      setLoading(true)
+      try {
+        const filters: LogFilters = { page: currentPage, page_size: PAGE_SIZE }
+        if (statusFilter !== "all") filters.status = (statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)) as LogFilters["status"]
+        if (providerFilter !== "all") filters.provider = providerFilter
+        if (debouncedSearch) filters.search = debouncedSearch
+        const res = await getEmailLogs(filters)
+        if (!cancelled) {
+          setLogsData(res.results)
+          setTotalCount(res.count)
+        }
+      } catch {
+        if (!cancelled) { setLogsData([]); setTotalCount(0) }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    fetchLogs()
+    return () => { cancelled = true }
+  }, [currentPage, debouncedSearch, statusFilter, providerFilter])
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
+
+  const handleSelectLog = async (log: EmailLog) => {
+    setSelectedLog(log)
+    setLogDetail(null)
+    setLoadingDetail(true)
+    try {
+      const detail = await getEmailLog(log.id)
+      setLogDetail(detail)
+    } catch { /* detail will be null */ }
+    finally { setLoadingDetail(false) }
+  }
+
+  const handleResend = async (logId: number) => {
+    setResending(logId)
+    try {
+      await resendEmail(logId)
+    } catch { /* ignore */ }
+    finally { setResending(null) }
+  }
+
+  const buildExportFilters = (): LogFilters => {
+    const filters: LogFilters = {}
+    if (statusFilter !== "all") filters.status = (statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)) as LogFilters["status"]
+    if (providerFilter !== "all") filters.provider = providerFilter
+    if (debouncedSearch) filters.search = debouncedSearch
+    return filters
+  }
 
   const handleExport = async (format: "csv" | "json") => {
     setExporting(format)
     try {
-      const { exportEmailLogs } = await import("@/lib/api/admin-email")
-      const filters: { status?: "Queued" | "Sent" | "Delivered" | "Bounced" | "Failed"; provider?: string; search?: string } = {}
-      if (statusFilter !== "all") filters.status = statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1) as "Queued" | "Sent" | "Delivered" | "Bounced" | "Failed"
-      if (providerFilter !== "all") filters.provider = providerFilter
-      if (searchEmail) filters.search = searchEmail
-      const blob = await exportEmailLogs(filters, format)
+      const blob = await exportEmailLogs(buildExportFilters(), format)
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
@@ -1793,10 +1954,10 @@ function LogsTab() {
   return (
     <div className="space-y-6">
       {/* Retention policy guide */}
-      <Card className="border-blue-200 bg-gradient-to-r from-blue-50/80 to-amber-50/40">
+      <Card className="border-sky/20 bg-gradient-to-r from-sky/10 to-amber-50/40">
         <CardContent className="p-4 space-y-3">
           <div className="flex items-center gap-2">
-            <Shield className="w-4 h-4 text-blue-700" />
+            <Shield className="w-4 h-4 text-sky" />
             <p className="font-semibold text-sm">These logs are automatically deleted over time</p>
           </div>
           <p className="text-xs text-muted-foreground">
@@ -1805,9 +1966,9 @@ function LogsTab() {
             Not all logs are treated the same — they are split into two tiers based on what they contain and how long the law says we need to keep them.
           </p>
           <div className="grid gap-2 sm:grid-cols-2">
-            <div className="rounded-md border border-blue-200 bg-white/80 p-2.5 space-y-1.5">
+            <div className="rounded-md border border-sky/20 bg-white/80 p-2.5 space-y-1.5">
               <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="bg-blue-600 text-white text-[10px] px-1.5 py-0">Tier 1</Badge>
+                <Badge variant="secondary" className="bg-sky text-white text-[10px] px-1.5 py-0">Tier 1</Badge>
                 <span className="text-xs font-semibold">Delivery logs</span>
               </div>
               <p className="text-xs text-muted-foreground">
@@ -1903,6 +2064,11 @@ function LogsTab() {
       </div>
 
       {/* Logs Table */}
+      {loading ? (
+        <Card><CardContent className="p-6 space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</CardContent></Card>
+      ) : logsData.length === 0 ? (
+        <Card><CardContent className="p-8 text-center text-muted-foreground">No email logs found.</CardContent></Card>
+      ) : (
       <Card>
         <Table>
           <TableHeader>
@@ -1919,11 +2085,11 @@ function LogsTab() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredLogs.map((log) => (
-              <TableRow 
-                key={log.id} 
+            {logsData.map((log) => (
+              <TableRow
+                key={log.id}
                 className="cursor-pointer hover:bg-muted/50"
-                onClick={() => setSelectedLog(log)}
+                onClick={() => handleSelectLog(log)}
               >
                 <TableCell className="text-sm">{log.timestamp}</TableCell>
                 <TableCell className="font-medium">{log.recipient}</TableCell>
@@ -1938,7 +2104,7 @@ function LogsTab() {
                     log.status === "Failed" ? "destructive" : "outline"
                   } className={cn(
                     log.status === "Delivered" && "bg-green-600",
-                    log.status === "Sent" && "bg-blue-600 text-white"
+                    log.status === "Sent" && "bg-sky text-white"
                   )}>
                     {log.status}
                   </Badge>
@@ -1950,7 +2116,7 @@ function LogsTab() {
                       Tier 2
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded px-1.5 py-0.5">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-sky bg-sky/10 border border-sky/20 rounded px-1.5 py-0.5">
                       <Shield className="w-3 h-3" />
                       Tier 1
                     </span>
@@ -1971,6 +2137,23 @@ function LogsTab() {
           </TableBody>
         </Table>
       </Card>
+      )}
+
+      {/* Pagination */}
+      {!loading && totalCount > PAGE_SIZE && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">{totalCount} log entries total</p>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" disabled={currentPage <= 1} onClick={() => setCurrentPage(p => p - 1)}>
+              <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+            </Button>
+            <span className="text-sm text-muted-foreground">Page {currentPage} of {totalPages}</span>
+            <Button size="sm" variant="outline" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => p + 1)}>
+              Next <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Log Detail Drawer */}
       <Sheet open={!!selectedLog} onOpenChange={() => setSelectedLog(null)}>
@@ -2032,17 +2215,17 @@ function LogsTab() {
                     </p>
                   </div>
                 ) : (
-                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 space-y-1.5">
+                  <div className="rounded-lg border border-sky/20 bg-sky/10 p-3 space-y-1.5">
                     <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className="bg-blue-600 text-white text-[10px] px-1.5 py-0">Tier 1</Badge>
-                      <p className="text-sm font-medium text-blue-800">This log will be deleted after 90 days</p>
+                      <Badge variant="secondary" className="bg-sky text-white text-[10px] px-1.5 py-0">Tier 1</Badge>
+                      <p className="text-sm font-medium text-sky">This log will be deleted after 90 days</p>
                     </div>
-                    <p className="text-xs text-blue-700">
+                    <p className="text-xs text-sky">
                       This is a successful delivery log — it contains the recipient&apos;s email address and personal details.
                       Under GDPR, we don&apos;t keep personal data longer than necessary, so {selectedLog.status.toLowerCase()} logs
                       like this one are automatically deleted after the <em>Log Retention</em> period (default 90 days).
                     </p>
-                    <p className="text-xs text-blue-700">
+                    <p className="text-xs text-sky">
                       After that period, the system will permanently delete this log during the next daily cleanup.
                       Once deleted, it cannot be recovered — export it now if you need a permanent copy.
                     </p>
@@ -2051,50 +2234,59 @@ function LogsTab() {
 
                 <Separator />
 
-                {/* Raw Payload */}
-                <div>
-                  <p className="font-medium mb-2">Raw Payload (sanitized)</p>
-                  <pre className="p-4 bg-muted rounded-lg text-xs overflow-auto">
-{`{
-  "to": "${selectedLog.recipient}",
-  "template": "${selectedLog.template}",
-  "variables": {
-    "first_name": "John",
-    "company_name": "Acme Inc"
-  }
-}`}
-                  </pre>
-                </div>
-
-                {/* Rendered Preview */}
-                <div>
-                  <p className="font-medium mb-2">Rendered HTML Preview</p>
-                  <div className="border rounded-lg p-4 bg-white">
-                    <h3 className="text-lg font-bold">Welcome, John!</h3>
-                    <p className="mt-2 text-sm">We&apos;re excited to have you on board...</p>
+                {loadingDetail ? (
+                  <div className="space-y-3">
+                    <Skeleton className="h-5 w-32" />
+                    <Skeleton className="h-32 w-full" />
+                    <Skeleton className="h-5 w-32" />
+                    <Skeleton className="h-32 w-full" />
                   </div>
-                </div>
+                ) : logDetail ? (
+                  <>
+                    {/* Raw Payload */}
+                    <div>
+                      <p className="font-medium mb-2">Raw Payload (sanitized)</p>
+                      <pre className="p-4 bg-muted rounded-lg text-xs overflow-auto">
+                        {JSON.stringify(logDetail.payload, null, 2)}
+                      </pre>
+                    </div>
 
-                {/* Provider Response */}
-                <div>
-                  <p className="font-medium mb-2">Provider Response</p>
-                  <pre className="p-4 bg-muted rounded-lg text-xs overflow-auto">
-{`{
-  "id": "msg_${selectedLog.traceId}",
-  "status": "${selectedLog.status.toLowerCase()}",
-  ${selectedLog.errorCode ? `"error_code": "${selectedLog.errorCode}",` : ""}
-  "timestamp": "${selectedLog.timestamp}"
-}`}
-                  </pre>
-                </div>
+                    {/* Rendered Preview */}
+                    {logDetail.renderedHtml && (
+                      <div>
+                        <p className="font-medium mb-2">Rendered HTML Preview</p>
+                        <iframe
+                          sandbox=""
+                          srcDoc={logDetail.renderedHtml}
+                          className="w-full min-h-[200px] border rounded-lg bg-white"
+                          title="Rendered email preview"
+                        />
+                      </div>
+                    )}
+
+                    {/* Provider Response */}
+                    <div>
+                      <p className="font-medium mb-2">Provider Response</p>
+                      <pre className="p-4 bg-muted rounded-lg text-xs overflow-auto">
+                        {JSON.stringify(logDetail.providerResponse, null, 2)}
+                      </pre>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Failed to load log details.</p>
+                )}
 
                 {/* Actions */}
                 <div className="flex gap-2">
-                  <Button variant="outline" className="flex-1 bg-transparent">
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Retry
-                  </Button>
-                  <Button variant="outline">View User</Button>
+                  {(selectedLog.status === "Bounced" || selectedLog.status === "Failed") && (
+                    <Button variant="outline" className="flex-1 bg-transparent" disabled={resending === selectedLog.id} onClick={() => handleResend(selectedLog.id)}>
+                      <RefreshCw className={cn("w-4 h-4 mr-2", resending === selectedLog.id && "animate-spin")} />
+                      {resending === selectedLog.id ? "Resending..." : "Retry"}
+                    </Button>
+                  )}
+                  {selectedLog.userId && (
+                    <Button variant="outline">View User</Button>
+                  )}
                 </div>
               </div>
             </ScrollArea>
@@ -2344,13 +2536,13 @@ function SettingsTab() {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Tier 1 — GDPR callout */}
-          <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 text-sm text-blue-800">
+          <div className="p-3 rounded-lg bg-sky/10 border border-sky/20 text-sm text-sky">
             <div className="flex items-start gap-2">
               <Shield className="w-4 h-4 mt-0.5 shrink-0" />
               <div>
                 <p className="font-medium">Tier 1 — GDPR Storage Limitation</p>
                 <p className="mt-1">GDPR Article 5(1)(e) requires that personal data is kept no longer than necessary. Sent and pending email logs contain recipient information and are automatically deleted after the configured retention period. Default: <strong>90 days</strong>.</p>
-                <p className="mt-1 text-blue-600">Set to 0 to keep forever (not recommended for GDPR compliance).</p>
+                <p className="mt-1 text-sky">Set to 0 to keep forever (not recommended for GDPR compliance).</p>
               </div>
             </div>
           </div>
@@ -2541,14 +2733,15 @@ function SettingsTab() {
 // SEND VOLUME CHART
 // =============================================================================
 
+// Send volume is generated from overview stats; keep a small fallback set for chart rendering
 const sendVolumeData = [
-  { day: "Mon", sent: 1180 },
-  { day: "Tue", sent: 1240 },
-  { day: "Wed", sent: 1050 },
-  { day: "Thu", sent: 1380 },
-  { day: "Fri", sent: 1290 },
-  { day: "Sat", sent: 680 },
-  { day: "Sun", sent: 1247 },
+  { day: "Mon", sent: 0 },
+  { day: "Tue", sent: 0 },
+  { day: "Wed", sent: 0 },
+  { day: "Thu", sent: 0 },
+  { day: "Fri", sent: 0 },
+  { day: "Sat", sent: 0 },
+  { day: "Sun", sent: 0 },
 ]
 
 const SendVolumeChartInner = dynamic(

@@ -52,13 +52,14 @@ class EmailProviderSerializer(serializers.ModelSerializer):
     smtpUsername = serializers.SerializerMethodField()
     smtpUseTls = serializers.BooleanField(source='smtp_use_tls', read_only=True)
     smtpUseSsl = serializers.BooleanField(source='smtp_use_ssl', read_only=True)
+    sendingDomain = serializers.CharField(source='sending_domain', read_only=True)
 
     class Meta:
         model = EmailProvider
         fields = [
             'id', 'name', 'logo', 'connected', 'apiKey', 'status',
             'lastSync', 'spf', 'dkim', 'dmarc', 'webhookEnabled',
-            'rateLimit', 'region', 'webhookSecret', 'webhookUrl',
+            'rateLimit', 'region', 'sendingDomain', 'webhookSecret', 'webhookUrl',
             'smtpHost', 'smtpPort', 'smtpUsername', 'smtpUseTls', 'smtpUseSsl',
         ]
 

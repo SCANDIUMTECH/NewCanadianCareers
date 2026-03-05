@@ -1,12 +1,28 @@
 "use client"
 
+import { useState, type FormEvent } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { Search, MapPin } from "lucide-react"
 import { MotionWrapper } from "./motion-wrapper"
 import { MagneticButton } from "./magnetic-button"
 import { TextReveal } from "./text-reveal"
 import { ConstellationCanvas } from "./constellation-canvas"
+import { FloatingMapleLeaves } from "./floating-maple-leaves"
 
 export function HeroSection() {
+  const router = useRouter()
+  const [keyword, setKeyword] = useState("")
+  const [location, setLocation] = useState("")
+
+  const handleSearch = (e: FormEvent) => {
+    e.preventDefault()
+    const params = new URLSearchParams()
+    if (keyword.trim()) params.set("q", keyword.trim())
+    if (location.trim()) params.set("location", location.trim())
+    router.push(`/jobs${params.toString() ? `?${params.toString()}` : ""}`)
+  }
+
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden">
       {/* Ambient background gradient */}
@@ -17,6 +33,9 @@ export function HeroSection() {
         }}
       />
       
+      {/* Floating maple leaf silhouettes */}
+      <FloatingMapleLeaves />
+
       {/* Editorial container */}
       <div className="relative w-full max-w-[1400px] mx-auto px-6 md:px-12 lg:px-24 py-32 md:py-40">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
@@ -35,7 +54,7 @@ export function HeroSection() {
 
             {/* Staggered reveal: subhead */}
             <MotionWrapper delay={200}>
-              <p className="text-lg md:text-xl text-foreground-muted leading-relaxed max-w-md">
+              <p className="font-secondary text-lg md:text-xl text-foreground-muted leading-relaxed max-w-md">
                 The trusted job platform connecting newcomers to Canada with employers who value diverse talent and global experience.
               </p>
             </MotionWrapper>
@@ -56,6 +75,7 @@ export function HeroSection() {
                 </Link>
               </div>
             </MotionWrapper>
+
           </div>
 
           {/* Right column: Live Constellation Canvas */}
@@ -82,6 +102,41 @@ export function HeroSection() {
           </MotionWrapper>
 
         </div>
+
+        {/* Full-width search bar */}
+        <MotionWrapper delay={500}>
+          <form onSubmit={handleSearch} className="mt-12">
+            <div className="flex flex-col sm:flex-row items-stretch gap-2 p-2 bg-white/80 dark:bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl shadow-lg">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-muted/50" />
+                <input
+                  type="text"
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  placeholder="Job title or keyword"
+                  className="w-full pl-10 pr-3 py-3 bg-transparent text-sm text-foreground placeholder:text-foreground-muted/50 outline-none rounded-xl focus:bg-foreground/[0.02] transition-colors"
+                />
+              </div>
+              <div className="hidden sm:block w-px bg-border/50 my-2" />
+              <div className="relative flex-1">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-muted/50" />
+                <input
+                  type="text"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="City or province"
+                  className="w-full pl-10 pr-3 py-3 bg-transparent text-sm text-foreground placeholder:text-foreground-muted/50 outline-none rounded-xl focus:bg-foreground/[0.02] transition-colors"
+                />
+              </div>
+              <button
+                type="submit"
+                className="px-8 py-3 bg-primary text-primary-foreground text-sm font-medium rounded-xl hover:bg-primary/90 active:scale-[0.98] transition-all whitespace-nowrap"
+              >
+                Search Jobs
+              </button>
+            </div>
+          </form>
+        </MotionWrapper>
       </div>
     </section>
   )

@@ -467,7 +467,7 @@ function UsersContent() {
       <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary-light to-primary flex items-center justify-center shadow-lg shadow-primary/20">
               <Users className="h-6 w-6 text-white" />
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-green-500 border-2 border-background" />
@@ -525,7 +525,7 @@ function UsersContent() {
             <StatCard title="Total Users" value={stats?.total.toLocaleString() || "0"} icon={<Users className="h-4 w-4" />} gradient="from-slate-600 to-slate-800" />
             <StatCard title="Active" value={stats?.active.toLocaleString() || "0"} color="green" icon={<UserCheck className="h-4 w-4" />} gradient="from-green-500 to-emerald-600" />
             <StatCard title="Pending Verification" value={stats?.pending.toLocaleString() || "0"} color="amber" icon={<Clock className="h-4 w-4" />} gradient="from-amber-500 to-orange-600" />
-            <StatCard title="Suspended" value={stats?.suspended.toLocaleString() || "0"} color="red" icon={<ShieldBan className="h-4 w-4" />} gradient="from-red-500 to-rose-600" />
+            <StatCard title="Suspended" value={stats?.suspended.toLocaleString() || "0"} color="red" icon={<ShieldBan className="h-4 w-4" />} gradient="from-destructive to-destructive-deep" />
           </>
         )}
       </motion.div>
@@ -665,8 +665,8 @@ function UsersContent() {
                       <Badge
                         variant="outline"
                         className={cn(
-                          user.role === "admin" && "border-purple-200 text-purple-700",
-                          user.role === "employer" && "border-blue-200 text-blue-700",
+                          user.role === "admin" && "border-primary/20 text-primary",
+                          user.role === "employer" && "border-sky/20 text-sky",
                           user.role === "agency" && "border-teal-200 text-teal-700",
                           user.role === "candidate" && "border-green-200 text-green-700"
                         )}

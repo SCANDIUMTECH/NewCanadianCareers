@@ -39,8 +39,8 @@ export function BannerSlot({ placement, className }: BannerSlotProps) {
           setLoaded(true)
         }
       })
-      .catch((err) => {
-        console.error(`[BannerSlot] Failed to fetch banners for "${placement}":`, err)
+      .catch(() => {
+        // Silently handle — banners are optional; endpoint may not exist yet
         if (!cancelled) setLoaded(true)
       })
     return () => { cancelled = true }

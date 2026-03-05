@@ -188,9 +188,15 @@ class GenerateSEOMetaView(APIView):
             )
 
         # Permission check: admin can generate for any job,
-        # employers/agencies only for their own jobs
+        # employers/agencies only for their own jobs.
+        # Deny-by-default: users without a company or agency get 403.
         user = request.user
         if user.role != 'admin':
+            if not user.company and not user.agency:
+                return Response(
+                    {'error': 'You do not have permission to generate SEO meta for this job'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
             if user.company and job.company_id != user.company_id:
                 return Response(
                     {'error': 'You can only generate SEO meta for your own jobs'},
@@ -317,9 +323,14 @@ class GenerateSocialContentView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # Permission check
+        # Permission check — deny-by-default for users without company/agency
         user = request.user
         if user.role != 'admin':
+            if not user.company and not user.agency:
+                return Response(
+                    {'error': 'You do not have permission to generate social content for this job'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
             if user.company and job.company_id != user.company_id:
                 return Response(
                     {'error': 'You can only generate social content for your own jobs'},

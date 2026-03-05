@@ -116,7 +116,7 @@ export function JobCard({
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-foreground-muted">{company.name}</span>
+              <span className="font-secondary text-sm text-foreground-muted">{company.name}</span>
               {company.verified && (
                 <BadgeCheck className="w-4 h-4 text-primary" />
               )}
@@ -157,7 +157,7 @@ export function JobCard({
 
         {/* Salary */}
         {salary && (
-          <p className="text-base font-semibold text-foreground mt-3">
+          <p className="font-secondary text-base font-semibold text-foreground mt-3">
             {formattedSalary}
             <span className="text-sm font-normal text-foreground-muted ml-1">/ {salary?.period || "year"}</span>
           </p>
@@ -182,10 +182,10 @@ export function JobCard({
 
         {/* Footer */}
         <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/50">
-          <span className="text-xs text-foreground-muted">
+          <span className="font-secondary text-xs text-foreground-muted">
             {formatDate(postedDate)}
           </span>
-          <span className="text-xs text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+          <span className="font-secondary text-xs text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">
             View Details →
           </span>
         </div>

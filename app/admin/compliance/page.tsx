@@ -94,7 +94,7 @@ import GDPRAdmin from "@/components/admin/gdpr-admin"
 
 const enforcementConfig: Record<string, { label: string; color: string }> = {
   manual: { label: "Manual", color: "bg-gray-100 text-gray-700" },
-  automated: { label: "Automated", color: "bg-blue-100 text-blue-700" },
+  automated: { label: "Automated", color: "bg-sky/10 text-sky" },
   legal_hold: { label: "Legal Hold", color: "bg-amber-100 text-amber-700" },
 }
 
@@ -127,7 +127,7 @@ const formatRetention = (days: number) => {
 
 const statusConfig: Record<string, { label: string; color: string; icon: typeof Clock }> = {
   pending: { label: "Pending", color: "bg-amber-100 text-amber-700", icon: Clock },
-  in_progress: { label: "Processing", color: "bg-blue-100 text-blue-700", icon: RefreshCw },
+  in_progress: { label: "Processing", color: "bg-sky/10 text-sky", icon: RefreshCw },
   completed: { label: "Completed", color: "bg-emerald-100 text-emerald-700", icon: Check },
   rejected: { label: "Rejected", color: "bg-red-100 text-red-700", icon: AlertTriangle },
 }
@@ -580,7 +580,7 @@ export default function CompliancePage() {
       <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center shadow-lg shadow-primary/20">
               <ShieldCheck className="h-6 w-6 text-white" />
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-green-500 border-2 border-background" />
@@ -634,16 +634,16 @@ export default function CompliancePage() {
               </CardContent>
             </Card>
             <Card className="relative overflow-hidden group">
-              <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-blue-500 opacity-[0.06] transition-opacity duration-300 group-hover:opacity-[0.10]" />
-              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-blue-500 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-sky opacity-[0.06] transition-opacity duration-300 group-hover:opacity-[0.10]" />
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-sky to-sky-deep opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <CardContent className="p-4 relative">
                 <div className="flex items-center justify-between">
                   <p className="text-sm text-muted-foreground">Processing</p>
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-sky to-sky-deep text-white shadow-sm">
                     <RefreshCw className="h-4 w-4" />
                   </div>
                 </div>
-                <p className="mt-1 text-2xl font-bold tabular-nums text-blue-600">{stats.processing_count}</p>
+                <p className="mt-1 text-2xl font-bold tabular-nums text-sky">{stats.processing_count}</p>
               </CardContent>
             </Card>
             <Card className="relative overflow-hidden group">
@@ -660,12 +660,12 @@ export default function CompliancePage() {
               </CardContent>
             </Card>
             <Card className="relative overflow-hidden group">
-              <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-indigo-500 opacity-[0.06] transition-opacity duration-300 group-hover:opacity-[0.10]" />
-              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-indigo-500 to-violet-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-primary opacity-[0.06] transition-opacity duration-300 group-hover:opacity-[0.10]" />
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-hover opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <CardContent className="p-4 relative">
                 <div className="flex items-center justify-between">
                   <p className="text-sm text-muted-foreground">Total Requests</p>
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-sm">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary-hover text-white shadow-sm">
                     <FileText className="h-4 w-4" />
                   </div>
                 </div>
@@ -766,13 +766,13 @@ export default function CompliancePage() {
                       <div
                         className={cn(
                           "w-10 h-10 rounded-lg flex items-center justify-center",
-                          isDeletionType(request.type) ? "bg-red-100" : "bg-blue-100"
+                          isDeletionType(request.type) ? "bg-red-100" : "bg-sky/10"
                         )}
                       >
                         {isDeletionType(request.type) ? (
                           <Trash2 className="w-5 h-5 text-red-600" />
                         ) : (
-                          <Download className="w-5 h-5 text-blue-600" />
+                          <Download className="w-5 h-5 text-sky" />
                         )}
                       </div>
 
@@ -1042,11 +1042,11 @@ export default function CompliancePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {legalDocs.map((doc) => (
                 <Card key={doc.id} className="relative overflow-hidden group">
-                  <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-indigo-500 opacity-[0.06] transition-opacity duration-300 group-hover:opacity-[0.10]" />
-                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-indigo-500 to-violet-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-primary opacity-[0.06] transition-opacity duration-300 group-hover:opacity-[0.10]" />
+                  <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary-hover opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   <CardContent className="p-6 relative">
                     <div className="flex items-start justify-between">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-sm">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary-hover text-white shadow-sm">
                         <FileText className="w-5 h-5" />
                       </div>
                       <div className="flex items-center gap-2">

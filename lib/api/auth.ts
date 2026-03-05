@@ -8,6 +8,8 @@ import type {
   User,
   AuthResponse,
   LoginCredentials,
+  LoginCodeCredentials,
+  EmailCheckResponse,
   RegisterData,
   PasswordResetRequest,
   PasswordResetConfirm,
@@ -21,6 +23,36 @@ import type {
  */
 export async function login(credentials: LoginCredentials): Promise<AuthResponse> {
   return apiClient<AuthResponse>('/api/auth/login/', {
+    method: 'POST',
+    body: JSON.stringify(credentials),
+  })
+}
+
+/**
+ * Check if an email is associated with an existing account.
+ */
+export async function checkEmail(data: { email: string; turnstile_token?: string }): Promise<EmailCheckResponse> {
+  return apiClient<EmailCheckResponse>('/api/auth/email/check/', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+/**
+ * Send a one-time login code to the user's email.
+ */
+export async function sendLoginCode(data: { email: string; turnstile_token?: string }): Promise<void> {
+  await apiClient('/api/auth/login/send-code/', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+/**
+ * Verify a one-time login code and authenticate.
+ */
+export async function verifyLoginCode(credentials: LoginCodeCredentials): Promise<AuthResponse> {
+  return apiClient<AuthResponse>('/api/auth/login/verify-code/', {
     method: 'POST',
     body: JSON.stringify(credentials),
   })

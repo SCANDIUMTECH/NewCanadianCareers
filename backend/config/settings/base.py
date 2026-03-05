@@ -148,6 +148,7 @@ REST_FRAMEWORK = {
         'marketing_bulk': '10/hour',
         'coupon_redemption': '20/hour',
         'resend_verification': '3/hour',
+        'email_check': '10/hour',
         'rum_ingest': '1000/min',
         'banner_tracking': '500/hour',
         'affiliate_tracking': '500/hour',
@@ -169,6 +170,8 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
     'AUTH_COOKIE': 'ncc_access',
+    'AUTH_COOKIE_REFRESH': 'ncc_refresh',
+    'AUTH_COOKIE_SESSION': 'ncc_has_session',
     'AUTH_COOKIE_HTTP_ONLY': True,
     'AUTH_COOKIE_SECURE': not DEBUG,  # False in dev for http://localhost
     'AUTH_COOKIE_SAMESITE': 'Lax',
@@ -194,10 +197,14 @@ CSRF_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SAMESITE = 'Lax'
 
 # Celery Configuration — RabbitMQ broker, Redis result backend
-# CELERY_BROKER_URL must be set in environment. No guest:guest fallback.
-# Production settings will raise if this is not set; dev uses ALWAYS_EAGER so broker is unused.
-CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://redis:6379/1')
-CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL', 'redis://redis:6379/0')
+# Both URLs MUST be set via environment variables. No unauthenticated defaults.
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL')
+if not CELERY_BROKER_URL:
+    raise ValueError('CELERY_BROKER_URL environment variable must be set')
+
+CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL')
+if not CELERY_RESULT_BACKEND:
+    raise ValueError('REDIS_URL environment variable must be set')
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'

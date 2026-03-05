@@ -2,6 +2,8 @@ import { cache, Suspense } from "react"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { Loader2 } from "lucide-react"
+import { Header } from "@/components/header"
+import { Footer } from "@/components/footer"
 import { getPublicArticle } from "@/lib/api/articles"
 import { ArticleJsonLd, BreadcrumbJsonLd } from "@/components/seo/article-schema"
 import { ArticleDetailClient } from "./article-detail-client"
@@ -80,39 +82,43 @@ export default async function ArticlePage({ params }: Props) {
 
   return (
     <>
-      {/* JSON-LD */}
-      <ArticleJsonLd
-        article={{
-          title: article.title,
-          description: article.meta_description || article.excerpt || "",
-          content: article.content,
-          slug: article.slug,
-          coverImage: article.cover_image || undefined,
-          publishedAt: article.published_at || "",
-          updatedAt: article.updated_at,
-          authorName: article.author_name || undefined,
-          category: article.category?.name,
-          tags: article.tags,
-          readingTime: article.reading_time,
-        }}
-      />
-      <BreadcrumbJsonLd
-        items={[
-          { name: "Home", url: baseUrl },
-          { name: "News", url: `${baseUrl}/news` },
-          { name: article.title, url: `${baseUrl}/news/${article.slug}` },
-        ]}
-      />
+      <Header />
+      <main className="pt-16 md:pt-20">
+        {/* JSON-LD */}
+        <ArticleJsonLd
+          article={{
+            title: article.title,
+            description: article.meta_description || article.excerpt || "",
+            content: article.content,
+            slug: article.slug,
+            coverImage: article.cover_image || undefined,
+            publishedAt: article.published_at || "",
+            updatedAt: article.updated_at,
+            authorName: article.author_name || undefined,
+            category: article.category?.name,
+            tags: article.tags,
+            readingTime: article.reading_time,
+          }}
+        />
+        <BreadcrumbJsonLd
+          items={[
+            { name: "Home", url: baseUrl },
+            { name: "News", url: `${baseUrl}/news` },
+            { name: article.title, url: `${baseUrl}/news/${article.slug}` },
+          ]}
+        />
 
-      <Suspense
-        fallback={
-          <div className="flex items-center justify-center min-h-[400px]">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        }
-      >
-        <ArticleDetailClient article={article} />
-      </Suspense>
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center min-h-[400px]">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          }
+        >
+          <ArticleDetailClient article={article} />
+        </Suspense>
+      </main>
+      <Footer />
     </>
   )
 }

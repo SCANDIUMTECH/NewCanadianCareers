@@ -1,10 +1,7 @@
 "use client"
 
 import { Suspense, useState, useEffect, useMemo, useCallback } from "react"
-import Link from "next/link"
-import Image from "next/image"
 import { useSearchParams, useRouter } from "next/navigation"
-import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -29,22 +26,6 @@ import { useAuth } from "@/hooks/use-auth"
 function JobsPageSkeleton() {
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-2xl border-b border-border/50">
-        <div className="max-w-[1400px] mx-auto px-6 md:px-12">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
-              <Image
-                src="/logo.svg"
-                alt="New Canadian Careers Logo"
-                width={32}
-                height={32}
-                className="h-8 w-auto"
-                priority
-              />
-            </div>
-          </div>
-        </div>
-      </header>
       <div className="max-w-[1400px] mx-auto px-6 md:px-12 py-8">
         <div className="animate-pulse space-y-6">
           <div className="h-10 w-64 bg-foreground/10 rounded-lg" />
@@ -94,6 +75,7 @@ const defaultFilters: JobFilters = {
   location: "",
   remote: [],
   type: [],
+  category: "",
   salaryMin: 0,
   salaryMax: 0,
   datePosted: "",
@@ -119,6 +101,7 @@ function JobsPageContent() {
     location: searchParams.get("location") || "",
     remote: searchParams.get("remote")?.split(",").filter(Boolean) || [],
     type: searchParams.get("type")?.split(",").filter(Boolean) || [],
+    category: searchParams.get("category") || "",
     salaryMin: parseInt(searchParams.get("salaryMin") || "0") || 0,
     salaryMax: parseInt(searchParams.get("salaryMax") || "0") || 0,
     datePosted: searchParams.get("datePosted") || "",
@@ -149,6 +132,7 @@ function JobsPageContent() {
     if (filters.location) params.set("location", filters.location)
     if (filters.remote.length) params.set("remote", filters.remote.join(","))
     if (filters.type.length) params.set("type", filters.type.join(","))
+    if (filters.category) params.set("category", filters.category)
     if (filters.salaryMin) params.set("salaryMin", filters.salaryMin.toString())
     if (filters.salaryMax) params.set("salaryMax", filters.salaryMax.toString())
     if (filters.datePosted) params.set("datePosted", filters.datePosted)
@@ -173,6 +157,7 @@ function JobsPageContent() {
           salaryMin: filters.salaryMin > 0 ? filters.salaryMin : undefined,
           salaryMax: filters.salaryMax > 0 ? filters.salaryMax : undefined,
           datePosted: filters.datePosted || undefined,
+          category: filters.category || undefined,
           sort: sortBy as PublicJobSearchFilters['sort'],
           page_size: 50,
         }
@@ -258,6 +243,7 @@ function JobsPageContent() {
     if (filters.location) count++
     count += filters.remote.length
     count += filters.type.length
+    if (filters.category) count++
     if (filters.salaryMin > 0) count++
     if (filters.salaryMax > 0) count++
     if (filters.datePosted) count++
@@ -266,6 +252,14 @@ function JobsPageContent() {
 
   const activeFilters = useMemo(() => {
     const result: { key: string; label: string; onRemove: () => void }[] = []
+
+    if (filters.category) {
+      result.push({
+        key: "category",
+        label: filters.category.charAt(0).toUpperCase() + filters.category.slice(1).replace(/-/g, " "),
+        onRemove: () => setFilters((f) => ({ ...f, category: "" })),
+      })
+    }
 
     if (filters.location) {
       result.push({
@@ -325,32 +319,6 @@ function JobsPageContent() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-2xl border-b border-border/50">
-        <div className="max-w-[1400px] mx-auto px-6 md:px-12">
-          <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center group">
-              <span className="text-lg font-semibold tracking-tight text-foreground transition-colors duration-300 group-hover:text-primary">
-                NCC
-              </span>
-              <span className="ml-1.5 w-2 h-2 rounded-full bg-primary/50 transition-all duration-500 group-hover:bg-primary" />
-            </Link>
-            <div className="flex items-center gap-3">
-              <Link href="/login">
-                <Button variant="ghost" className="text-foreground-muted hover:text-foreground">
-                  Sign in
-                </Button>
-              </Link>
-              <Link href="/signup">
-                <Button className="bg-primary hover:bg-primary-hover text-primary-foreground">
-                  Post a Job
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
-
       {/* Search Hero */}
       <div className="bg-card border-b border-border/50">
         <div className="max-w-[1400px] mx-auto px-6 md:px-12 py-8 md:py-12">
@@ -358,7 +326,7 @@ function JobsPageContent() {
             <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-foreground mb-2">
               Find your next opportunity
             </h1>
-            <p className="text-foreground-muted mb-6">
+            <p className="font-secondary text-foreground-muted mb-6">
               Discover {totalCount > 0 ? `${totalCount.toLocaleString()}+` : ""} jobs at companies that value great talent
             </p>
           </MotionWrapper>
@@ -404,7 +372,7 @@ function JobsPageContent() {
           {/* Desktop Sidebar */}
           <aside className="hidden lg:block w-72 shrink-0">
             <MotionWrapper delay={150}>
-              <div className="sticky top-24 space-y-6">
+              <div className="sticky top-28 md:top-32 space-y-6">
                 <JobFiltersSidebar
                   filters={filters}
                   onFiltersChange={setFilters}
@@ -431,7 +399,7 @@ function JobsPageContent() {
                     />
                   </div>
 
-                  <p className="text-sm text-foreground-muted">
+                  <p className="font-secondary text-sm text-foreground-muted">
                     {isLoading ? (
                       "Loading..."
                     ) : error ? (
@@ -446,7 +414,7 @@ function JobsPageContent() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <span className="text-sm text-foreground-muted">Sort by:</span>
+                  <span className="font-secondary text-sm text-foreground-muted">Sort by:</span>
                   <Select value={sortBy} onValueChange={setSortBy}>
                     <SelectTrigger className="w-[180px]">
                       <SelectValue />
@@ -560,32 +528,6 @@ function JobsPageContent() {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="border-t border-border/50 py-8 mt-12">
-        <div className="max-w-[1400px] mx-auto px-6 md:px-12">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <Image
-                src="/logo.svg"
-                alt="New Canadian Careers Logo"
-                width={32}
-                height={32}
-                className="h-8 w-auto"
-                priority
-              />
-            </div>
-            <div className="flex items-center gap-6 text-sm text-foreground-muted">
-              <Link href="/terms" className="hover:text-foreground transition-colors">
-                Terms
-              </Link>
-              <Link href="/privacy" className="hover:text-foreground transition-colors">
-                Privacy
-              </Link>
-              <span>&copy; {new Date().getFullYear()} New Canadian Careers</span>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   )
 }

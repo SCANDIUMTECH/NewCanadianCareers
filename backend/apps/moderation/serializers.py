@@ -371,21 +371,30 @@ class PlatformSettingsSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['updated_at']
 
+    MASKED_SECRET_FIELDS = ['turnstile_secret_key', 'integration_mixpanel_token']
+
     def to_representation(self, instance):
-        """Mask webhook URLs on read — show only last 8 chars."""
+        """Mask secret fields and webhook URLs on read."""
         data = super().to_representation(instance)
+        # Mask Slack webhook URLs — show only last 8 chars
         for field in self.SLACK_WEBHOOK_FIELDS:
             url = data.get(field, '')
             if url:
-                # Show masked prefix + last 8 chars for identification
                 data[field] = '\u2022' * 8 + url[-8:]
+            else:
+                data[field] = ''
+        # Mask secret keys — show only last 4 chars
+        for field in self.MASKED_SECRET_FIELDS:
+            value = data.get(field, '')
+            if value:
+                data[field] = '\u2022' * 8 + value[-4:]
             else:
                 data[field] = ''
         return data
 
     def update(self, instance, validated_data):
-        """Skip webhook fields that still contain the masked value."""
-        for field in self.SLACK_WEBHOOK_FIELDS:
+        """Skip fields that still contain their masked value (not actually changed)."""
+        for field in self.SLACK_WEBHOOK_FIELDS + self.MASKED_SECRET_FIELDS:
             value = validated_data.get(field)
             if value and value.startswith('\u2022' * 8):
                 validated_data.pop(field)

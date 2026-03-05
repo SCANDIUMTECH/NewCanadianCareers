@@ -164,7 +164,7 @@ export default function JourneysPage() {
       <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-teal-500/20">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-sky to-sky-deep flex items-center justify-center shadow-lg shadow-sky/20">
               <GitBranchPlus className="h-6 w-6 text-white" />
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-green-500 border-2 border-background" />
@@ -247,8 +247,8 @@ export default function JourneysPage() {
                 <TableRow>
                   <TableCell colSpan={9} className="text-center py-16">
                     <div className="flex flex-col items-center justify-center text-muted-foreground">
-                      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-purple-100 mb-4">
-                        <GitBranchPlus className="h-8 w-8 text-violet-400" />
+                      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 mb-4">
+                        <GitBranchPlus className="h-8 w-8 text-primary/60" />
                       </div>
                       <p className="font-semibold text-foreground text-lg">No journeys yet</p>
                       <p className="text-sm mt-1 mb-6 max-w-sm">Create your first automation journey to get started</p>

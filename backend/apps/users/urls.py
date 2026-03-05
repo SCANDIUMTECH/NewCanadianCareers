@@ -12,6 +12,11 @@ urlpatterns = [
     path('logout/', views.LogoutView.as_view(), name='logout'),
     path('token/refresh/', views.CookieTokenRefreshView.as_view(), name='token-refresh'),
 
+    # Email-first login flow
+    path('email/check/', views.EmailCheckView.as_view(), name='email-check'),
+    path('login/send-code/', views.SendLoginCodeView.as_view(), name='send-login-code'),
+    path('login/verify-code/', views.VerifyLoginCodeView.as_view(), name='verify-login-code'),
+
     # Profile
     path('me/', views.MeView.as_view(), name='me'),
     path('me/resume/', views.ResumeUploadView.as_view(), name='resume-upload'),

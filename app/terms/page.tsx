@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { PublicPageShell } from "@/components/public-page-shell"
 import { TermsOfServiceClient } from "./terms-client"
 
 export const metadata: Metadata = {
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 }
 
 export default function TermsOfServicePage() {
-  return <TermsOfServiceClient />
+  return (
+    <PublicPageShell>
+      <TermsOfServiceClient />
+    </PublicPageShell>
+  )
 }

@@ -55,28 +55,8 @@ export function TermsOfServiceClient() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-2xl border-b border-border/50">
-        <div className="max-w-[1200px] mx-auto px-6 md:px-12">
-          <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center group">
-              <span className="text-lg font-semibold tracking-tight text-foreground transition-colors duration-300 group-hover:text-primary">
-                NCC
-              </span>
-              <span className="ml-1.5 w-2 h-2 rounded-full bg-primary/50 transition-all duration-500 group-hover:bg-primary" />
-            </Link>
-            <Link
-              href="/"
-              className="text-sm text-foreground-muted hover:text-foreground transition-colors"
-            >
-              Back to Home
-            </Link>
-          </div>
-        </div>
-      </header>
-
       {/* Mobile TOC Toggle */}
-      <div className="lg:hidden sticky top-16 z-40 bg-card/95 backdrop-blur-xl border-b border-border/50">
+      <div className="lg:hidden sticky top-24 md:top-28 z-40 bg-card/95 backdrop-blur-xl border-b border-border/50">
         <button
           onClick={() => setIsTocOpen(!isTocOpen)}
           className="w-full px-6 py-3 flex items-center justify-between text-sm font-medium text-foreground"
@@ -118,7 +98,7 @@ export function TermsOfServiceClient() {
         <div className="flex gap-12">
           {/* Desktop Sidebar TOC */}
           <aside className="hidden lg:block w-64 shrink-0">
-            <div className="sticky top-24">
+            <div className="sticky top-32 md:top-36">
               <MotionWrapper delay={0}>
                 <h2 className="text-sm font-semibold text-foreground mb-4">Table of Contents</h2>
                 <nav className="space-y-1">
@@ -157,7 +137,7 @@ export function TermsOfServiceClient() {
             <MotionWrapper delay={200}>
               <div className="rounded-2xl bg-card border border-border/50 shadow-sm p-8 md:p-10">
                 <div className="prose prose-slate max-w-none">
-                  <section id="acceptance" className="scroll-mt-32">
+                  <section id="acceptance" className="scroll-mt-36">
                     <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-3">
                       <span className="w-1 h-6 bg-primary rounded-full" />
                       Acceptance of Terms
@@ -170,7 +150,7 @@ export function TermsOfServiceClient() {
                     </p>
                   </section>
 
-                  <section id="description" className="scroll-mt-32">
+                  <section id="description" className="scroll-mt-36">
                     <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-3">
                       <span className="w-1 h-6 bg-primary rounded-full" />
                       Description of Service
@@ -202,7 +182,7 @@ export function TermsOfServiceClient() {
                     </ul>
                   </section>
 
-                  <section id="accounts" className="scroll-mt-32">
+                  <section id="accounts" className="scroll-mt-36">
                     <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-3">
                       <span className="w-1 h-6 bg-primary rounded-full" />
                       User Accounts
@@ -237,7 +217,7 @@ export function TermsOfServiceClient() {
                     </p>
                   </section>
 
-                  <section id="conduct" className="scroll-mt-32">
+                  <section id="conduct" className="scroll-mt-36">
                     <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-3">
                       <span className="w-1 h-6 bg-primary rounded-full" />
                       User Conduct
@@ -280,7 +260,7 @@ export function TermsOfServiceClient() {
                     </p>
                   </section>
 
-                  <section id="content" className="scroll-mt-32">
+                  <section id="content" className="scroll-mt-36">
                     <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-3">
                       <span className="w-1 h-6 bg-primary rounded-full" />
                       Content Ownership
@@ -296,7 +276,7 @@ export function TermsOfServiceClient() {
                     </p>
                   </section>
 
-                  <section id="privacy" className="scroll-mt-32">
+                  <section id="privacy" className="scroll-mt-36">
                     <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-3">
                       <span className="w-1 h-6 bg-primary rounded-full" />
                       Privacy Policy
@@ -309,7 +289,7 @@ export function TermsOfServiceClient() {
                     </p>
                   </section>
 
-                  <section id="payment" className="scroll-mt-32">
+                  <section id="payment" className="scroll-mt-36">
                     <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-3">
                       <span className="w-1 h-6 bg-primary rounded-full" />
                       Payment Terms
@@ -340,7 +320,7 @@ export function TermsOfServiceClient() {
                     </p>
                   </section>
 
-                  <section id="termination" className="scroll-mt-32">
+                  <section id="termination" className="scroll-mt-36">
                     <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-3">
                       <span className="w-1 h-6 bg-primary rounded-full" />
                       Termination
@@ -367,7 +347,7 @@ export function TermsOfServiceClient() {
                     </p>
                   </section>
 
-                  <section id="disclaimers" className="scroll-mt-32">
+                  <section id="disclaimers" className="scroll-mt-36">
                     <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-3">
                       <span className="w-1 h-6 bg-primary rounded-full" />
                       Disclaimers
@@ -394,7 +374,7 @@ export function TermsOfServiceClient() {
                     </p>
                   </section>
 
-                  <section id="liability" className="scroll-mt-32">
+                  <section id="liability" className="scroll-mt-36">
                     <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-3">
                       <span className="w-1 h-6 bg-primary rounded-full" />
                       Limitation of Liability
@@ -421,7 +401,7 @@ export function TermsOfServiceClient() {
                     </p>
                   </section>
 
-                  <section id="governing-law" className="scroll-mt-32">
+                  <section id="governing-law" className="scroll-mt-36">
                     <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-3">
                       <span className="w-1 h-6 bg-primary rounded-full" />
                       Governing Law
@@ -434,7 +414,7 @@ export function TermsOfServiceClient() {
                     </p>
                   </section>
 
-                  <section id="changes" className="scroll-mt-32">
+                  <section id="changes" className="scroll-mt-36">
                     <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-3">
                       <span className="w-1 h-6 bg-primary rounded-full" />
                       Changes to Terms
@@ -447,7 +427,7 @@ export function TermsOfServiceClient() {
                     </p>
                   </section>
 
-                  <section id="contact" className="scroll-mt-32">
+                  <section id="contact" className="scroll-mt-36">
                     <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-3">
                       <span className="w-1 h-6 bg-primary rounded-full" />
                       Contact Information
@@ -478,24 +458,6 @@ export function TermsOfServiceClient() {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="border-t border-border/50 py-8">
-        <div className="max-w-[1200px] mx-auto px-6 md:px-12">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-foreground-muted">
-              &copy; {new Date().getFullYear()} New Canadian Careers. All rights reserved.
-            </p>
-            <div className="flex items-center gap-6">
-              <Link href="/terms" className="text-sm text-primary font-medium">
-                Terms of Service
-              </Link>
-              <Link href="/privacy" className="text-sm text-foreground-muted hover:text-foreground transition-colors">
-                Privacy Policy
-              </Link>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   )
 }

@@ -103,12 +103,12 @@ function NewsletterCTA() {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1.5">
           <Mail className="h-4 w-4 text-primary" />
-          <span className="text-[11px] font-semibold tracking-[0.12em] uppercase text-muted-foreground">Newsletter</span>
+          <span className="font-secondary text-[11px] font-semibold tracking-[0.12em] uppercase text-muted-foreground">Newsletter</span>
         </div>
         <h3 className="font-secondary text-lg font-bold tracking-tight mb-1">
           Stay in the loop
         </h3>
-        <p className="text-sm text-muted-foreground leading-relaxed">
+        <p className="font-secondary text-sm text-muted-foreground leading-relaxed">
           The latest career insights and hiring trends, delivered weekly.
         </p>
       </div>
@@ -230,8 +230,8 @@ export function NewsIndexClient() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* ─── Header ─── */}
-      <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-xl border-b border-border/30">
+      {/* ─── Sub-bar: Search + Categories ─── */}
+      <div className="sticky top-16 md:top-20 z-40 bg-white/90 backdrop-blur-xl border-b border-border/30">
         <div className="max-w-7xl mx-auto px-4 md:px-6">
           {/* Top bar */}
           <div className="flex items-center justify-between gap-4 py-4">
@@ -255,7 +255,7 @@ export function NewsIndexClient() {
               <button
                 onClick={() => { setActiveCategory("all"); setCurrentPage(1) }}
                 className={cn(
-                  "px-4 py-3 text-xs font-semibold tracking-[0.08em] uppercase whitespace-nowrap transition-colors border-b-2",
+                  "px-4 py-3 font-secondary text-xs font-semibold tracking-[0.08em] uppercase whitespace-nowrap transition-colors border-b-2",
                   activeCategory === "all"
                     ? "text-foreground border-primary"
                     : "text-muted-foreground border-transparent hover:text-foreground"
@@ -268,7 +268,7 @@ export function NewsIndexClient() {
                   key={cat.id}
                   onClick={() => { setActiveCategory(cat.slug); setCurrentPage(1) }}
                   className={cn(
-                    "px-4 py-3 text-xs font-semibold tracking-[0.08em] uppercase whitespace-nowrap transition-colors border-b-2",
+                    "px-4 py-3 font-secondary text-xs font-semibold tracking-[0.08em] uppercase whitespace-nowrap transition-colors border-b-2",
                     activeCategory === cat.slug
                       ? "text-foreground border-primary"
                       : "text-muted-foreground border-transparent hover:text-foreground"
@@ -321,8 +321,8 @@ export function NewsIndexClient() {
             <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
               <Newspaper className="h-8 w-8 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-semibold mb-1">No articles found</h3>
-            <p className="text-sm text-muted-foreground">
+            <h3 className="font-secondary text-lg font-semibold mb-1">No articles found</h3>
+            <p className="font-secondary text-sm text-muted-foreground">
               {hasActiveSearch
                 ? "Try adjusting your search or filters"
                 : "Check back soon for new content"}
@@ -454,7 +454,7 @@ export function NewsIndexClient() {
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <span className="text-sm text-muted-foreground px-4">
+                <span className="font-secondary text-sm text-muted-foreground px-4">
                   Page {currentPage} of {totalPages}
                 </span>
                 <Button

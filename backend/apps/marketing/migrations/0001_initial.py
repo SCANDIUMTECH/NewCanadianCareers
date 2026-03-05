@@ -12,6 +12,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('billing', '0005_package_team_management_alter_invoice_currency_and_more'),
         ('companies', '0009_company_team_management_enabled'),
+        ('moderation', '0004_affiliatelink_featureflag_fraudrule_jobpackage_and_more'),
         ('notifications', '0003_emailprovider_emailsettings_emailtemplate_and_more'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
@@ -105,7 +106,7 @@ class Migration(migrations.Migration):
                 ('expires_at', models.DateTimeField(blank=True, null=True)),
                 ('one_per_ip', models.BooleanField(default=False)),
                 ('require_verified_email', models.BooleanField(default=False)),
-                ('applicable_packages', models.ManyToManyField(blank=True, related_name='marketing_coupons', to='billing.package')),
+                ('applicable_packages', models.ManyToManyField(blank=True, related_name='marketing_coupons', to='moderation.jobpackage')),
                 ('campaign', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='coupons', to='marketing.campaign')),
                 ('created_by', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='created_coupons', to=settings.AUTH_USER_MODEL)),
                 ('legacy_promo_code', models.OneToOneField(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='marketing_coupon', to='billing.promocode')),

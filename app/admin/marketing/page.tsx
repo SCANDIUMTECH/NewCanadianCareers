@@ -80,7 +80,7 @@ export default function MarketingOverviewPage() {
       <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-fuchsia-500 to-pink-600 flex items-center justify-center shadow-lg shadow-fuchsia-500/20">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-destructive to-destructive-deep flex items-center justify-center shadow-lg shadow-destructive/20">
               <Megaphone className="h-6 w-6 text-white" />
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-green-500 border-2 border-background" />
@@ -128,8 +128,8 @@ export default function MarketingOverviewPage() {
               title="Consent Rate"
               value={`${overview.consent_rate}%`}
               icon={<TrendingUp className="h-4 w-4" />}
-              gradient="from-blue-500 to-indigo-600"
-              bgAccent="bg-blue-500"
+              gradient="from-sky to-sky-deep"
+              bgAccent="bg-sky"
               sparkColor={STATUS.info}
               sparkData={generateTrend(overview.consent_rate, 8, 0.03, "up")}
               chartType="area"
@@ -161,8 +161,8 @@ export default function MarketingOverviewPage() {
               title="Redemptions (30d)"
               value={overview.redemptions_30d}
               icon={<Ticket className="h-4 w-4" />}
-              gradient="from-purple-500 to-violet-600"
-              bgAccent="bg-purple-500"
+              gradient="from-primary to-primary-hover"
+              bgAccent="bg-primary"
               sparkColor={CHART.purple}
               sparkData={generateTrend(overview.redemptions_30d, 12, 0.1, "up")}
               chartType="area"
@@ -242,7 +242,7 @@ export default function MarketingOverviewPage() {
             href="/admin/marketing/campaigns"
             icon={<Send className="h-5 w-5" />}
             stats={overview ? `${overview.campaigns_sent} sent` : undefined}
-            accentColor="from-blue-500 to-indigo-500"
+            accentColor="from-sky to-sky-deep"
           />
           <QuickActionCard
             title="Journeys"
@@ -250,7 +250,7 @@ export default function MarketingOverviewPage() {
             href="/admin/marketing/journeys"
             icon={<Zap className="h-5 w-5" />}
             stats={overview ? `${overview.journeys_active} active` : undefined}
-            accentColor="from-violet-500 to-purple-500"
+            accentColor="from-primary-light to-primary"
           />
           <QuickActionCard
             title="Coupons & Credits"
@@ -359,11 +359,11 @@ function ChannelCard({
 }) {
   const colorMap = {
     blue: {
-      gradient: "from-blue-500 to-indigo-600",
-      bg: "bg-blue-50 dark:bg-blue-950/30",
-      text: "text-blue-600 dark:text-blue-400",
-      border: "border-blue-100 dark:border-blue-900/50",
-      bar: "from-blue-400 via-blue-500 to-indigo-600",
+      gradient: "from-sky to-sky-deep",
+      bg: "bg-sky/10 dark:bg-sky/10",
+      text: "text-sky dark:text-sky",
+      border: "border-sky/20 dark:border-sky/20",
+      bar: "from-sky via-sky to-sky-deep",
     },
     emerald: {
       gradient: "from-emerald-500 to-teal-600",
@@ -373,11 +373,11 @@ function ChannelCard({
       bar: "from-emerald-400 via-emerald-500 to-teal-600",
     },
     violet: {
-      gradient: "from-violet-500 to-purple-600",
-      bg: "bg-violet-50 dark:bg-violet-950/30",
-      text: "text-violet-600 dark:text-violet-400",
-      border: "border-violet-100 dark:border-violet-900/50",
-      bar: "from-violet-400 via-purple-500 to-purple-600",
+      gradient: "from-primary-light to-primary",
+      bg: "bg-primary/10 dark:bg-primary/10",
+      text: "text-primary dark:text-primary",
+      border: "border-primary/20 dark:border-primary/20",
+      bar: "from-primary-light via-primary to-primary-hover",
     },
     amber: {
       gradient: "from-amber-500 to-orange-500",

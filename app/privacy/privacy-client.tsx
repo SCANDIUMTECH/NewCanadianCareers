@@ -53,28 +53,8 @@ export function PrivacyPolicyClient() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-2xl border-b border-border/50">
-        <div className="max-w-[1200px] mx-auto px-6 md:px-12">
-          <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center group">
-              <span className="text-lg font-semibold tracking-tight text-foreground transition-colors duration-300 group-hover:text-primary">
-                NCC
-              </span>
-              <span className="ml-1.5 w-2 h-2 rounded-full bg-primary/50 transition-all duration-500 group-hover:bg-primary" />
-            </Link>
-            <Link
-              href="/"
-              className="text-sm text-foreground-muted hover:text-foreground transition-colors"
-            >
-              Back to Home
-            </Link>
-          </div>
-        </div>
-      </header>
-
       {/* Mobile TOC Toggle */}
-      <div className="lg:hidden sticky top-16 z-40 bg-card/95 backdrop-blur-xl border-b border-border/50">
+      <div className="lg:hidden sticky top-24 md:top-28 z-40 bg-card/95 backdrop-blur-xl border-b border-border/50">
         <button
           onClick={() => setIsTocOpen(!isTocOpen)}
           className="w-full px-6 py-3 flex items-center justify-between text-sm font-medium text-foreground"
@@ -116,7 +96,7 @@ export function PrivacyPolicyClient() {
         <div className="flex gap-12">
           {/* Desktop Sidebar TOC */}
           <aside className="hidden lg:block w-64 shrink-0">
-            <div className="sticky top-24">
+            <div className="sticky top-32 md:top-36">
               <MotionWrapper delay={0}>
                 <h2 className="text-sm font-semibold text-foreground mb-4">Table of Contents</h2>
                 <nav className="space-y-1">
@@ -155,7 +135,7 @@ export function PrivacyPolicyClient() {
             <MotionWrapper delay={200}>
               <div className="rounded-2xl bg-card border border-border/50 shadow-sm p-8 md:p-10">
                 <div className="prose prose-slate max-w-none">
-                  <section id="introduction" className="scroll-mt-32">
+                  <section id="introduction" className="scroll-mt-36">
                     <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-3">
                       <span className="w-1 h-6 bg-primary rounded-full" />
                       Introduction
@@ -168,7 +148,7 @@ export function PrivacyPolicyClient() {
                     </p>
                   </section>
 
-                  <section id="information-we-collect" className="scroll-mt-32">
+                  <section id="information-we-collect" className="scroll-mt-36">
                     <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-3">
                       <span className="w-1 h-6 bg-primary rounded-full" />
                       Information We Collect
@@ -203,7 +183,7 @@ export function PrivacyPolicyClient() {
                     </p>
                   </section>
 
-                  <section id="how-we-use" className="scroll-mt-32">
+                  <section id="how-we-use" className="scroll-mt-36">
                     <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-3">
                       <span className="w-1 h-6 bg-primary rounded-full" />
                       How We Use Your Information
@@ -243,7 +223,7 @@ export function PrivacyPolicyClient() {
                     </ul>
                   </section>
 
-                  <section id="information-sharing" className="scroll-mt-32">
+                  <section id="information-sharing" className="scroll-mt-36">
                     <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-3">
                       <span className="w-1 h-6 bg-primary rounded-full" />
                       Information Sharing
@@ -274,7 +254,7 @@ export function PrivacyPolicyClient() {
                     </p>
                   </section>
 
-                  <section id="data-security" className="scroll-mt-32">
+                  <section id="data-security" className="scroll-mt-36">
                     <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-3">
                       <span className="w-1 h-6 bg-primary rounded-full" />
                       Data Security
@@ -305,7 +285,7 @@ export function PrivacyPolicyClient() {
                     </p>
                   </section>
 
-                  <section id="your-rights" className="scroll-mt-32">
+                  <section id="your-rights" className="scroll-mt-36">
                     <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-3">
                       <span className="w-1 h-6 bg-primary rounded-full" />
                       Your Rights
@@ -340,7 +320,7 @@ export function PrivacyPolicyClient() {
                     </p>
                   </section>
 
-                  <section id="cookies" className="scroll-mt-32">
+                  <section id="cookies" className="scroll-mt-36">
                     <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-3">
                       <span className="w-1 h-6 bg-primary rounded-full" />
                       Cookies and Tracking
@@ -367,7 +347,7 @@ export function PrivacyPolicyClient() {
                     </p>
                   </section>
 
-                  <section id="data-retention" className="scroll-mt-32">
+                  <section id="data-retention" className="scroll-mt-36">
                     <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-3">
                       <span className="w-1 h-6 bg-primary rounded-full" />
                       Data Retention
@@ -394,7 +374,7 @@ export function PrivacyPolicyClient() {
                     </p>
                   </section>
 
-                  <section id="children" className="scroll-mt-32">
+                  <section id="children" className="scroll-mt-36">
                     <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-3">
                       <span className="w-1 h-6 bg-primary rounded-full" />
                       Children&apos;s Privacy
@@ -404,7 +384,7 @@ export function PrivacyPolicyClient() {
                     </p>
                   </section>
 
-                  <section id="changes" className="scroll-mt-32">
+                  <section id="changes" className="scroll-mt-36">
                     <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-3">
                       <span className="w-1 h-6 bg-primary rounded-full" />
                       Changes to This Policy
@@ -414,7 +394,7 @@ export function PrivacyPolicyClient() {
                     </p>
                   </section>
 
-                  <section id="contact" className="scroll-mt-32">
+                  <section id="contact" className="scroll-mt-36">
                     <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-3">
                       <span className="w-1 h-6 bg-primary rounded-full" />
                       Contact Us
@@ -445,24 +425,6 @@ export function PrivacyPolicyClient() {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="border-t border-border/50 py-8">
-        <div className="max-w-[1200px] mx-auto px-6 md:px-12">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-foreground-muted">
-              &copy; {new Date().getFullYear()} New Canadian Careers. All rights reserved.
-            </p>
-            <div className="flex items-center gap-6">
-              <Link href="/terms" className="text-sm text-foreground-muted hover:text-foreground transition-colors">
-                Terms of Service
-              </Link>
-              <Link href="/privacy" className="text-sm text-primary font-medium">
-                Privacy Policy
-              </Link>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   )
 }

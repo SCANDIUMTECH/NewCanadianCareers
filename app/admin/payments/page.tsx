@@ -839,15 +839,15 @@ export default function PaymentsPage() {
               value={stats.transactions_count.toLocaleString()}
               subtitle="This month"
               icon={<Receipt className="h-4 w-4" />}
-              gradient="from-blue-500 to-indigo-600"
-              bgAccent="bg-blue-500"
+              gradient="from-sky to-sky-deep"
+              bgAccent="bg-sky"
             />
             <StatCard
               title="Avg. Order Value"
               value={formatCurrency(stats.average_transaction)}
               icon={<TrendingUp className="h-4 w-4" />}
-              gradient="from-violet-500 to-purple-600"
-              bgAccent="bg-violet-500"
+              gradient="from-primary-light to-primary"
+              bgAccent="bg-primary"
             />
             <StatCard
               title="By Type"
@@ -861,8 +861,8 @@ export default function PaymentsPage() {
         ) : (
           <>
             <StatCard title="Revenue (MTD)" value="--" icon={<DollarSign className="h-4 w-4" />} gradient="from-emerald-500 to-teal-600" bgAccent="bg-emerald-500" />
-            <StatCard title="Transactions" value="--" icon={<Receipt className="h-4 w-4" />} gradient="from-blue-500 to-indigo-600" bgAccent="bg-blue-500" />
-            <StatCard title="Avg. Order Value" value="--" icon={<TrendingUp className="h-4 w-4" />} gradient="from-violet-500 to-purple-600" bgAccent="bg-violet-500" />
+            <StatCard title="Transactions" value="--" icon={<Receipt className="h-4 w-4" />} gradient="from-sky to-sky-deep" bgAccent="bg-sky" />
+            <StatCard title="Avg. Order Value" value="--" icon={<TrendingUp className="h-4 w-4" />} gradient="from-primary-light to-primary" bgAccent="bg-primary" />
             <StatCard title="By Type" value="--" icon={<Layers className="h-4 w-4" />} gradient="from-amber-500 to-orange-600" bgAccent="bg-amber-500" />
           </>
         )}
@@ -905,12 +905,12 @@ export default function PaymentsPage() {
       {/* Transactions */}
       <motion.div variants={itemVariants}>
         <Card className="relative overflow-hidden group">
-          <div className={cn("absolute -top-6 -right-6 w-24 h-24 rounded-full opacity-[0.06] transition-opacity duration-300 group-hover:opacity-[0.10] bg-blue-500")} />
-          <div className={cn("absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-300 from-blue-500 to-indigo-600")} />
+          <div className={cn("absolute -top-6 -right-6 w-24 h-24 rounded-full opacity-[0.06] transition-opacity duration-300 group-hover:opacity-[0.10] bg-sky")} />
+          <div className={cn("absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-300 from-sky to-sky-deep")} />
           <CardHeader className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-sky to-sky-deep text-white shadow-sm">
                   <Receipt className="h-4 w-4" />
                 </div>
                 <div className="flex items-center gap-2.5">

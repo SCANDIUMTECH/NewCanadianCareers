@@ -91,7 +91,7 @@ export default function NewJourneyPage() {
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
-        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm shadow-violet-500/20 flex-shrink-0">
+        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary-light to-primary flex items-center justify-center shadow-sm shadow-primary/20 flex-shrink-0">
           <GitBranchPlus className="h-5 w-5 text-white" />
         </div>
         <div>

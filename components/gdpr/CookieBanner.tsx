@@ -3,7 +3,8 @@
 import React, { useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import DOMPurify from "dompurify"
-import { Cookie, Shield, Settings2, X } from "lucide-react"
+import Image from "next/image"
+import { Settings2, X } from "lucide-react"
 import { useGDPR } from "@/hooks/use-gdpr"
 import { cn } from "@/lib/utils"
 
@@ -76,21 +77,25 @@ export function CookieBanner() {
               )}
             >
               {/* Subtle top gradient accent */}
-              <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-[#3B5BDB] via-[#5C7CFA] to-[#3B5BDB] opacity-60" />
+              <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-[#FF4500] via-[#FF6B35] to-[#FF4500] opacity-60" />
 
               <div className="p-5 pt-6">
                 {/* Header */}
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex items-center gap-2.5">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-b from-[#3B5BDB]/10 to-[#3B5BDB]/5 ring-1 ring-[#3B5BDB]/10">
-                      <Shield className="h-[18px] w-[18px] text-[#3B5BDB]" />
-                    </div>
+                    <Image
+                      src="/favicon-ncc.svg"
+                      alt="New Canadian Careers"
+                      width={36}
+                      height={36}
+                      className="h-9 w-9 rounded-lg object-contain"
+                    />
                     <div>
                       <h3 className="text-[14px] font-semibold tracking-tight text-gray-900">
                         Privacy & Cookies
                       </h3>
                       <p className="text-[11px] text-gray-400 font-medium">
-                        GDPR Compliant
+                        New Canadian Careers
                       </p>
                     </div>
                   </div>
@@ -105,7 +110,7 @@ export function CookieBanner() {
 
                 {/* Body text */}
                 <div
-                  className="text-[13px] leading-[1.6] text-gray-500 mb-4 [&_a]:text-[#3B5BDB] [&_a]:underline [&_a]:underline-offset-2 [&_a]:decoration-[#3B5BDB]/30 hover:[&_a]:decoration-[#3B5BDB]/60 [&_p]:m-0"
+                  className="text-[13px] leading-[1.6] text-gray-500 mb-4 [&_a]:text-[#FF4500] [&_a]:underline [&_a]:underline-offset-2 [&_a]:decoration-[#FF4500]/30 hover:[&_a]:decoration-[#FF4500]/60 [&_p]:m-0"
                   dangerouslySetInnerHTML={{ __html: sanitizedText }}
                 />
 
@@ -115,7 +120,7 @@ export function CookieBanner() {
                     href={settings.privacy_policy_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mb-4 inline-flex items-center gap-1 text-[12px] font-medium text-[#3B5BDB]/70 transition-colors hover:text-[#3B5BDB]"
+                    className="mb-4 inline-flex items-center gap-1 text-[12px] font-medium text-[#FF4500]/70 transition-colors hover:text-[#FF4500]"
                   >
                     Read our Privacy Policy →
                   </a>
@@ -128,10 +133,10 @@ export function CookieBanner() {
                     onClick={allowAll}
                     className={cn(
                       "w-full rounded-xl px-4 py-2.5",
-                      "bg-[#3B5BDB] text-white text-[13px] font-semibold",
-                      "shadow-[0_1px_2px_rgba(59,91,219,0.2),inset_0_1px_0_rgba(255,255,255,0.1)]",
+                      "bg-[#FF4500] text-white text-[13px] font-semibold",
+                      "shadow-[0_1px_2px_rgba(255,69,0,0.2),inset_0_1px_0_rgba(255,255,255,0.1)]",
                       "transition-all duration-200",
-                      "hover:bg-[#2F4BC7] hover:shadow-[0_4px_16px_rgba(59,91,219,0.3),inset_0_1px_0_rgba(255,255,255,0.1)]",
+                      "hover:bg-[#E03D00] hover:shadow-[0_4px_16px_rgba(255,69,0,0.3),inset_0_1px_0_rgba(255,255,255,0.1)]",
                       "active:scale-[0.98]"
                     )}
                   >

@@ -2,7 +2,10 @@
 Symmetric encryption utilities for sensitive data at rest.
 
 Uses Fernet (AES-128-CBC + HMAC-SHA256) with a key derived from
-Django's SECRET_KEY via PBKDF2. No additional env var required.
+Django's SECRET_KEY via PBKDF2.
+
+The PBKDF2 salt is configurable via the FIELD_ENCRYPTION_SALT environment
+variable. Each deployment should use a unique salt for defense-in-depth.
 
 Usage (low-level):
     from core.encryption import encrypt, decrypt
@@ -19,6 +22,7 @@ Usage (model field — preferred):
 import base64
 import hashlib
 import logging
+import os
 
 from cryptography.fernet import Fernet, InvalidToken
 from django.conf import settings
@@ -36,10 +40,12 @@ def _get_fernet() -> Fernet:
         return _fernet_instance
 
     # PBKDF2 with SHA256, 480 000 iterations → 32-byte key → base64-encode for Fernet
+    # Salt is configurable per-deployment for defense-in-depth
+    salt = os.environ.get('FIELD_ENCRYPTION_SALT', 'orion-field-encryption-salt').encode('utf-8')
     dk = hashlib.pbkdf2_hmac(
         'sha256',
         settings.SECRET_KEY.encode('utf-8'),
-        b'orion-field-encryption-salt',
+        salt,
         480_000,
         dklen=32,
     )

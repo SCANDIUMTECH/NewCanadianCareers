@@ -129,9 +129,9 @@ const statusConfig: Record<string, { label: string; color: string; icon: typeof 
   draft: { label: "Draft", color: "bg-gray-100 text-gray-700", icon: FileText },
   pending: { label: "Pending Review", color: "bg-amber-100 text-amber-700", icon: Clock },
   pending_payment: { label: "Pending Payment", color: "bg-orange-100 text-orange-700", icon: CreditCard },
-  scheduled: { label: "Scheduled", color: "bg-purple-100 text-purple-700", icon: Clock },
+  scheduled: { label: "Scheduled", color: "bg-primary/10 text-primary", icon: Clock },
   published: { label: "Published", color: "bg-emerald-100 text-emerald-700", icon: Check },
-  paused: { label: "Paused", color: "bg-blue-100 text-blue-700", icon: Pause },
+  paused: { label: "Paused", color: "bg-sky/10 text-sky", icon: Pause },
   expired: { label: "Expired", color: "bg-gray-100 text-gray-600", icon: Clock },
   filled: { label: "Filled", color: "bg-teal-100 text-teal-700", icon: CheckCircle },
   hidden: { label: "Hidden", color: "bg-red-100 text-red-700", icon: EyeOff },
@@ -142,9 +142,9 @@ const statusDotConfig: Record<string, { color: string; label: string }> = {
   draft: { color: "bg-gray-400", label: "Draft" },
   pending: { color: "bg-amber-500", label: "Pending Review" },
   pending_payment: { color: "bg-orange-500", label: "Pending Payment" },
-  scheduled: { color: "bg-purple-500", label: "Scheduled" },
+  scheduled: { color: "bg-primary", label: "Scheduled" },
   published: { color: "bg-emerald-500", label: "Published" },
-  paused: { color: "bg-blue-500", label: "Paused" },
+  paused: { color: "bg-sky", label: "Paused" },
   expired: { color: "bg-gray-400", label: "Expired" },
   filled: { color: "bg-teal-500", label: "Filled" },
   hidden: { color: "bg-red-500", label: "Hidden" },
@@ -200,9 +200,9 @@ function formatDate(dateStr: string | null | undefined): string {
 
 // Deterministic avatar colors for initials fallback
 const AVATAR_COLORS = [
-  "bg-blue-600", "bg-emerald-600", "bg-violet-600", "bg-amber-600",
-  "bg-rose-600", "bg-cyan-600", "bg-fuchsia-600", "bg-teal-600",
-  "bg-indigo-600", "bg-orange-600", "bg-lime-600", "bg-sky-600",
+  "bg-sky", "bg-emerald-600", "bg-primary", "bg-amber-600",
+  "bg-destructive", "bg-sky", "bg-destructive", "bg-teal-600",
+  "bg-foreground", "bg-orange-600", "bg-lime-600", "bg-primary-light",
 ]
 
 function getAvatarColor(name: string | null | undefined): string {
@@ -899,7 +899,7 @@ function JobsManagementContent() {
               value={stats?.flagged || 0}
               color="red"
               icon={<Flag className="h-4 w-4" />}
-              gradient="from-red-500 to-rose-600"
+              gradient="from-red-500 to-red-600"
               active={activeTab === "flagged"}
               onClick={() => setActiveTab("flagged")}
               urgent

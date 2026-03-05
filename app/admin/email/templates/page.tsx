@@ -80,7 +80,7 @@ const CATEGORY_TAXONOMY: Record<TemplateType, CategoryGroup> = {
   Transactional: {
     label: "Transactional",
     icon: Zap,
-    gradient: "from-blue-500 to-indigo-600",
+    gradient: "from-sky to-sky-deep",
     subcategories: [
       { value: "Authentication", label: "Authentication" },
       { value: "Jobs", label: "Jobs" },
@@ -92,7 +92,7 @@ const CATEGORY_TAXONOMY: Record<TemplateType, CategoryGroup> = {
   Marketing: {
     label: "Marketing",
     icon: Megaphone,
-    gradient: "from-violet-500 to-purple-600",
+    gradient: "from-primary-light to-primary",
     subcategories: [
       { value: "Campaign", label: "Campaign" },
       { value: "Promotional", label: "Promotional" },
@@ -113,8 +113,8 @@ const CATEGORY_TAXONOMY: Record<TemplateType, CategoryGroup> = {
 }
 
 const TYPE_COLORS: Record<TemplateType, string> = {
-  Transactional: "bg-blue-500",
-  Marketing: "bg-violet-500",
+  Transactional: "bg-sky",
+  Marketing: "bg-primary",
   System: "bg-slate-500",
 }
 
@@ -125,16 +125,16 @@ const STATUS_CONFIG: Record<TemplateStatus, { label: string; className: string }
 }
 
 const SUBCATEGORY_COLORS: Record<string, string> = {
-  Authentication: "border-blue-200 text-blue-600",
+  Authentication: "border-sky/20 text-sky",
   Jobs: "border-emerald-200 text-emerald-600",
   Applications: "border-sky-200 text-sky-600",
   Billing: "border-amber-200 text-amber-600",
   Alerts: "border-red-200 text-red-600",
-  Campaign: "border-violet-200 text-violet-600",
-  Promotional: "border-pink-200 text-pink-600",
+  Campaign: "border-primary/20 text-primary",
+  Promotional: "border-destructive/20 text-destructive",
   Newsletter: "border-teal-200 text-teal-600",
   Coupon: "border-orange-200 text-orange-600",
-  Announcement: "border-fuchsia-200 text-fuchsia-600",
+  Announcement: "border-destructive/20 text-destructive",
   Default: "border-slate-200 text-slate-600",
   Internal: "border-gray-200 text-gray-600",
 }
@@ -334,7 +334,7 @@ export default function EmailTemplatesPage() {
       <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center shadow-lg shadow-primary/20">
               <FileText className="h-6 w-6 text-white" />
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-green-500 border-2 border-background" />
@@ -376,16 +376,16 @@ export default function EmailTemplatesPage() {
             <StatCard title="Draft" value={stats.draft} icon={<Clock className="h-3.5 w-3.5" />} gradient="from-amber-500 to-orange-600" />
             <StatCard title="Archived" value={stats.archived} icon={<Archive className="h-3.5 w-3.5" />} gradient="from-gray-500 to-slate-600" />
             <Card className="relative overflow-hidden group">
-              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-blue-500 via-violet-500 to-slate-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-sky via-primary to-slate-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <CardContent className="p-4 relative">
                 <p className="text-sm text-muted-foreground mb-2">By Type</p>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-blue-500" />
+                    <div className="w-2 h-2 rounded-full bg-sky" />
                     <span className="text-sm font-semibold tabular-nums">{stats.transactional}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-violet-500" />
+                    <div className="w-2 h-2 rounded-full bg-primary" />
                     <span className="text-sm font-semibold tabular-nums">{stats.marketing}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
@@ -503,8 +503,8 @@ export default function EmailTemplatesPage() {
           ) : templates.length === 0 ? (
             <Card>
               <CardContent className="p-12 text-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500/10 to-violet-600/10 mx-auto mb-4">
-                  <Inbox className="h-7 w-7 text-indigo-500/50" />
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/10 to-primary-hover/10 mx-auto mb-4">
+                  <Inbox className="h-7 w-7 text-primary/50" />
                 </div>
                 <h3 className="text-lg font-medium">No templates found</h3>
                 <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">

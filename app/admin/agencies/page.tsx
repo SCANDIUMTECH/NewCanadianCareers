@@ -488,7 +488,7 @@ export default function AgenciesPage() {
       case "active":
         return "border-green-200 text-green-700"
       case "trial":
-        return "border-blue-200 text-blue-700"
+        return "border-sky/20 text-sky"
       case "suspended":
         return "border-red-200 text-red-700"
       default:
@@ -573,14 +573,14 @@ export default function AgenciesPage() {
           <>
             <StatCard title="Total Agencies" value={stats.total_agencies.toString()} icon={<Briefcase className="h-4 w-4" />} gradient="from-slate-600 to-slate-800" />
             <StatCard title="Verified" value={stats.verified_agencies.toString()} color="green" icon={<ShieldCheck className="h-4 w-4" />} gradient="from-green-500 to-emerald-600" />
-            <StatCard title="Total Volume (MTD)" value={formatCurrency(stats.monthly_volume)} color="primary" icon={<DollarSign className="h-4 w-4" />} gradient="from-blue-500 to-indigo-600" />
+            <StatCard title="Total Volume (MTD)" value={formatCurrency(stats.monthly_volume)} color="primary" icon={<DollarSign className="h-4 w-4" />} gradient="from-sky to-sky-deep" />
             <StatCard title="Low Credits" value={(stats.low_credits ?? 0).toString()} color="amber" icon={<AlertTriangle className="h-4 w-4" />} gradient="from-amber-500 to-orange-600" />
           </>
         ) : (
           <>
             <StatCard title="Total Agencies" value="--" icon={<Briefcase className="h-4 w-4" />} gradient="from-slate-600 to-slate-800" />
             <StatCard title="Verified" value="--" color="green" icon={<ShieldCheck className="h-4 w-4" />} gradient="from-green-500 to-emerald-600" />
-            <StatCard title="Total Volume (MTD)" value="--" color="primary" icon={<DollarSign className="h-4 w-4" />} gradient="from-blue-500 to-indigo-600" />
+            <StatCard title="Total Volume (MTD)" value="--" color="primary" icon={<DollarSign className="h-4 w-4" />} gradient="from-sky to-sky-deep" />
             <StatCard title="Low Credits" value="--" color="amber" icon={<AlertTriangle className="h-4 w-4" />} gradient="from-amber-500 to-orange-600" />
           </>
         )}

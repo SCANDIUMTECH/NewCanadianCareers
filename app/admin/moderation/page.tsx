@@ -166,7 +166,7 @@ export default function ModerationPage() {
       <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center shadow-lg shadow-rose-500/20">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-destructive to-destructive-deep flex items-center justify-center shadow-lg shadow-destructive/20">
               <Shield className="h-6 w-6 text-white" />
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-green-500 border-2 border-background" />
@@ -188,7 +188,7 @@ export default function ModerationPage() {
       {/* Stats */}
       <motion.div variants={itemVariants} className="grid gap-4 md:grid-cols-4">
         <StatCard title="Pending Review" value={stats ? String(stats.pending) : "--"} color="amber" icon={<Clock className="h-4 w-4" />} gradient="from-amber-500 to-orange-600" />
-        <StatCard title="Flagged Jobs" value={stats ? String(stats.flagged) : "--"} color="red" icon={<AlertTriangle className="h-4 w-4" />} gradient="from-red-500 to-rose-600" />
+        <StatCard title="Flagged Jobs" value={stats ? String(stats.flagged) : "--"} color="red" icon={<AlertTriangle className="h-4 w-4" />} gradient="from-red-500 to-red-600" />
         <StatCard title="Published" value={stats ? String(stats.published) : "--"} color="green" icon={<Check className="h-4 w-4" />} gradient="from-green-500 to-emerald-600" />
         <StatCard title="Total Jobs" value={stats ? String(stats.total) : "--"} icon={<FileText className="h-4 w-4" />} gradient="from-slate-600 to-slate-800" />
       </motion.div>
@@ -435,7 +435,7 @@ function ModerationCard({
   isSelected: boolean
   onClick: () => void
 }) {
-  const borderColor = item.type === "reported" ? "border-l-red-500" : item.flags.length > 0 ? "border-l-amber-500" : "border-l-blue-500"
+  const borderColor = item.type === "reported" ? "border-l-red-500" : item.flags.length > 0 ? "border-l-amber-500" : "border-l-sky"
   return (
     <Card
       className={cn(

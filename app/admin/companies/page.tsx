@@ -310,7 +310,7 @@ function CompaniesContent() {
       case "active":
         return "border-green-200 text-green-700"
       case "trial":
-        return "border-blue-200 text-blue-700"
+        return "border-sky/20 text-sky"
       case "suspended":
         return "border-red-200 text-red-700"
       default:
@@ -510,7 +510,7 @@ function CompaniesContent() {
       <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-sky-500 to-cyan-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-sky to-sky-deep flex items-center justify-center shadow-lg shadow-sky/20">
               <Building2 className="h-6 w-6 text-white" />
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-green-500 border-2 border-background" />
@@ -561,7 +561,7 @@ function CompaniesContent() {
           <>
             <StatCard title="Total Companies" value={stats?.total?.toLocaleString() || "0"} icon={<Building className="h-4 w-4" />} gradient="from-slate-600 to-slate-800" />
             <StatCard title="Verified" value={stats?.verified?.toLocaleString() || "0"} color="green" icon={<ShieldCheck className="h-4 w-4" />} gradient="from-green-500 to-emerald-600" />
-            <StatCard title="Pending Verification" value={stats?.pending?.toLocaleString() || "0"} color="primary" icon={<Clock className="h-4 w-4" />} gradient="from-blue-500 to-indigo-600" />
+            <StatCard title="Pending Verification" value={stats?.pending?.toLocaleString() || "0"} color="primary" icon={<Clock className="h-4 w-4" />} gradient="from-sky to-sky-deep" />
             <StatCard title="Low Credits" value={(stats?.low_credits ?? 0).toLocaleString()} color="amber" icon={<AlertTriangle className="h-4 w-4" />} gradient="from-amber-500 to-orange-600" />
           </>
         )}

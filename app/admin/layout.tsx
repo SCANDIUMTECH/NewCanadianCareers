@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { useAdminContext, AdminProvider } from "@/hooks/use-admin"
 import { RequireRole } from "@/lib/auth/require-role"
 import { cn, getInitials } from "@/lib/utils"
+import Image from "next/image"
 import {
   SidebarProvider,
   Sidebar,
@@ -82,48 +83,48 @@ import { AdminCommandPalette } from "@/components/admin/command-palette"
 // Navigation structure based on the spec
 const navigation = {
   main: [
-    { name: "Dashboard", href: "/admin", icon: LayoutDashboard, gradient: "from-indigo-500 to-blue-600" },
-    { name: "Users", href: "/admin/users", icon: Users, gradient: "from-violet-500 to-purple-600" },
-    { name: "Companies", href: "/admin/companies", icon: Building2, gradient: "from-sky-500 to-cyan-600" },
-    { name: "Agencies", href: "/admin/agencies", icon: Briefcase, gradient: "from-amber-500 to-orange-600" },
-    { name: "Jobs", href: "/admin/jobs", icon: FileText, gradient: "from-emerald-500 to-teal-600" },
-    { name: "Moderation", href: "/admin/moderation", icon: Shield, badgeKey: "pending_jobs" as const, gradient: "from-rose-500 to-pink-600" },
-    { name: "Taxonomies", href: "/admin/taxonomies", icon: Tags, gradient: "from-teal-500 to-emerald-600" },
+    { name: "Dashboard", href: "/admin", icon: LayoutDashboard, gradient: "from-primary to-primary-hover" },
+    { name: "Users", href: "/admin/users", icon: Users, gradient: "from-primary to-primary-hover" },
+    { name: "Companies", href: "/admin/companies", icon: Building2, gradient: "from-sky to-sky-deep" },
+    { name: "Agencies", href: "/admin/agencies", icon: Briefcase, gradient: "from-primary-light to-primary" },
+    { name: "Jobs", href: "/admin/jobs", icon: FileText, gradient: "from-primary to-primary-hover" },
+    { name: "Moderation", href: "/admin/moderation", icon: Shield, badgeKey: "pending_jobs" as const, gradient: "from-destructive to-destructive-deep" },
+    { name: "Taxonomies", href: "/admin/taxonomies", icon: Tags, gradient: "from-foreground to-foreground-deep" },
   ],
   distribution: [
-    { name: "Articles", href: "/admin/articles", icon: Newspaper, gradient: "from-violet-500 to-purple-600" },
-    { name: "Article Categories", href: "/admin/articles/categories", icon: Tags, gradient: "from-purple-500 to-violet-600" },
-    { name: "Social", href: "/admin/social", icon: Share2, gradient: "from-pink-500 to-rose-600" },
-    { name: "Search & SEO", href: "/admin/search", icon: Globe, gradient: "from-cyan-500 to-blue-600" },
-    { name: "AI Services", href: "/admin/ai", icon: Sparkles, gradient: "from-violet-500 to-purple-600" },
+    { name: "Articles", href: "/admin/articles", icon: Newspaper, gradient: "from-primary to-primary-hover" },
+    { name: "Article Categories", href: "/admin/articles/categories", icon: Tags, gradient: "from-primary-light to-primary" },
+    { name: "Social", href: "/admin/social", icon: Share2, gradient: "from-destructive to-destructive-deep" },
+    { name: "Search & SEO", href: "/admin/search", icon: Globe, gradient: "from-sky to-sky-deep" },
+    { name: "AI Services", href: "/admin/ai", icon: Sparkles, gradient: "from-foreground to-foreground-deep" },
   ],
   monetization: [
-    { name: "Job Packages", href: "/admin/packages", icon: Package, gradient: "from-violet-500 to-indigo-600" },
-    { name: "Payments", href: "/admin/payments", icon: CreditCard, gradient: "from-emerald-500 to-green-600" },
-    { name: "Banners", href: "/admin/banners", icon: ImageIcon, gradient: "from-amber-500 to-yellow-600" },
-    { name: "Affiliates", href: "/admin/affiliates", icon: Link2, gradient: "from-teal-500 to-cyan-600" },
-    { name: "Entitlements", href: "/admin/entitlements", icon: Wallet, gradient: "from-purple-500 to-violet-600" },
+    { name: "Job Packages", href: "/admin/packages", icon: Package, gradient: "from-primary to-primary-hover" },
+    { name: "Payments", href: "/admin/payments", icon: CreditCard, gradient: "from-primary-light to-primary" },
+    { name: "Banners", href: "/admin/banners", icon: ImageIcon, gradient: "from-sky to-sky-deep" },
+    { name: "Affiliates", href: "/admin/affiliates", icon: Link2, gradient: "from-sky to-sky-deep" },
+    { name: "Entitlements", href: "/admin/entitlements", icon: Wallet, gradient: "from-foreground to-foreground-deep" },
   ],
   marketing: [
-    { name: "Overview", href: "/admin/marketing", icon: Megaphone, gradient: "from-fuchsia-500 to-pink-600" },
-    { name: "Audiences", href: "/admin/marketing/audiences", icon: UsersRound, gradient: "from-violet-500 to-purple-600" },
-    { name: "Campaigns", href: "/admin/marketing/campaigns", icon: Send, gradient: "from-blue-500 to-indigo-600" },
-    { name: "Templates", href: "/admin/email/templates", icon: FileText, gradient: "from-indigo-500 to-violet-600" },
-    { name: "Journeys", href: "/admin/marketing/journeys", icon: GitBranchPlus, gradient: "from-teal-500 to-emerald-600" },
-    { name: "Coupons & Credits", href: "/admin/marketing/coupons", icon: Ticket, gradient: "from-amber-500 to-orange-600" },
-    { name: "Reports", href: "/admin/marketing/reports", icon: BarChart3, gradient: "from-sky-500 to-cyan-600" },
-    { name: "Compliance", href: "/admin/marketing/compliance", icon: ShieldCheck, gradient: "from-slate-500 to-gray-600" },
+    { name: "Overview", href: "/admin/marketing", icon: Megaphone, gradient: "from-destructive to-destructive-deep" },
+    { name: "Audiences", href: "/admin/marketing/audiences", icon: UsersRound, gradient: "from-primary to-primary-hover" },
+    { name: "Campaigns", href: "/admin/marketing/campaigns", icon: Send, gradient: "from-sky to-sky-deep" },
+    { name: "Templates", href: "/admin/email/templates", icon: FileText, gradient: "from-primary-light to-primary" },
+    { name: "Journeys", href: "/admin/marketing/journeys", icon: GitBranchPlus, gradient: "from-foreground to-foreground-deep" },
+    { name: "Coupons & Credits", href: "/admin/marketing/coupons", icon: Ticket, gradient: "from-primary to-primary-hover" },
+    { name: "Reports", href: "/admin/marketing/reports", icon: BarChart3, gradient: "from-sky to-sky-deep" },
+    { name: "Compliance", href: "/admin/marketing/compliance", icon: ShieldCheck, gradient: "from-foreground to-foreground-deep" },
   ],
   system: [
-    { name: "Email Config", href: "/admin/email", icon: Mail, gradient: "from-blue-500 to-indigo-600" },
-    { name: "Feature Flags", href: "/admin/features", icon: ToggleLeft, gradient: "from-emerald-500 to-teal-600" },
-    { name: "Audit Logs", href: "/admin/audit", icon: ScrollText, gradient: "from-amber-500 to-orange-600" },
-    { name: "Fraud", href: "/admin/fraud", icon: AlertTriangle, gradient: "from-red-500 to-rose-600" },
-    { name: "Settings", href: "/admin/settings", icon: Settings, gradient: "from-slate-500 to-gray-600" },
+    { name: "Email Config", href: "/admin/email", icon: Mail, gradient: "from-sky to-sky-deep" },
+    { name: "Feature Flags", href: "/admin/features", icon: ToggleLeft, gradient: "from-primary to-primary-hover" },
+    { name: "Audit Logs", href: "/admin/audit", icon: ScrollText, gradient: "from-foreground to-foreground-deep" },
+    { name: "Fraud", href: "/admin/fraud", icon: AlertTriangle, gradient: "from-destructive to-destructive-deep" },
+    { name: "Settings", href: "/admin/settings", icon: Settings, gradient: "from-foreground to-foreground-deep" },
   ],
   support: [
-    { name: "Support Tools", href: "/admin/support", icon: LifeBuoy, gradient: "from-sky-500 to-cyan-600" },
-    { name: "Compliance", href: "/admin/compliance", icon: ShieldCheck, gradient: "from-indigo-500 to-violet-600" },
+    { name: "Support Tools", href: "/admin/support", icon: LifeBuoy, gradient: "from-sky to-sky-deep" },
+    { name: "Compliance", href: "/admin/compliance", icon: ShieldCheck, gradient: "from-foreground to-foreground-deep" },
   ],
 }
 
@@ -218,10 +219,14 @@ function AdminLayoutContent({
           {/* Logo */}
           <SidebarHeader className="p-4 pb-2">
             <Link href="/admin" className="flex items-center gap-2.5 group">
-              <div className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-blue-600 text-white font-bold text-sm shadow-md shadow-indigo-500/25">
-                O
-                <Sparkles className="absolute -top-1 -right-1 h-3 w-3 text-amber-400 drop-shadow-sm" />
-              </div>
+              <Image
+                src="/favicon-ncc.svg"
+                alt="NCC"
+                width={32}
+                height={32}
+                className="h-8 w-8 rounded-lg shadow-md"
+                priority
+              />
               <div className="flex flex-col group-data-[collapsible=icon]:hidden">
                 <span className="text-sm font-bold tracking-tight font-secondary leading-none">
                   NCC
@@ -250,7 +255,7 @@ function AdminLayoutContent({
                   <DropdownMenuTrigger asChild>
                     <SidebarMenuButton className="h-12 rounded-lg hover:bg-sidebar-accent/80 transition-colors">
                       <Avatar className="h-7 w-7 ring-2 ring-primary/10">
-                        <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-blue-600 text-white text-[10px] font-semibold">
+                        <AvatarFallback className="bg-gradient-to-br from-primary to-primary-hover text-white text-[10px] font-semibold">
                           {userInitials}
                         </AvatarFallback>
                       </Avatar>
@@ -315,7 +320,7 @@ export default function AdminLayout({
 const ENV_BADGE_CONFIG: Record<string, { label: string; className: string }> = {
   production: { label: "Production", className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
   staging: { label: "Staging", className: "bg-amber-500/10 text-amber-600 border-amber-500/20" },
-  development: { label: "Development", className: "bg-blue-500/10 text-blue-600 border-blue-500/20" },
+  development: { label: "Development", className: "bg-sky/10 text-sky border-sky/20" },
 }
 
 const notificationTypeIcons: Record<string, ElementType> = {
@@ -327,7 +332,7 @@ const notificationTypeIcons: Record<string, ElementType> = {
 }
 
 const notificationTypeColors: Record<string, string> = {
-  application: "bg-blue-500/10 text-blue-600",
+  application: "bg-sky/10 text-sky",
   message: "bg-emerald-500/10 text-emerald-600",
   system: "bg-primary/10 text-primary",
   job: "bg-amber-500/10 text-amber-600",
