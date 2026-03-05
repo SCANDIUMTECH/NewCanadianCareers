@@ -242,8 +242,8 @@ export default function AdminDashboard() {
     switch (type) {
       case "job":
         return {
-          icon: <FileText className="h-4 w-4 text-blue-600" />,
-          bgClass: "bg-blue-50 text-blue-600 border border-blue-100",
+          icon: <FileText className="h-4 w-4 text-sky" />,
+          bgClass: "bg-sky/10 text-sky border border-sky/20",
         }
       case "user":
         return {
@@ -257,8 +257,8 @@ export default function AdminDashboard() {
         }
       case "payment":
         return {
-          icon: <CreditCard className="h-4 w-4 text-violet-600" />,
-          bgClass: "bg-violet-50 text-violet-600 border border-violet-100",
+          icon: <CreditCard className="h-4 w-4 text-primary" />,
+          bgClass: "bg-primary/10 text-primary border border-primary/20",
         }
       default:
         return {
@@ -283,7 +283,7 @@ export default function AdminDashboard() {
       <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center shadow-lg shadow-primary/20">
               <LayoutDashboard className="h-6 w-6 text-white" />
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-green-500 border-2 border-background" />
@@ -364,7 +364,7 @@ export default function AdminDashboard() {
                         className={cn(
                           alert.severity === "error" && "text-red-700",
                           alert.severity === "warning" && "text-amber-700",
-                          alert.severity === "info" && "text-blue-700"
+                          alert.severity === "info" && "text-sky"
                         )}
                       >
                         {alert.message}
@@ -425,8 +425,8 @@ export default function AdminDashboard() {
               trend={stats.jobs_change.startsWith("-") ? "down" : "up"}
               subtitle="from last period"
               icon={<Briefcase className="h-4 w-4" />}
-              gradient="from-blue-500 to-indigo-600"
-              bgAccent="bg-blue-500"
+              gradient="from-sky to-sky-deep"
+              bgAccent="bg-sky"
               sparkColor={CHART.primary}
             />
             <StatCard
@@ -447,8 +447,8 @@ export default function AdminDashboard() {
               trend={stats.revenue_change.startsWith("-") ? "down" : "up"}
               subtitle="from last month"
               icon={<DollarSign className="h-4 w-4" />}
-              gradient="from-violet-500 to-purple-600"
-              bgAccent="bg-violet-500"
+              gradient="from-primary-light to-primary"
+              bgAccent="bg-primary"
               sparkColor={CHART.purple}
             />
             <StatCard
@@ -473,8 +473,8 @@ export default function AdminDashboard() {
               trend="up"
               subtitle="from last period"
               icon={<Briefcase className="h-4 w-4" />}
-              gradient="from-blue-500 to-indigo-600"
-              bgAccent="bg-blue-500"
+              gradient="from-sky to-sky-deep"
+              bgAccent="bg-sky"
               sparkColor={CHART.primary}
             />
             <StatCard
@@ -495,8 +495,8 @@ export default function AdminDashboard() {
               trend="up"
               subtitle="from last month"
               icon={<DollarSign className="h-4 w-4" />}
-              gradient="from-violet-500 to-purple-600"
-              bgAccent="bg-violet-500"
+              gradient="from-primary-light to-primary"
+              bgAccent="bg-primary"
               sparkColor={CHART.purple}
             />
             <StatCard
@@ -655,12 +655,12 @@ export default function AdminDashboard() {
 
         {/* Recent Activity */}
         <Card className="lg:col-span-2 relative overflow-hidden group">
-          <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-blue-500 opacity-[0.04] transition-opacity duration-300 group-hover:opacity-[0.08]" />
-          <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-sky opacity-[0.04] transition-opacity duration-300 group-hover:opacity-[0.08]" />
+          <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-sky via-primary-light to-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-sky to-sky-deep text-white shadow-sm">
                   <Activity className="h-4 w-4" />
                 </div>
                 <div>

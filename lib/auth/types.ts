@@ -82,6 +82,16 @@ export interface AuthResponse {
   message?: string
 }
 
+export interface EmailCheckResponse {
+  exists: boolean
+}
+
+export interface LoginCodeCredentials {
+  email: string
+  code: string
+  turnstile_token?: string
+}
+
 export interface ApiError {
   message: string
   errors?: Record<string, string[]>

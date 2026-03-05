@@ -1,9 +1,7 @@
-"""Fix entity_id callable default warning and sync migration state.
+"""Add entity_id and editing_locked_after_publish fields, then fix entity_id defaults.
 
-The entity_id and editing_locked_after_publish columns already exist in the DB
-but were missing from migration state. This migration uses SeparateDatabaseAndState
-to fix the state without attempting to re-add existing columns, then alters entity_id
-to remove the callable default (replaced by save() override logic).
+Adds entity_id to Company and Agency, editing_locked_after_publish to Company,
+then alters entity_id to remove callable default (replaced by save() override logic).
 """
 from django.db import migrations, models
 import core.utils
@@ -16,45 +14,41 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # Step 1: Fix migration state — tell Django these fields exist
-        # (no DB operations since columns are already there)
-        migrations.SeparateDatabaseAndState(
-            state_operations=[
-                migrations.AddField(
-                    model_name='agency',
-                    name='entity_id',
-                    field=models.CharField(
-                        db_index=True,
-                        default=core.utils.generate_entity_id,
-                        editable=False,
-                        help_text='Unique 8-character alphanumeric identifier',
-                        max_length=10,
-                        unique=True,
-                    ),
-                    preserve_default=False,
-                ),
-                migrations.AddField(
-                    model_name='company',
-                    name='entity_id',
-                    field=models.CharField(
-                        db_index=True,
-                        default=core.utils.generate_entity_id,
-                        editable=False,
-                        help_text='Unique 8-character alphanumeric identifier',
-                        max_length=10,
-                        unique=True,
-                    ),
-                    preserve_default=False,
-                ),
-                migrations.AddField(
-                    model_name='company',
-                    name='editing_locked_after_publish',
-                    field=models.BooleanField(default=False),
-                ),
-            ],
-            database_operations=[],
+        # Step 1: Add entity_id to Agency
+        migrations.AddField(
+            model_name='agency',
+            name='entity_id',
+            field=models.CharField(
+                db_index=True,
+                default=core.utils.generate_entity_id,
+                editable=False,
+                help_text='Unique 8-character alphanumeric identifier',
+                max_length=10,
+                unique=True,
+            ),
+            preserve_default=False,
         ),
-        # Step 2: Alter entity_id to remove callable default (actual DB-safe operation)
+        # Step 2: Add entity_id to Company
+        migrations.AddField(
+            model_name='company',
+            name='entity_id',
+            field=models.CharField(
+                db_index=True,
+                default=core.utils.generate_entity_id,
+                editable=False,
+                help_text='Unique 8-character alphanumeric identifier',
+                max_length=10,
+                unique=True,
+            ),
+            preserve_default=False,
+        ),
+        # Step 3: Add editing_locked_after_publish to Company
+        migrations.AddField(
+            model_name='company',
+            name='editing_locked_after_publish',
+            field=models.BooleanField(default=False),
+        ),
+        # Step 4: Alter entity_id to remove callable default
         migrations.AlterField(
             model_name='agency',
             name='entity_id',

@@ -110,6 +110,7 @@ EMAIL_TEMPLATES = {
     'account_deleted': 'email/account_deleted.html',
     'application_withdrawn': 'email/application_withdrawn.html',
     'application_message': 'email/application_message.html',
+    'login_code': 'email/login_code.html',
     'default': 'email/default.html',
 }
 

@@ -570,7 +570,7 @@ export default function SocialDistributionPage() {
       <motion.div variants={itemVariants} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center shadow-lg shadow-pink-500/20">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-destructive to-destructive-deep flex items-center justify-center shadow-lg shadow-destructive/20">
               <Share2 className="h-6 w-6 text-white" />
             </div>
             {globalEnabled && (
@@ -654,9 +654,9 @@ export default function SocialDistributionPage() {
             animate="show"
           >
             {[
-              { label: "Posts Today", value: stats.posts_today, icon: Zap, gradient: "from-blue-500 to-indigo-600", bgAccent: "bg-blue-500", accent: "text-primary" },
+              { label: "Posts Today", value: stats.posts_today ?? 0, icon: Zap, gradient: "from-sky to-sky-deep", bgAccent: "bg-sky", accent: "text-primary" },
               { label: "Queued", value: queued_count, icon: Clock, gradient: "from-amber-500 to-orange-600", bgAccent: "bg-amber-500", accent: "text-warning" },
-              { label: "Failed (24h)", value: failed_count, icon: AlertTriangle, gradient: "from-red-500 to-rose-600", bgAccent: "bg-red-500", accent: "text-destructive", highlight: failed_count > 0 },
+              { label: "Failed (24h)", value: failed_count, icon: AlertTriangle, gradient: "from-red-500 to-red-600", bgAccent: "bg-red-500", accent: "text-destructive", highlight: failed_count > 0 },
               { label: "Success Rate", value: `${stats.success_rate}%`, icon: ArrowUpRight, gradient: "from-emerald-500 to-teal-600", bgAccent: "bg-emerald-500", accent: "text-success" },
             ].map((stat) => (
               <motion.div key={stat.label} variants={itemVariants}>
@@ -754,12 +754,12 @@ export default function SocialDistributionPage() {
 
           {/* Recent Activity */}
           <Card className="relative overflow-hidden group">
-            <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-indigo-500 opacity-[0.04] transition-opacity duration-300 group-hover:opacity-[0.08]" />
-            <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-indigo-500 via-blue-500 to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-primary opacity-[0.04] transition-opacity duration-300 group-hover:opacity-[0.08]" />
+            <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary via-primary-light to-sky opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-blue-600 text-white shadow-sm">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary-hover text-white shadow-sm">
                     <CircleDot className="h-4 w-4" />
                   </div>
                   <div>
@@ -894,11 +894,11 @@ export default function SocialDistributionPage() {
           <motion.div variants={itemVariants} initial="hidden" animate="show">
             <Card className="relative overflow-hidden group">
               <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-red-500 opacity-[0.04] transition-opacity duration-300 group-hover:opacity-[0.08]" />
-              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-red-500 via-rose-500 to-orange-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-red-500 via-red-500 to-orange-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-sm">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-red-500 to-red-600 text-white shadow-sm">
                       <AlertTriangle className="h-4 w-4" />
                     </div>
                     <div>
@@ -1107,12 +1107,12 @@ export default function SocialDistributionPage() {
         <TabsContent value="settings" className="space-y-6">
           <motion.div variants={itemVariants} initial="hidden" animate="show">
             <Card className="relative overflow-hidden group">
-              <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-violet-500 opacity-[0.04] transition-opacity duration-300 group-hover:opacity-[0.08]" />
-              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-violet-500 via-purple-500 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full bg-primary opacity-[0.04] transition-opacity duration-300 group-hover:opacity-[0.08]" />
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary-light via-primary to-sky opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             {/* Global Policy */}
             <div className="p-6 space-y-5">
               <div className="flex items-center gap-2.5 mb-1">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-sm">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary-light to-primary text-white shadow-sm">
                   <Shield className="h-4 w-4" />
                 </div>
                 <div>
@@ -1170,7 +1170,7 @@ export default function SocialDistributionPage() {
             {/* Rate Limits */}
             <div className="p-6 border-t border-border space-y-4">
               <div className="flex items-center gap-2.5 mb-1">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-sm">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-sky to-sky-deep text-white shadow-sm">
                   <Gauge className="h-4 w-4" />
                 </div>
                 <div>

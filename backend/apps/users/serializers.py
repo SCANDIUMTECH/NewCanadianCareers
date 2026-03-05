@@ -262,6 +262,7 @@ class AdminUserSerializer(serializers.ModelSerializer):
         read_only_fields = [
             'id', 'entity_id', 'created_at', 'updated_at', 'last_login',
             'role', 'status', 'is_staff', 'is_active', 'mfa_enabled',
+            'is_marketing_admin', 'is_marketing_analyst',
         ]
 
 
@@ -384,3 +385,22 @@ class ProfileCompletionSerializer(serializers.Serializer):
 
     percentage = serializers.IntegerField()
     sections = serializers.DictField(child=serializers.BooleanField())
+
+
+class EmailCheckSerializer(serializers.Serializer):
+    """Serializer for email existence check."""
+
+    email = serializers.EmailField()
+
+
+class SendLoginCodeSerializer(serializers.Serializer):
+    """Serializer for sending a login code."""
+
+    email = serializers.EmailField()
+
+
+class VerifyLoginCodeSerializer(serializers.Serializer):
+    """Serializer for verifying a login code."""
+
+    email = serializers.EmailField()
+    code = serializers.CharField(max_length=6, min_length=6)

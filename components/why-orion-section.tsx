@@ -20,7 +20,7 @@ export function WhyOrionSection() {
         <MotionWrapper delay={0}>
           <div className="flex items-center gap-4 mb-8">
             <div className="h-px w-8 bg-primary/40" />
-            <p className="text-sm font-medium text-foreground-muted tracking-wide uppercase">
+            <p className="font-secondary text-sm font-medium text-foreground-muted tracking-wide uppercase">
               Why NCC Exists
             </p>
           </div>
@@ -50,7 +50,7 @@ export function WhyOrionSection() {
           
           {/* Emphasis line */}
           <MotionWrapper delay={600}>
-            <p className="mt-8 text-xl text-foreground leading-relaxed font-medium">
+            <p className="font-secondary mt-8 text-xl text-foreground leading-relaxed font-medium">
               Just opportunity.
             </p>
           </MotionWrapper>

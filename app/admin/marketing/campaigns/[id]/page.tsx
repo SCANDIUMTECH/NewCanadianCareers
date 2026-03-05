@@ -101,10 +101,10 @@ const itemVariants = {
 
 const STATUS_COLORS: Record<CampaignStatus, string> = {
   draft: "border-slate-200 text-slate-600 bg-slate-50",
-  scheduled: "border-blue-200 text-blue-600 bg-blue-50",
+  scheduled: "border-sky/20 text-sky bg-sky/10",
   pending_approval: "border-amber-200 text-amber-600 bg-amber-50",
   approved: "border-emerald-200 text-emerald-600 bg-emerald-50",
-  sending: "border-violet-200 text-violet-600 bg-violet-50",
+  sending: "border-primary/20 text-primary bg-primary/5",
   sent: "border-green-200 text-green-700 bg-green-50",
   paused: "border-amber-200 text-amber-700 bg-amber-50",
   canceled: "border-slate-200 text-slate-500 bg-slate-50",
@@ -113,10 +113,10 @@ const STATUS_COLORS: Record<CampaignStatus, string> = {
 
 const STATUS_DOTS: Record<CampaignStatus, string> = {
   draft: "bg-slate-400",
-  scheduled: "bg-blue-500",
+  scheduled: "bg-sky",
   pending_approval: "bg-amber-500",
   approved: "bg-emerald-500",
-  sending: "bg-violet-500 animate-pulse",
+  sending: "bg-primary animate-pulse",
   sent: "bg-green-600",
   paused: "bg-amber-600",
   canceled: "bg-slate-400",
@@ -341,7 +341,7 @@ export default function CampaignDetailPage() {
       label: "Recipients",
       value: (stats?.total_recipients ?? campaign.total_recipients).toLocaleString(),
       icon: <Users className="h-4 w-4" />,
-      gradient: "from-blue-500 to-indigo-600",
+      gradient: "from-sky to-sky-deep",
     },
     {
       label: "Delivered",
@@ -362,7 +362,7 @@ export default function CampaignDetailPage() {
       value: (stats?.clicked_count ?? campaign.clicked_count).toLocaleString(),
       subtitle: `${stats?.click_rate ?? campaign.click_rate}% click rate`,
       icon: <MousePointerClick className="h-4 w-4" />,
-      gradient: "from-violet-500 to-purple-600",
+      gradient: "from-primary-light to-primary",
     },
     {
       label: "Bounced",
@@ -411,7 +411,7 @@ export default function CampaignDetailPage() {
       {/* Header */}
       <motion.div variants={itemVariants} className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="flex items-start gap-3">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm shadow-blue-500/20 flex-shrink-0 mt-0.5">
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-sky to-sky-deep flex items-center justify-center shadow-sm shadow-sky/20 flex-shrink-0 mt-0.5">
             <Send className="h-5 w-5 text-white" />
           </div>
           <div>
@@ -422,7 +422,7 @@ export default function CampaignDetailPage() {
                 {formatStatus(campaign.status)}
               </Badge>
               {campaign.is_ab_test && (
-                <Badge variant="outline" className="text-[10px] border-violet-200 text-violet-600 bg-violet-50">A/B Test</Badge>
+                <Badge variant="outline" className="text-[10px] border-primary/20 text-primary bg-primary/5">A/B Test</Badge>
               )}
             </div>
             <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1 flex-wrap">
@@ -772,7 +772,7 @@ export default function CampaignDetailPage() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-1">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-sky to-sky-deep flex items-center justify-center shadow-sm">
                 <Mail className="h-5 w-5 text-white" />
               </div>
               <div>

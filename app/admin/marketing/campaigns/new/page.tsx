@@ -59,8 +59,8 @@ const stepContentVariants = {
 }
 
 const STEPS = [
-  { id: 1, label: "Audience", description: "Choose recipients", icon: Users, color: "from-blue-500 to-indigo-600" },
-  { id: 2, label: "Content", description: "Compose email", icon: Mail, color: "from-violet-500 to-purple-600" },
+  { id: 1, label: "Audience", description: "Choose recipients", icon: Users, color: "from-sky to-sky-deep" },
+  { id: 2, label: "Content", description: "Compose email", icon: Mail, color: "from-primary-light to-primary" },
   { id: 3, label: "Review & Send", description: "Finalize", icon: Send, color: "from-emerald-500 to-teal-600" },
 ]
 
@@ -170,7 +170,7 @@ export default function NewCampaignPage() {
 
       {/* Header */}
       <motion.div variants={itemVariants} className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm shadow-blue-500/20">
+        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-sky to-sky-deep flex items-center justify-center shadow-sm shadow-sky/20">
           <Send className="h-5 w-5 text-white" />
         </div>
         <div>
@@ -273,10 +273,10 @@ export default function NewCampaignPage() {
                 animate="visible"
                 exit="exit"
               >
-                <Card className="border-l-2 border-l-blue-400">
+                <Card className="border-l-2 border-l-sky">
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
-                      <Users className="h-5 w-5 text-blue-500" />
+                      <Users className="h-5 w-5 text-sky" />
                       Select Audience
                     </CardTitle>
                   </CardHeader>
@@ -310,8 +310,8 @@ export default function NewCampaignPage() {
                         </SelectContent>
                       </Select>
                       {selectedSegment && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground bg-blue-50/50 dark:bg-blue-950/20 p-2.5 rounded-lg">
-                          <Users className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground bg-sky/5 dark:bg-sky/5 p-2.5 rounded-lg">
+                          <Users className="h-4 w-4 text-sky flex-shrink-0" />
                           <span>
                             {selectedSegment.segment_type === "dynamic" ? "Dynamic" : "Static"} segment
                             · ~{selectedSegment.estimated_size.toLocaleString()} eligible recipients
@@ -349,10 +349,10 @@ export default function NewCampaignPage() {
                 animate="visible"
                 exit="exit"
               >
-                <Card className="border-l-2 border-l-violet-400">
+                <Card className="border-l-2 border-l-primary">
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
-                      <Mail className="h-5 w-5 text-violet-500" />
+                      <Mail className="h-5 w-5 text-primary" />
                       Email Content
                     </CardTitle>
                   </CardHeader>
@@ -480,7 +480,7 @@ export default function NewCampaignPage() {
                     {(isAbTest || requiresApproval) && (
                       <div className="flex gap-2 pt-4 mt-4 border-t">
                         {isAbTest && (
-                          <span className="text-xs text-violet-600 bg-violet-50 dark:bg-violet-950/30 px-2.5 py-1 rounded-md font-medium">
+                          <span className="text-xs text-primary bg-primary/5 dark:bg-primary/10 px-2.5 py-1 rounded-md font-medium">
                             A/B Test enabled
                           </span>
                         )}

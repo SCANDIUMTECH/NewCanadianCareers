@@ -53,7 +53,7 @@ const itemVariants = {
 const TXN_TYPE_COLORS: Record<string, string> = {
   credit: "border-green-200 text-green-600 bg-green-50",
   debit: "border-red-200 text-red-600 bg-red-50",
-  refund: "border-blue-200 text-blue-600 bg-blue-50",
+  refund: "border-sky/20 text-sky bg-sky/10",
   expired: "border-gray-200 text-gray-500 bg-gray-50",
 }
 
@@ -147,7 +147,7 @@ export default function WalletDetailPage() {
 
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-sm shadow-indigo-500/20">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center shadow-sm shadow-primary/20">
               <Wallet className="h-5 w-5 text-white" />
             </div>
             <div>
@@ -173,11 +173,11 @@ export default function WalletDetailPage() {
       {/* Balance Card */}
       <motion.div variants={itemVariants}>
         <Card className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/[0.03] to-violet-500/[0.03]" />
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] to-primary-hover/[0.03]" />
           <CardContent className="pt-6 pb-6 relative">
             <div className="text-center">
               <p className="text-sm text-muted-foreground">Current Balance</p>
-              <p className="text-4xl font-bold mt-1 bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
+              <p className="text-4xl font-bold mt-1 bg-gradient-to-r from-primary to-primary-hover bg-clip-text text-transparent">
                 ${Number(wallet.balance).toFixed(2)}
               </p>
             </div>

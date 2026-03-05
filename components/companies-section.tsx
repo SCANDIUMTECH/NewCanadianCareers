@@ -30,7 +30,7 @@ export function CompaniesSection() {
             <MotionWrapper delay={0}>
               <div className="flex items-center gap-4">
                 <div className="h-px w-8 bg-primary/40" />
-                <p className="text-sm font-medium text-foreground-muted tracking-wide uppercase">
+                <p className="font-secondary text-sm font-medium text-foreground-muted tracking-wide uppercase">
                   For Companies & Agencies
                 </p>
               </div>

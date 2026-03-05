@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { MotionWrapper } from "@/components/motion-wrapper"
 import { useAuth } from "@/hooks/use-auth"
@@ -76,10 +77,14 @@ export default function VerifyEmailPromptPage() {
         <div className="relative z-10 flex flex-col justify-between p-12 lg:p-16">
           {/* Logo */}
           <Link href="/" className="flex items-center">
-            <span className="text-2xl font-semibold tracking-tight text-white">
-              NCC
-            </span>
-            <span className="ml-1.5 w-2 h-2 rounded-full bg-primary" />
+            <Image
+              src="/logo.svg"
+              alt="New Canadian Careers"
+              width={180}
+              height={48}
+              className="h-10 w-auto brightness-0 invert"
+              priority
+            />
           </Link>
 
           {/* Quote */}
@@ -105,10 +110,14 @@ export default function VerifyEmailPromptPage() {
           {/* Mobile Logo */}
           <MotionWrapper delay={0} className="lg:hidden mb-12">
             <Link href="/" className="flex items-center">
-              <span className="text-xl font-semibold tracking-tight text-foreground">
-                NCC
-              </span>
-              <span className="ml-1 w-1.5 h-1.5 rounded-full bg-primary" />
+              <Image
+                src="/logo.svg"
+                alt="New Canadian Careers"
+                width={160}
+                height={44}
+                className="h-9 w-auto"
+                priority
+              />
             </Link>
           </MotionWrapper>
 

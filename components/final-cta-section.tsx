@@ -30,7 +30,7 @@ export function FinalCTASection() {
           </MotionWrapper>
 
           <MotionWrapper delay={150}>
-            <p className="mt-6 text-lg md:text-xl text-foreground-muted leading-relaxed">
+            <p className="font-secondary mt-6 text-lg md:text-xl text-foreground-muted leading-relaxed">
               Join thousands of newcomers and employers building Canada&apos;s future workforce.
             </p>
           </MotionWrapper>

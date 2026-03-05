@@ -23,8 +23,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.permissions import IsAdmin
 from apps.audit.models import AuditLog
-from .throttles import ResendVerificationThrottle
-from .models import User, UserSession, PasswordResetToken, EmailVerificationToken
+from .throttles import ResendVerificationThrottle, EmailCheckThrottle
+from .models import User, UserSession, PasswordResetToken, EmailVerificationToken, LoginCode
 from .serializers import (
     UserSerializer, UserCreateSerializer, LoginSerializer,
     PasswordResetRequestSerializer, PasswordResetConfirmSerializer,
@@ -32,7 +32,8 @@ from .serializers import (
     UserSessionSerializer, AdminUserSerializer, AdminUserCreateSerializer,
     AdminUserStatsSerializer, UserActivitySerializer,
     ResumeSerializer, PrivacySettingsSerializer, DashboardStatsSerializer,
-    ProfileCompletionSerializer
+    ProfileCompletionSerializer,
+    EmailCheckSerializer, SendLoginCodeSerializer, VerifyLoginCodeSerializer,
 )
 
 
@@ -53,6 +54,28 @@ def get_client_ip(request):
     return request.META.get('REMOTE_ADDR', '0.0.0.0')
 
 
+def _fire_fraud_alert(alert_type, severity, user, description, indicators, ip_address):
+    """Fire a realtime fraud alert to the admin fraud dashboard.
+
+    Runs asynchronously via Celery — does not block the request.
+    """
+    try:
+        from apps.moderation.services import FraudDetectionService
+        FraudDetectionService.create_realtime_alert(
+            alert_type=alert_type,
+            severity=severity,
+            subject_type='user',
+            subject_id=user.id,
+            subject_name=user.email,
+            description=description,
+            indicators=indicators,
+            ip_address=ip_address,
+            affected_accounts=[user.email],
+        )
+    except Exception:
+        logger.warning("Failed to create fraud alert for %s", user.email, exc_info=True)
+
+
 class RegisterView(generics.CreateAPIView):
     """User registration endpoint."""
 
@@ -60,11 +83,12 @@ class RegisterView(generics.CreateAPIView):
     permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
-        # Turnstile verification
+        # Turnstile verification — fail-closed on critical auth endpoint
         is_valid, error = verify_turnstile_token(
             request.data.get('turnstile_token'),
             get_client_ip(request),
             feature='auth',
+            fail_closed=True,
         )
         if not is_valid:
             return Response({'detail': error}, status=status.HTTP_400_BAD_REQUEST)
@@ -124,11 +148,12 @@ class LoginView(APIView):
         from apps.audit.services import LoginSecurityService
         from rest_framework import serializers
 
-        # Turnstile verification
+        # Turnstile verification — fail-closed on critical auth endpoint
         is_valid, error = verify_turnstile_token(
             request.data.get('turnstile_token'),
             get_client_ip(request),
             feature='auth',
+            fail_closed=True,
         )
         if not is_valid:
             return Response({'detail': error}, status=status.HTTP_400_BAD_REQUEST)
@@ -204,6 +229,241 @@ class LoginView(APIView):
         return response
 
 
+class EmailCheckView(APIView):
+    """Check if an email is associated with an active account."""
+
+    permission_classes = [AllowAny]
+    throttle_classes = [EmailCheckThrottle]
+
+    def post(self, request):
+        is_valid, error = verify_turnstile_token(
+            request.data.get('turnstile_token'),
+            get_client_ip(request),
+            feature='auth',
+            fail_closed=True,
+        )
+        if not is_valid:
+            return Response({'detail': error}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = EmailCheckSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data['email']
+        exists = User.objects.filter(email=email, status__in=['active', 'pending']).exists()
+        return Response({'exists': exists})
+
+
+class SendLoginCodeView(APIView):
+    """Send a one-time login code via email."""
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        # Turnstile verification — fail-closed on critical auth endpoint
+        is_valid, error = verify_turnstile_token(
+            request.data.get('turnstile_token'),
+            get_client_ip(request),
+            feature='auth',
+            fail_closed=True,
+        )
+        if not is_valid:
+            return Response({'detail': error}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = SendLoginCodeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data['email']
+
+        # Always return 200 to avoid leaking whether an email exists
+        try:
+            user = User.objects.get(email=email, status__in=['active', 'pending'])
+        except User.DoesNotExist:
+            return Response({'message': 'If an account exists, a code has been sent.'})
+
+        # Check account lockout — silently refuse to prevent enumeration
+        from apps.audit.services import LoginSecurityService
+        is_locked, remaining = LoginSecurityService.is_locked(user)
+        if is_locked:
+            _fire_fraud_alert(
+                'suspicious_activity', 'high', user,
+                f'Locked account {user.email} attempted to request a login code (lockout bypass attempt).',
+                ['Account locked', 'Login code request while locked'],
+                get_client_ip(request),
+            )
+            return Response({'message': 'If an account exists, a code has been sent.'})
+
+        # Per-email rate limit: max 3 codes per hour to prevent brute-force cycling
+        recent_codes_count = LoginCode.objects.filter(
+            user=user,
+            created_at__gte=timezone.now() - timedelta(hours=1),
+        ).count()
+        if recent_codes_count >= 3:
+            _fire_fraud_alert(
+                'suspicious_activity', 'medium', user,
+                f'Login code rate limit exceeded for {user.email}: {recent_codes_count} codes requested in 1 hour (threshold: 3).',
+                [f'{recent_codes_count} codes in 1 hour', 'Possible brute-force cycling'],
+                get_client_ip(request),
+            )
+            return Response({'message': 'If an account exists, a code has been sent.'})
+
+        # Invalidate previous unused codes
+        LoginCode.objects.filter(user=user, used_at__isnull=True).update(
+            used_at=timezone.now()
+        )
+
+        # Generate 6-digit code
+        code = f'{secrets.randbelow(1_000_000):06d}'
+        LoginCode.objects.create(
+            user=user,
+            code=code,
+            expires_at=timezone.now() + timedelta(minutes=10),
+        )
+
+        # Send code via email
+        try:
+            from apps.notifications.tasks import send_email as send_email_task
+            send_email_task.delay(
+                to_email=user.email,
+                subject='Your sign-in code for New Canadian Careers',
+                template='login_code',
+                context={
+                    'name': user.first_name or 'there',
+                    'code': code,
+                },
+                user_id=user.id,
+            )
+        except Exception:
+            logger.warning("Failed to queue login code email for user %s", user.email)
+
+        return Response({'message': 'If an account exists, a code has been sent.'})
+
+
+class VerifyLoginCodeView(APIView):
+    """Verify a one-time login code and authenticate the user."""
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        from apps.audit.services import LoginSecurityService
+
+        is_valid, error = verify_turnstile_token(
+            request.data.get('turnstile_token'),
+            get_client_ip(request),
+            feature='auth',
+            fail_closed=True,
+        )
+        if not is_valid:
+            return Response({'detail': error}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = VerifyLoginCodeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data['email']
+        code = serializer.validated_data['code']
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response(
+                {'detail': 'Invalid code or email.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if user.status == 'suspended':
+            return Response(
+                {'detail': 'Your account has been suspended.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Check account lockout
+        is_locked, remaining = LoginSecurityService.is_locked(user)
+        if is_locked:
+            _fire_fraud_alert(
+                'suspicious_activity', 'high', user,
+                f'Locked account {user.email} attempted to verify a login code (lockout bypass attempt).',
+                ['Account locked', 'Login code verification while locked'],
+                get_client_ip(request),
+            )
+            return Response({
+                'error': 'Account temporarily locked',
+                'retry_after': remaining,
+                'message': f'Too many failed attempts. Try again in {remaining // 60} minutes.'
+            }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+        # Find latest unused code for this user
+        latest_code = LoginCode.objects.filter(
+            user=user,
+            used_at__isnull=True,
+        ).order_by('-created_at').first()
+
+        if not latest_code:
+            return Response(
+                {'detail': 'No active code found. Please request a new one.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if latest_code.attempts >= 5:
+            return Response(
+                {'detail': 'Too many failed attempts. Please request a new code.'},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
+        if timezone.now() > latest_code.expires_at:
+            return Response(
+                {'detail': 'Code has expired. Please request a new one.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if latest_code.code != code:
+            latest_code.attempts += 1
+            latest_code.save(update_fields=['attempts'])
+            remaining = 5 - latest_code.attempts
+            return Response(
+                {'detail': f'Invalid code. {remaining} attempt(s) remaining.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Code matches — mark as used
+        latest_code.used_at = timezone.now()
+        latest_code.save(update_fields=['used_at'])
+
+        # Record successful login
+        LoginSecurityService.record_attempt(request, email, user, success=True)
+
+        # Update last login IP
+        user.last_login_ip = LoginSecurityService.get_client_ip(request)
+        user.save(update_fields=['last_login_ip'])
+
+        # Create session
+        login(request, user)
+
+        location_parts = filter(None, [
+            request.META.get('HTTP_CF_IPCITY', ''),
+            request.META.get('HTTP_CF_IPCOUNTRY', '')
+        ])
+        location = ', '.join(location_parts) or ''
+
+        UserSession.objects.create(
+            user=user,
+            session_key=request.session.session_key or '',
+            ip_address=LoginSecurityService.get_client_ip(request),
+            user_agent=request.META.get('HTTP_USER_AGENT', ''),
+            location=location,
+            expires_at=timezone.now() + timedelta(days=7)
+        )
+
+        # Generate JWT tokens
+        refresh = RefreshToken.for_user(user)
+
+        from core.cookies import set_auth_cookies
+
+        response = Response({
+            'user': UserSerializer(user).data,
+        })
+        set_auth_cookies(response, refresh.access_token, refresh)
+        return response
+
+
 class LogoutView(APIView):
     """User logout endpoint."""
 
@@ -229,9 +489,9 @@ class LogoutView(APIView):
 class CookieTokenRefreshView(APIView):
     """Refresh JWT using HTTP-only cookie.
 
-    Reads the refresh token from the 'orion_refresh' cookie, validates it,
-    issues a new access token (and rotated refresh token if rotation is enabled),
-    and sets them as HTTP-only cookies on the response.
+    Reads the refresh token from the cookie (name defined in settings.SIMPLE_JWT),
+    validates it, issues a new access token (and rotated refresh token if rotation
+    is enabled), and sets them as HTTP-only cookies on the response.
 
     Falls back to reading 'refresh' from request body for backward
     compatibility with mobile/API consumers.
@@ -240,12 +500,14 @@ class CookieTokenRefreshView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        from django.conf import settings as django_settings
         from rest_framework_simplejwt.tokens import RefreshToken
         from rest_framework_simplejwt.exceptions import TokenError
         from core.cookies import set_auth_cookies, clear_auth_cookies
 
         # Try cookie first, then request body (backward compat)
-        refresh_token = request.COOKIES.get('orion_refresh') or request.data.get('refresh')
+        refresh_cookie_name = django_settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH']
+        refresh_token = request.COOKIES.get(refresh_cookie_name) or request.data.get('refresh')
         if not refresh_token:
             return Response(
                 {'error': 'No refresh token provided'},
@@ -256,6 +518,25 @@ class CookieTokenRefreshView(APIView):
             old_refresh = RefreshToken(refresh_token)
             access_token = old_refresh.access_token
 
+            # Verify the user account is still active before issuing new tokens
+            try:
+                refresh_user = User.objects.get(id=old_refresh['user_id'])
+            except User.DoesNotExist:
+                response = Response(
+                    {'error': 'User not found'},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+                clear_auth_cookies(response)
+                return response
+
+            if not refresh_user.is_active or refresh_user.status == 'suspended':
+                response = Response(
+                    {'detail': 'Account is suspended.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+                clear_auth_cookies(response)
+                return response
+
             if django_settings.SIMPLE_JWT.get('ROTATE_REFRESH_TOKENS', False):
                 # Blacklist old token if configured
                 if django_settings.SIMPLE_JWT.get('BLACKLIST_AFTER_ROTATION', False):
@@ -264,7 +545,7 @@ class CookieTokenRefreshView(APIView):
                     except AttributeError:
                         pass  # Blacklist app not installed
 
-                user = User.objects.get(id=old_refresh['user_id'])
+                user = refresh_user
                 new_refresh = RefreshToken.for_user(user)
                 response = Response({'access': str(new_refresh.access_token)})
                 set_auth_cookies(response, new_refresh.access_token, new_refresh)
@@ -342,11 +623,12 @@ class PasswordResetRequestView(APIView):
     serializer_class = PasswordResetRequestSerializer
 
     def post(self, request):
-        # Turnstile verification
+        # Turnstile verification — fail-closed on critical auth endpoint
         is_valid, error = verify_turnstile_token(
             request.data.get('turnstile_token'),
             get_client_ip(request),
             feature='auth',
+            fail_closed=True,
         )
         if not is_valid:
             return Response({'detail': error}, status=status.HTTP_400_BAD_REQUEST)
@@ -400,11 +682,12 @@ class PasswordResetConfirmView(APIView):
     serializer_class = PasswordResetConfirmSerializer
 
     def post(self, request):
-        # Turnstile verification
+        # Turnstile verification — fail-closed on critical auth endpoint
         is_valid, error = verify_turnstile_token(
             request.data.get('turnstile_token'),
             get_client_ip(request),
             feature='auth',
+            fail_closed=True,
         )
         if not is_valid:
             return Response({'detail': error}, status=status.HTTP_400_BAD_REQUEST)
@@ -449,6 +732,9 @@ class PasswordResetConfirmView(APIView):
                     pass  # token_blacklist app not installed/configured
                 except Exception:
                     logger.error('Failed to blacklist tokens for user %s after password reset', user.id, exc_info=True)
+
+                # Invalidate any outstanding login codes
+                LoginCode.objects.filter(user=user, used_at__isnull=True).update(used_at=timezone.now())
 
             return Response({'message': 'Password reset successful'})
 
@@ -495,6 +781,9 @@ class PasswordChangeView(APIView):
                 pass  # token_blacklist app not installed/configured
             except Exception:
                 logger.error('Failed to blacklist tokens for user %s after password change', request.user.id, exc_info=True)
+
+            # Invalidate any outstanding login codes
+            LoginCode.objects.filter(user=request.user, used_at__isnull=True).update(used_at=timezone.now())
 
         return Response({'message': 'Password changed successfully'})
 
@@ -672,10 +961,24 @@ class AdminSuspendUserView(APIView):
         try:
             user = User.objects.get(id=user_id)
             user.status = 'suspended'
-            user.save(update_fields=['status'])
+            user.is_active = False  # SimpleJWT checks is_active on token validation
+            user.save(update_fields=['status', 'is_active'])
 
             # Invalidate all sessions
             UserSession.objects.filter(user=user).update(is_active=False)
+
+            # Blacklist all outstanding refresh tokens — immediate revocation
+            try:
+                from rest_framework_simplejwt.token_blacklist.models import (
+                    OutstandingToken, BlacklistedToken
+                )
+                outstanding = OutstandingToken.objects.filter(user=user)
+                BlacklistedToken.objects.bulk_create(
+                    [BlacklistedToken(token=t) for t in outstanding],
+                    ignore_conflicts=True,
+                )
+            except (ImportError, AttributeError):
+                pass  # token_blacklist app not installed
 
             serializer = AdminUserSerializer(user)
             return Response(serializer.data)
@@ -695,7 +998,8 @@ class AdminActivateUserView(APIView):
         try:
             user = User.objects.get(id=user_id)
             user.status = 'active'
-            user.save(update_fields=['status'])
+            user.is_active = True
+            user.save(update_fields=['status', 'is_active'])
 
             serializer = AdminUserSerializer(user)
             return Response(serializer.data)
@@ -714,6 +1018,9 @@ class AdminResetPasswordView(APIView):
     def post(self, request, user_id):
         try:
             user = User.objects.get(id=user_id)
+
+            # Invalidate existing unused reset tokens before creating a new one
+            PasswordResetToken.objects.filter(user=user, used_at__isnull=True).delete()
 
             # Create password reset token and send email
             token = secrets.token_urlsafe(32)
@@ -916,10 +1223,20 @@ class AdminImpersonateUserView(APIView):
         try:
             target_user = User.objects.get(id=user_id)
 
-            # Generate impersonation token
-            refresh = RefreshToken.for_user(target_user)
+            # Block admin-to-admin impersonation to prevent privilege abuse
+            if target_user.role == 'admin':
+                return Response(
+                    {'error': 'Cannot impersonate admin users'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
 
-            # TODO: Log impersonation session in audit log
+            # Generate short-lived impersonation token (access only, no refresh)
+            refresh = RefreshToken.for_user(target_user)
+            refresh['impersonated_by'] = request.user.id
+            refresh['is_impersonation'] = True
+            access_token = refresh.access_token
+
+            # Log impersonation session in audit log
             from apps.audit.models import AuditLog
             AuditLog.objects.create(
                 actor=request.user,
@@ -933,8 +1250,9 @@ class AdminImpersonateUserView(APIView):
                 }
             )
 
+            # Return only the access token — no refresh token for impersonation
             return Response({
-                'token': str(refresh.access_token),
+                'token': str(access_token),
                 'redirect_url': f'/impersonate/{target_user.id}',
                 'expires_at': (timezone.now() + timedelta(hours=1)).isoformat()
             })
@@ -946,13 +1264,16 @@ class AdminImpersonateUserView(APIView):
 
 
 class AdminEndImpersonationView(APIView):
-    """End impersonation session."""
+    """End impersonation session — clears auth cookies to restore admin session."""
 
-    permission_classes = [IsAuthenticated, IsAdmin]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        # TODO: Handle ending impersonation
-        return Response({'message': 'Impersonation session ended'})
+        from core.cookies import clear_auth_cookies
+
+        response = Response({'message': 'Impersonation session ended'})
+        clear_auth_cookies(response)
+        return response
 
 
 # Candidate profile views

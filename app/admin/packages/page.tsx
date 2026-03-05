@@ -308,7 +308,7 @@ export default function PackagesPage() {
       <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary-light to-primary flex items-center justify-center shadow-lg shadow-primary/20">
               <Package className="h-6 w-6 text-white" />
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-green-500 border-2 border-background" />
@@ -347,9 +347,9 @@ export default function PackagesPage() {
           <>
             {[
               { label: "Active Packages", value: stats.active.toString(), icon: Zap, gradient: "from-emerald-500 to-teal-600", bgAccent: "bg-emerald-500" },
-              { label: "Total Packages", value: stats.total.toString(), icon: Package, gradient: "from-blue-500 to-indigo-600", bgAccent: "bg-blue-500" },
+              { label: "Total Packages", value: stats.total.toString(), icon: Package, gradient: "from-sky to-sky-deep", bgAccent: "bg-sky" },
               { label: "Most Popular", value: stats.mostPopular?.name || "—", icon: Star, gradient: "from-amber-500 to-orange-600", bgAccent: "bg-amber-500" },
-              { label: "Avg. Price", value: `$${stats.avgPrice}`, icon: CreditCard, gradient: "from-violet-500 to-purple-600", bgAccent: "bg-violet-500" },
+              { label: "Avg. Price", value: `$${stats.avgPrice}`, icon: CreditCard, gradient: "from-primary-light to-primary", bgAccent: "bg-primary" },
             ].map((stat) => (
               <Card key={stat.label} className="relative overflow-hidden group">
                 <div className={cn("absolute -top-6 -right-6 w-24 h-24 rounded-full opacity-[0.06] transition-opacity duration-300 group-hover:opacity-[0.10]", stat.bgAccent)} />
@@ -929,9 +929,9 @@ function getPackageGradient(paymentType: string, isPopular: boolean): { gradient
   if (isPopular) return { gradient: "from-amber-500 via-orange-500 to-red-500", bgAccent: "bg-amber-500" }
   switch (paymentType) {
     case "subscription":
-      return { gradient: "from-violet-500 to-purple-600", bgAccent: "bg-violet-500" }
+      return { gradient: "from-primary-light to-primary", bgAccent: "bg-primary" }
     case "bundle":
-      return { gradient: "from-blue-500 to-indigo-600", bgAccent: "bg-blue-500" }
+      return { gradient: "from-sky to-sky-deep", bgAccent: "bg-sky" }
     default:
       return { gradient: "from-emerald-500 to-teal-600", bgAccent: "bg-emerald-500" }
   }

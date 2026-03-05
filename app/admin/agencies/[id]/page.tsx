@@ -543,15 +543,15 @@ export default function AdminAgencyDetailPage() {
           label: "Active Jobs",
           value: agency.active_jobs_count ?? 0,
           icon: <Briefcase className="h-4 w-4" />,
-          gradient: "from-blue-500 to-indigo-600",
-          accent: "bg-blue-500",
+          gradient: "from-sky to-sky-deep",
+          accent: "bg-sky",
         },
         {
           label: "Total Jobs",
           value: agency.total_jobs_count ?? agency.job_count ?? 0,
           icon: <Briefcase className="h-4 w-4" />,
-          gradient: "from-violet-500 to-purple-600",
-          accent: "bg-violet-500",
+          gradient: "from-primary-light to-primary",
+          accent: "bg-primary",
         },
         {
           label: "Clients",
@@ -571,15 +571,15 @@ export default function AdminAgencyDetailPage() {
           label: "Job Credits",
           value: agency.job_credits_remaining ?? 0,
           icon: <CreditCard className="h-4 w-4" />,
-          gradient: "from-pink-500 to-rose-600",
-          accent: "bg-pink-500",
+          gradient: "from-destructive to-destructive-deep",
+          accent: "bg-destructive",
         },
         {
           label: "Monthly Volume",
           value: formatCurrency(agency.monthly_volume ?? 0),
           icon: <DollarSign className="h-4 w-4" />,
-          gradient: "from-cyan-500 to-blue-600",
-          accent: "bg-cyan-500",
+          gradient: "from-sky to-sky-deep",
+          accent: "bg-sky",
           isFormatted: true,
         },
       ]
@@ -684,7 +684,7 @@ export default function AdminAgencyDetailPage() {
       <motion.div variants={itemVariants} className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center shadow-lg shadow-purple-500/20 overflow-hidden">
+            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center shadow-lg shadow-primary/20 overflow-hidden">
               {agency.logo ? (
                 <img src={agency.logo} alt={agency.name} className="w-full h-full object-cover" />
               ) : (
@@ -1095,7 +1095,7 @@ export default function AdminAgencyDetailPage() {
                       >
                         <div className="flex items-center gap-3">
                           <Avatar className="h-10 w-10">
-                            <AvatarFallback className="bg-purple-500/10 text-purple-600 text-sm">
+                            <AvatarFallback className="bg-primary/10 text-primary text-sm">
                               {(member.full_name || "TM")
                                 .split(" ")
                                 .map((n) => n[0])
@@ -1161,9 +1161,9 @@ export default function AdminAgencyDetailPage() {
                 const summary = creditSummary[type] || { total: 0, used: 0, remaining: 0 }
                 const utilization = summary.total > 0 ? Math.round((summary.used / summary.total) * 100) : 0
                 const colorMap = {
-                  job: { bg: "bg-blue-500", text: "text-blue-600", light: "bg-blue-500/10", gradient: "from-blue-500 to-indigo-600" },
-                  featured: { bg: "bg-purple-500", text: "text-purple-600", light: "bg-purple-500/10", gradient: "from-purple-500 to-violet-600" },
-                  social: { bg: "bg-pink-500", text: "text-pink-600", light: "bg-pink-500/10", gradient: "from-pink-500 to-rose-600" },
+                  job: { bg: "bg-sky", text: "text-sky", light: "bg-sky/10", gradient: "from-sky to-sky-deep" },
+                  featured: { bg: "bg-primary", text: "text-primary", light: "bg-primary/10", gradient: "from-primary to-primary-hover" },
+                  social: { bg: "bg-destructive", text: "text-destructive", light: "bg-destructive/10", gradient: "from-destructive to-destructive-deep" },
                 }
                 const colors = colorMap[type]
                 return (
@@ -1237,9 +1237,9 @@ export default function AdminAgencyDetailPage() {
                                 <Badge
                                   variant="secondary"
                                   className={cn(
-                                    ent.credit_type === "job" && "bg-blue-500/10 text-blue-600",
-                                    ent.credit_type === "featured" && "bg-purple-500/10 text-purple-600",
-                                    ent.credit_type === "social" && "bg-pink-500/10 text-pink-600"
+                                    ent.credit_type === "job" && "bg-sky/10 text-sky",
+                                    ent.credit_type === "featured" && "bg-primary/10 text-primary",
+                                    ent.credit_type === "social" && "bg-destructive/10 text-destructive"
                                   )}
                                 >
                                   {ent.credit_type === "job" ? "Job" : ent.credit_type === "featured" ? "Featured" : "Social"}

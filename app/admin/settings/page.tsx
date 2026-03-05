@@ -949,7 +949,7 @@ function SettingsContent() {
           <TabsContent value="general" className="space-y-6">
             <SectionCard
               icon={<Globe className="h-4 w-4" />}
-              gradient="from-blue-500 to-indigo-600"
+              gradient="from-sky to-sky-deep"
               title="Platform Information"
               description="Basic platform settings and branding"
             >
@@ -1036,7 +1036,7 @@ function SettingsContent() {
             {/* Stripe API Keys */}
             <SectionCard
               icon={<CreditCard className="h-4 w-4" />}
-              gradient="from-violet-500 to-purple-600"
+              gradient="from-primary-light to-primary"
               title="Stripe Configuration"
               description="Manage Stripe API keys for payment processing"
               badge={
@@ -1069,7 +1069,7 @@ function SettingsContent() {
                   {stripeSettings && stripeSettings.connected && (
                     <div className="flex items-center justify-between p-3 border rounded-xl bg-muted/30">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-sm">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary-light to-primary text-white shadow-sm">
                           <CreditCard className="h-4 w-4" />
                         </div>
                         <div>
@@ -1219,10 +1219,10 @@ function SettingsContent() {
                         // ── Local Development Mode ──
                         return (
                           <div className="space-y-3">
-                            <div className="flex items-center gap-2 p-3 border border-blue-500/20 rounded-lg bg-blue-500/5 text-xs text-blue-700">
+                            <div className="flex items-center gap-2 p-3 border border-sky/20 rounded-lg bg-sky/5 text-xs text-sky">
                               <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
                               <span>
-                                You&apos;re running locally. Stripe cannot reach <code className="font-mono bg-blue-500/10 px-1 rounded">localhost</code> — use the Stripe CLI to forward webhooks during development.
+                                You&apos;re running locally. Stripe cannot reach <code className="font-mono bg-sky/10 px-1 rounded">localhost</code> — use the Stripe CLI to forward webhooks during development.
                               </span>
                             </div>
 
@@ -1460,7 +1460,7 @@ function SettingsContent() {
           <TabsContent value="marketing" className="space-y-6">
             <SectionCard
               icon={<Megaphone className="h-4 w-4" />}
-              gradient="from-pink-500 to-rose-600"
+              gradient="from-destructive to-destructive-deep"
               title="Campaign Settings"
               description="Default settings for marketing campaigns"
             >
@@ -1578,7 +1578,7 @@ function SettingsContent() {
 
             <SectionCard
               icon={<Link2 className="h-4 w-4" />}
-              gradient="from-blue-500 to-indigo-600"
+              gradient="from-sky to-sky-deep"
               title="Social Distribution"
               description="Connect and manage social media accounts for job distribution"
             >

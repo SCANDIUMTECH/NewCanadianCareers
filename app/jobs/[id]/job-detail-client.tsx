@@ -288,43 +288,43 @@ export function JobDetailClient({ job }: JobDetailClientProps) {
   return (
     <TooltipProvider>
       <div className="min-h-screen bg-background">
-        {/* Premium Header */}
-        <header
+        {/* Sticky Action Bar */}
+        <div
           className={cn(
-            "sticky top-0 z-50 bg-card/80 backdrop-blur-2xl border-b border-border/50 transition-all duration-700",
+            "sticky top-16 md:top-20 z-40 bg-card/80 backdrop-blur-2xl border-b border-border/50 transition-all duration-700 print:hidden",
             isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"
           )}
         >
           <div className="max-w-[1400px] mx-auto px-6 md:px-12 lg:px-24">
-            <div className="flex items-center justify-between h-16 md:h-20">
-              {/* Logo */}
-              <Link href="/" className="flex items-center group">
-                <span className="text-lg font-semibold tracking-tight text-foreground transition-colors duration-300 group-hover:text-primary">
-                  NCC
-                </span>
-                <span className="ml-1.5 w-2 h-2 rounded-full bg-primary/50 transition-all duration-500 group-hover:bg-primary" />
+            <div className="flex items-center justify-between h-12">
+              {/* Back to jobs */}
+              <Link href="/jobs" className="flex items-center gap-1.5 text-sm text-foreground-muted hover:text-foreground transition-colors">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+                Back to jobs
               </Link>
 
               {/* Actions */}
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="rounded-xl hover:bg-foreground/5"
+                      className="rounded-xl hover:bg-foreground/5 h-8 w-8"
                       onClick={handleSaveToggle}
                       disabled={isSaving}
                     >
                       {isSaving ? (
-                        <svg className="w-5 h-5 animate-spin text-foreground-muted" fill="none" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 animate-spin text-foreground-muted" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                         </svg>
                       ) : (
                         <svg
                           className={cn(
-                            "w-5 h-5 transition-all duration-300",
+                            "w-4 h-4 transition-all duration-300",
                             isSaved ? "fill-primary text-primary" : "text-foreground-muted"
                           )}
                           fill={isSaved ? "currentColor" : "none"}
@@ -345,10 +345,10 @@ export function JobDetailClient({ job }: JobDetailClientProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="rounded-xl hover:bg-foreground/5"
+                      className="rounded-xl hover:bg-foreground/5 h-8 w-8"
                       onClick={() => setShareDialogOpen(true)}
                     >
-                      <svg className="w-5 h-5 text-foreground-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <svg className="w-4 h-4 text-foreground-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                       </svg>
                     </Button>
@@ -358,8 +358,8 @@ export function JobDetailClient({ job }: JobDetailClientProps) {
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="rounded-xl hover:bg-foreground/5">
-                      <svg className="w-5 h-5 text-foreground-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <Button variant="ghost" size="icon" className="rounded-xl hover:bg-foreground/5 h-8 w-8">
+                      <svg className="w-4 h-4 text-foreground-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
                       </svg>
                     </Button>
@@ -387,7 +387,7 @@ export function JobDetailClient({ job }: JobDetailClientProps) {
                 </DropdownMenu>
 
                 <Button
-                  className="rounded-xl bg-primary text-primary-foreground hover:bg-primary-hover px-6"
+                  className="rounded-xl bg-primary text-primary-foreground hover:bg-primary-hover px-5 h-8 text-sm"
                   onClick={handleApplyClick}
                   disabled={hasApplied}
                 >
@@ -396,10 +396,10 @@ export function JobDetailClient({ job }: JobDetailClientProps) {
               </div>
             </div>
           </div>
-        </header>
+        </div>
 
         {/* Main Content - Print-Ready Section */}
-        <main ref={printRef} className="max-w-[1400px] mx-auto px-6 md:px-12 lg:px-24 py-12">
+        <div ref={printRef} className="max-w-[1400px] mx-auto px-6 md:px-12 lg:px-24 py-12">
           {/* Hero Section */}
           <div
             className={cn(
@@ -461,7 +461,7 @@ export function JobDetailClient({ job }: JobDetailClientProps) {
                             </Tooltip>
                           )}
                         </div>
-                        <p className="text-sm text-foreground-muted">{job.company.industry} · {job.company.size}</p>
+                        <p className="font-secondary text-sm text-foreground-muted">{job.company.industry} · {job.company.size}</p>
                       </div>
                     </div>
 
@@ -497,7 +497,7 @@ export function JobDetailClient({ job }: JobDetailClientProps) {
 
                     {/* Salary */}
                     <div className="mb-8">
-                      <p className="text-2xl md:text-3xl font-semibold text-foreground">
+                      <p className="font-secondary text-2xl md:text-3xl font-semibold text-foreground">
                         {formatSalary(job.salary.min, job.salary.max, job.salary.currency)}
                         <span className="text-base font-normal text-foreground-muted ml-2">/ year</span>
                       </p>
@@ -521,7 +521,7 @@ export function JobDetailClient({ job }: JobDetailClientProps) {
                     <div className="rounded-2xl bg-foreground/[0.02] border border-border/50 p-6 space-y-5">
                       {/* Job ID */}
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-foreground-muted">Job ID</span>
+                        <span className="font-secondary text-sm text-foreground-muted">Job ID</span>
                         <span className="text-sm font-mono font-medium text-foreground">{job.jobId || job.id}</span>
                       </div>
 
@@ -529,7 +529,7 @@ export function JobDetailClient({ job }: JobDetailClientProps) {
 
                       {/* Posted Date */}
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-foreground-muted">Posted</span>
+                        <span className="font-secondary text-sm text-foreground-muted">Posted</span>
                         <span className="text-sm font-medium text-foreground">{formatDate(job.postedDate)}</span>
                       </div>
 
@@ -537,7 +537,7 @@ export function JobDetailClient({ job }: JobDetailClientProps) {
 
                       {/* Expiration */}
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-foreground-muted">Expires</span>
+                        <span className="font-secondary text-sm text-foreground-muted">Expires</span>
                         <div className="text-right">
                           <span className="text-sm font-medium text-foreground">{formatDate(job.expirationDate)}</span>
                           <p className="text-xs text-foreground-muted">{getDaysRemaining()} days left</p>
@@ -549,12 +549,12 @@ export function JobDetailClient({ job }: JobDetailClientProps) {
                       {/* Stats */}
                       <div className="grid grid-cols-2 gap-4">
                         <div className="text-center p-3 rounded-xl bg-foreground/[0.02]">
-                          <p className="text-2xl font-semibold text-foreground">{(job.views ?? 0).toLocaleString()}</p>
-                          <p className="text-xs text-foreground-muted">Views</p>
+                          <p className="font-secondary text-2xl font-semibold text-foreground">{(job.views ?? 0).toLocaleString()}</p>
+                          <p className="font-secondary text-xs text-foreground-muted">Views</p>
                         </div>
                         <div className="text-center p-3 rounded-xl bg-foreground/[0.02]">
-                          <p className="text-2xl font-semibold text-foreground">{job.applications.toLocaleString()}</p>
-                          <p className="text-xs text-foreground-muted">Applicants</p>
+                          <p className="font-secondary text-2xl font-semibold text-foreground">{job.applications.toLocaleString()}</p>
+                          <p className="font-secondary text-xs text-foreground-muted">Applicants</p>
                         </div>
                       </div>
 
@@ -695,7 +695,7 @@ export function JobDetailClient({ job }: JobDetailClientProps) {
                   isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
                 )}
               >
-                <h3 className="font-semibold text-foreground mb-4">About {job.company.name}</h3>
+                <h3 className="font-secondary font-semibold text-foreground mb-4">About {job.company.name}</h3>
                 <p className="text-sm text-foreground-muted leading-relaxed mb-4">
                   {job.company.description}
                 </p>
@@ -733,7 +733,7 @@ export function JobDetailClient({ job }: JobDetailClientProps) {
                   isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
                 )}
               >
-                <h3 className="font-semibold text-foreground mb-4">Share this job</h3>
+                <h3 className="font-secondary font-semibold text-foreground mb-4">Share this job</h3>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
@@ -791,7 +791,7 @@ export function JobDetailClient({ job }: JobDetailClientProps) {
                   isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
                 )}
               >
-                <h3 className="font-semibold text-foreground mb-4">Similar jobs</h3>
+                <h3 className="font-secondary font-semibold text-foreground mb-4">Similar jobs</h3>
                 <div className="space-y-4">
                   {[
                     { title: "Product Designer", company: "Acme Corp", location: "Remote" },
@@ -801,7 +801,7 @@ export function JobDetailClient({ job }: JobDetailClientProps) {
                     <Link key={i} href="#" className="block group">
                       <div className="p-3 rounded-xl hover:bg-foreground/[0.02] transition-colors">
                         <p className="font-medium text-foreground group-hover:text-primary transition-colors">{similarJob.title}</p>
-                        <p className="text-sm text-foreground-muted">{similarJob.company} · {similarJob.location}</p>
+                        <p className="font-secondary text-sm text-foreground-muted">{similarJob.company} · {similarJob.location}</p>
                       </div>
                     </Link>
                   ))}
@@ -824,7 +824,7 @@ export function JobDetailClient({ job }: JobDetailClientProps) {
             <div className="flex items-center gap-4">
               <div className="flex-1">
                 <p className="font-semibold text-foreground truncate">{job.title}</p>
-                <p className="text-sm text-foreground-muted">{job.company.name}</p>
+                <p className="font-secondary text-sm text-foreground-muted">{job.company.name}</p>
               </div>
               <Button
                 className="rounded-xl bg-primary text-primary-foreground hover:bg-primary-hover px-8"
@@ -835,7 +835,7 @@ export function JobDetailClient({ job }: JobDetailClientProps) {
               </Button>
             </div>
           </div>
-        </main>
+        </div>
 
         {/* Share Dialog */}
         <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
@@ -1066,11 +1066,6 @@ export function JobDetailClient({ job }: JobDetailClientProps) {
             }
             .print\\:hidden {
               display: none !important;
-            }
-            header {
-              position: relative !important;
-              background: white !important;
-              border: none !important;
             }
             main {
               padding: 20px !important;

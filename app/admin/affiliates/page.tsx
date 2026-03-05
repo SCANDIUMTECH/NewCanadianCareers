@@ -86,10 +86,10 @@ const placementLabels: Record<AffiliatePlacement, string> = {
 }
 
 const placementColors: Record<AffiliatePlacement, string> = {
-  job_detail: "bg-blue-100 text-blue-700",
+  job_detail: "bg-sky/10 text-sky",
   search_results: "bg-amber-100 text-amber-700",
   email: "bg-green-100 text-green-700",
-  footer: "bg-purple-100 text-purple-700",
+  footer: "bg-primary/10 text-primary",
 }
 
 export default function AffiliatesPage() {
@@ -243,7 +243,7 @@ export default function AffiliatesPage() {
       {/* Page Header */}
       <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-sm shadow-cyan-500/20">
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-sky to-sky-deep flex items-center justify-center shadow-sm shadow-sky/20">
             <Link2 className="h-5 w-5 text-white" />
           </div>
           <div>
@@ -291,7 +291,7 @@ export default function AffiliatesPage() {
               title="Conversions"
               value={stats.conversions}
               color={STATUS.info}
-              valueClass="text-blue-600"
+              valueClass="text-sky"
               chartType="bar"
               sparkData={affiliates.map((a) => ({ v: a.conversions }))}
             />

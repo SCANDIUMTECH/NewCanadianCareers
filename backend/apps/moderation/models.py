@@ -386,11 +386,11 @@ class PlatformSettings(models.Model):
 
     # Integrations
     integration_google_analytics_id = models.CharField(max_length=50, blank=True, default='')
-    integration_mixpanel_token = models.CharField(max_length=100, blank=True, default='')
+    integration_mixpanel_token = EncryptedTextField(blank=True, default='')
 
     # Cloudflare Turnstile
     turnstile_site_key = models.CharField(max_length=100, blank=True, default='')
-    turnstile_secret_key = models.CharField(max_length=100, blank=True, default='')
+    turnstile_secret_key = EncryptedTextField(blank=True, default='')
     turnstile_enabled = models.BooleanField(default=False)
     turnstile_protect_auth = models.BooleanField(default=True)
     turnstile_protect_jobs = models.BooleanField(default=True)
@@ -398,12 +398,12 @@ class PlatformSettings(models.Model):
 
     # Slack Integration
     slack_enabled = models.BooleanField(default=False)
-    slack_webhook_default = models.CharField(max_length=500, blank=True, default='')
-    slack_webhook_security = models.CharField(max_length=500, blank=True, default='')
-    slack_webhook_moderation = models.CharField(max_length=500, blank=True, default='')
-    slack_webhook_billing = models.CharField(max_length=500, blank=True, default='')
-    slack_webhook_jobs = models.CharField(max_length=500, blank=True, default='')
-    slack_webhook_system = models.CharField(max_length=500, blank=True, default='')
+    slack_webhook_default = EncryptedTextField(blank=True, default='')
+    slack_webhook_security = EncryptedTextField(blank=True, default='')
+    slack_webhook_moderation = EncryptedTextField(blank=True, default='')
+    slack_webhook_billing = EncryptedTextField(blank=True, default='')
+    slack_webhook_jobs = EncryptedTextField(blank=True, default='')
+    slack_webhook_system = EncryptedTextField(blank=True, default='')
 
     # Security
     require_2fa = models.BooleanField(default=False)

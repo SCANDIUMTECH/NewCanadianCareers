@@ -1,6 +1,7 @@
 "use client"
 
-import { Suspense, useState, type FormEvent } from "react"
+import { Suspense, useState, useEffect, useRef, type FormEvent } from "react"
+import Image from "next/image"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -10,34 +11,71 @@ import { TurnstileGuard, useTurnstileToken } from "@/components/turnstile"
 import { useAuth } from "@/hooks/use-auth"
 import { ROLE_REDIRECTS } from "@/lib/auth/types"
 import type { ApiError } from "@/lib/auth/types"
+import { checkEmail, sendLoginCode } from "@/lib/api/auth"
+
+type LoginStep = "email" | "password" | "code"
 
 function LoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { login } = useAuth()
+  const { login, loginWithCode } = useAuth()
 
+  const [step, setStep] = useState<LoginStep>("email")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [code, setCode] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const { turnstileToken, setTurnstileToken } = useTurnstileToken()
 
+  // Resend cooldown
+  const [resendCooldown, setResendCooldown] = useState(0)
+  const cooldownRef = useRef<NodeJS.Timeout | null>(null)
+
   const sessionExpired = searchParams.get("session_expired") === "true"
 
-  const handleSubmit = async (e: FormEvent) => {
+  useEffect(() => {
+    return () => {
+      if (cooldownRef.current) clearInterval(cooldownRef.current)
+    }
+  }, [])
+
+  const getRedirectPath = (userRole: string) => {
+    let rawRedirect = ""
+    try { rawRedirect = decodeURIComponent(searchParams.get("redirect") || "") } catch { /* malformed URI */ }
+    return rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") && !rawRedirect.includes("\\") && !rawRedirect.includes(":")
+      ? rawRedirect
+      : ROLE_REDIRECTS[userRole as keyof typeof ROLE_REDIRECTS]
+  }
+
+  const handleEmailSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    setError("")
+    setIsLoading(true)
+
+    try {
+      const result = await checkEmail({ email, turnstile_token: turnstileToken || undefined })
+      if (result.exists) {
+        setStep("password")
+      } else {
+        router.push(`/signup?email=${encodeURIComponent(email)}`)
+      }
+    } catch (err) {
+      const apiError = err as ApiError
+      setError(apiError.message || "Something went wrong. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handlePasswordSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setError("")
     setIsLoading(true)
 
     try {
       const user = await login({ email, password, turnstile_token: turnstileToken || undefined })
-      // Redirect to the intended destination or role-based dashboard
-      let rawRedirect = ""
-      try { rawRedirect = decodeURIComponent(searchParams.get("redirect") || "") } catch { /* malformed URI */ }
-      const redirect = rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") && !rawRedirect.includes("\\") && !rawRedirect.includes(":")
-        ? rawRedirect
-        : ROLE_REDIRECTS[user.role]
-      router.push(redirect)
+      router.push(getRedirectPath(user.role))
     } catch (err) {
       const apiError = err as ApiError
       setError(apiError.message || "Invalid email or password")
@@ -46,48 +84,118 @@ function LoginContent() {
     }
   }
 
+  const handleSendCode = async () => {
+    setError("")
+    setIsLoading(true)
+
+    try {
+      await sendLoginCode({ email, turnstile_token: turnstileToken || undefined })
+      setStep("code")
+      startResendCooldown()
+    } catch (err) {
+      const apiError = err as ApiError
+      setError(apiError.message || "Failed to send code. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleCodeSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    setError("")
+    setIsLoading(true)
+
+    try {
+      const user = await loginWithCode({ email, code, turnstile_token: turnstileToken || undefined })
+      router.push(getRedirectPath(user.role))
+    } catch (err) {
+      const apiError = err as ApiError
+      setError(apiError.message || "Invalid code")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleResendCode = async () => {
+    if (resendCooldown > 0) return
+    setError("")
+
+    try {
+      await sendLoginCode({ email, turnstile_token: turnstileToken || undefined })
+      startResendCooldown()
+    } catch (err) {
+      const apiError = err as ApiError
+      setError(apiError.message || "Failed to resend code.")
+    }
+  }
+
+  const startResendCooldown = () => {
+    setResendCooldown(60)
+    if (cooldownRef.current) clearInterval(cooldownRef.current)
+    cooldownRef.current = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          if (cooldownRef.current) clearInterval(cooldownRef.current)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+  }
+
+  const handleChangeEmail = () => {
+    setStep("email")
+    setPassword("")
+    setCode("")
+    setError("")
+  }
+
   return (
     <div className="min-h-screen flex">
       {/* Left Panel - Branding */}
       <div className="hidden lg:flex lg:w-1/2 relative bg-foreground overflow-hidden">
         {/* Ambient gradient */}
-        <div 
+        <div
           className="absolute inset-0"
           style={{
             background: "radial-gradient(ellipse 80% 80% at 20% 80%, rgba(var(--primary-rgb), 0.3) 0%, transparent 50%)"
           }}
         />
-        <div 
+        <div
           className="absolute inset-0"
           style={{
             background: "radial-gradient(ellipse 60% 60% at 80% 20%, rgba(var(--primary-rgb), 0.2) 0%, transparent 50%)"
           }}
         />
-        
+
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-between p-12 lg:p-16">
           {/* Logo */}
           <Link href="/" className="flex items-center">
-            <span className="text-2xl font-semibold tracking-tight text-white">
-              NCC
-            </span>
-            <span className="ml-1.5 w-2 h-2 rounded-full bg-primary" />
+            <Image
+              src="/logo.svg"
+              alt="New Canadian Careers"
+              width={180}
+              height={48}
+              className="h-10 w-auto brightness-0 invert"
+              priority
+            />
           </Link>
 
           {/* Quote */}
           <div className="max-w-md">
-            <p className="text-2xl md:text-3xl font-medium leading-relaxed text-white/90">
+            <p className="font-secondary text-2xl md:text-3xl font-medium leading-relaxed text-white/90">
               Find the right people.
               <br />
               Without the noise.
             </p>
-            <p className="mt-6 text-base text-white/60">
+            <p className="font-secondary mt-6 text-base text-white/60">
               Join thousands of companies and candidates building meaningful connections.
             </p>
           </div>
 
           {/* Footer */}
-          <p className="text-sm text-white/40">
+          <p className="font-secondary text-sm text-white/40">
             &copy; {new Date().getFullYear()} New Canadian Careers
           </p>
         </div>
@@ -99,127 +207,294 @@ function LoginContent() {
           {/* Mobile Logo */}
           <MotionWrapper delay={0} className="lg:hidden mb-12">
             <Link href="/" className="flex items-center">
-              <span className="text-xl font-semibold tracking-tight text-foreground">
-                NCC
-              </span>
-              <span className="ml-1 w-1.5 h-1.5 rounded-full bg-primary" />
+              <Image
+                src="/logo.svg"
+                alt="New Canadian Careers"
+                width={160}
+                height={44}
+                className="h-9 w-auto"
+                priority
+              />
             </Link>
           </MotionWrapper>
 
           {sessionExpired && (
             <MotionWrapper delay={50}>
               <div className="mb-6 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                <p className="text-sm text-amber-700">
+                <p className="font-secondary text-sm text-amber-700">
                   Your session has expired. Please sign in again.
                 </p>
               </div>
             </MotionWrapper>
           )}
 
-          <MotionWrapper delay={100}>
-            <h1 className="text-3xl md:text-4xl font-medium tracking-tight text-foreground">
-              Welcome back
-            </h1>
-            <p className="mt-3 text-foreground-muted">
-              Sign in to your account to continue
-            </p>
-          </MotionWrapper>
+          {/* Step 1: Email */}
+          {step === "email" && (
+            <>
+              <MotionWrapper delay={100}>
+                <h1 className="text-3xl md:text-4xl font-medium tracking-tight text-foreground">
+                  Welcome back
+                </h1>
+                <p className="font-secondary mt-3 text-foreground-muted">
+                  Enter your email to continue
+                </p>
+              </MotionWrapper>
 
-          <MotionWrapper delay={200}>
-            <form onSubmit={handleSubmit} className="mt-10 space-y-5">
-              <AuthInput
-                type="email"
-                label="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
-                required
-              />
-              
-              <AuthInput
-                type="password"
-                label="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-                error={error}
-                required
-              />
-
-              <div className="flex items-center justify-between pt-1">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20"
+              <MotionWrapper delay={200}>
+                <form onSubmit={handleEmailSubmit} className="mt-10 space-y-5">
+                  <AuthInput
+                    type="email"
+                    label="Email address"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
+                    autoFocus
+                    required
                   />
-                  <span className="text-sm text-foreground-muted">Remember me</span>
-                </label>
-                <Link
-                  href="/forgot-password"
-                  className="text-sm text-primary hover:text-primary-hover transition-colors"
+
+                  <TurnstileGuard feature="auth" onToken={setTurnstileToken} />
+
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className={cn(
+                      "relative w-full py-4 rounded-lg text-base font-medium transition-all duration-300",
+                      "bg-primary text-primary-foreground hover:shadow-lg hover:shadow-primary/20",
+                      "disabled:opacity-50 disabled:cursor-not-allowed",
+                      "overflow-hidden"
+                    )}
+                  >
+                    <span className={cn(
+                      "inline-flex items-center gap-2 transition-all duration-300",
+                      isLoading && "opacity-0"
+                    )}>
+                      Continue
+                    </span>
+
+                    {isLoading && (
+                      <span className="absolute inset-0 flex items-center justify-center">
+                        <span className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                      </span>
+                    )}
+                  </button>
+
+                  {error && (
+                    <p role="alert" className="font-secondary text-sm text-destructive">{error}</p>
+                  )}
+                </form>
+              </MotionWrapper>
+
+              <MotionWrapper delay={300}>
+                <div className="mt-8 relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-border" />
+                  </div>
+                  <div className="relative flex justify-center">
+                    <span className="font-secondary px-4 text-sm text-foreground-muted bg-background">
+                      Or continue with
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-6 grid grid-cols-2 gap-4">
+                  <SocialButton provider="google">Google</SocialButton>
+                  <SocialButton provider="linkedin">LinkedIn</SocialButton>
+                </div>
+              </MotionWrapper>
+
+              <MotionWrapper delay={400}>
+                <p className="font-secondary mt-10 text-center text-foreground-muted">
+                  Don&apos;t have an account?{" "}
+                  <Link
+                    href="/signup"
+                    className="text-primary hover:text-primary-hover font-medium transition-colors"
+                  >
+                    Sign up
+                  </Link>
+                </p>
+              </MotionWrapper>
+            </>
+          )}
+
+          {/* Step 2: Password */}
+          {step === "password" && (
+            <>
+              <MotionWrapper delay={0}>
+                <h1 className="text-3xl md:text-4xl font-medium tracking-tight text-foreground">
+                  Welcome back
+                </h1>
+                <div className="mt-3 flex items-center gap-2">
+                  <span className="font-secondary text-foreground-muted">{email}</span>
+                  <button
+                    type="button"
+                    onClick={handleChangeEmail}
+                    className="font-secondary text-sm text-primary hover:text-primary-hover transition-colors"
+                  >
+                    Change
+                  </button>
+                </div>
+              </MotionWrapper>
+
+              <MotionWrapper delay={100}>
+                <form onSubmit={handlePasswordSubmit} className="mt-10 space-y-5">
+                  <AuthInput
+                    type="password"
+                    label="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="current-password"
+                    autoFocus
+                    error={error}
+                    required
+                  />
+
+                  <div className="flex items-center justify-between pt-1">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20"
+                      />
+                      <span className="font-secondary text-sm text-foreground-muted">Remember me</span>
+                    </label>
+                    <Link
+                      href="/forgot-password"
+                      className="font-secondary text-sm text-primary hover:text-primary-hover transition-colors"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
+
+                  <TurnstileGuard feature="auth" onToken={setTurnstileToken} />
+
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className={cn(
+                      "relative w-full py-4 rounded-lg text-base font-medium transition-all duration-300",
+                      "bg-primary text-primary-foreground hover:shadow-lg hover:shadow-primary/20",
+                      "disabled:opacity-50 disabled:cursor-not-allowed",
+                      "overflow-hidden"
+                    )}
+                  >
+                    <span className={cn(
+                      "inline-flex items-center gap-2 transition-all duration-300",
+                      isLoading && "opacity-0"
+                    )}>
+                      Sign in
+                    </span>
+
+                    {isLoading && (
+                      <span className="absolute inset-0 flex items-center justify-center">
+                        <span className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                      </span>
+                    )}
+                  </button>
+                </form>
+              </MotionWrapper>
+
+              <MotionWrapper delay={200}>
+                <div className="mt-6 text-center">
+                  <button
+                    type="button"
+                    onClick={handleSendCode}
+                    disabled={isLoading}
+                    className="font-secondary text-sm text-primary hover:text-primary-hover transition-colors disabled:opacity-50"
+                  >
+                    Email me a sign-in code instead
+                  </button>
+                </div>
+              </MotionWrapper>
+            </>
+          )}
+
+          {/* Step 3: Code */}
+          {step === "code" && (
+            <>
+              <MotionWrapper delay={0}>
+                <button
+                  type="button"
+                  onClick={() => { setStep("password"); setCode(""); setError("") }}
+                  className="flex items-center gap-2 font-secondary text-sm text-foreground-muted hover:text-foreground transition-colors mb-8"
                 >
-                  Forgot password?
-                </Link>
-              </div>
+                  <span className="text-lg">&larr;</span>
+                  <span>Back</span>
+                </button>
+              </MotionWrapper>
 
-              <TurnstileGuard feature="auth" onToken={setTurnstileToken} />
+              <MotionWrapper delay={100}>
+                <h1 className="text-3xl md:text-4xl font-medium tracking-tight text-foreground">
+                  Check your email
+                </h1>
+                <p className="font-secondary mt-3 text-foreground-muted">
+                  We sent a 6-digit code to <span className="text-foreground font-medium">{email}</span>
+                </p>
+              </MotionWrapper>
 
-              <button
-                type="submit"
-                disabled={isLoading}
-                className={cn(
-                  "relative w-full py-4 rounded-lg text-base font-medium transition-all duration-300",
-                  "bg-primary text-primary-foreground hover:shadow-lg hover:shadow-primary/20",
-                  "disabled:opacity-50 disabled:cursor-not-allowed",
-                  "overflow-hidden"
-                )}
-              >
-                <span className={cn(
-                  "inline-flex items-center gap-2 transition-all duration-300",
-                  isLoading && "opacity-0"
-                )}>
-                  Sign in
-                </span>
-                
-                {/* Loading spinner */}
-                {isLoading && (
-                  <span className="absolute inset-0 flex items-center justify-center">
-                    <span className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                  </span>
-                )}
-              </button>
-            </form>
-          </MotionWrapper>
+              <MotionWrapper delay={200}>
+                <form onSubmit={handleCodeSubmit} className="mt-10 space-y-5">
+                  <AuthInput
+                    type="text"
+                    label="Enter code"
+                    value={code}
+                    onChange={(e) => {
+                      // Only allow digits, max 6
+                      const val = e.target.value.replace(/\D/g, "").slice(0, 6)
+                      setCode(val)
+                    }}
+                    autoComplete="one-time-code"
+                    inputMode="numeric"
+                    pattern="[0-9]{6}"
+                    maxLength={6}
+                    autoFocus
+                    error={error}
+                    required
+                  />
 
-          <MotionWrapper delay={300}>
-            <div className="mt-8 relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-border" />
-              </div>
-              <div className="relative flex justify-center">
-                <span className="px-4 text-sm text-foreground-muted bg-background">
-                  Or continue with
-                </span>
-              </div>
-            </div>
+                  <TurnstileGuard feature="auth" onToken={setTurnstileToken} />
 
-            <div className="mt-6 grid grid-cols-2 gap-4">
-              <SocialButton provider="google">Google</SocialButton>
-              <SocialButton provider="github">GitHub</SocialButton>
-            </div>
-          </MotionWrapper>
+                  <button
+                    type="submit"
+                    disabled={isLoading || code.length !== 6}
+                    className={cn(
+                      "relative w-full py-4 rounded-lg text-base font-medium transition-all duration-300",
+                      "bg-primary text-primary-foreground hover:shadow-lg hover:shadow-primary/20",
+                      "disabled:opacity-50 disabled:cursor-not-allowed",
+                      "overflow-hidden"
+                    )}
+                  >
+                    <span className={cn(
+                      "inline-flex items-center gap-2 transition-all duration-300",
+                      isLoading && "opacity-0"
+                    )}>
+                      Verify
+                    </span>
 
-          <MotionWrapper delay={400}>
-            <p className="mt-10 text-center text-foreground-muted">
-              Don&apos;t have an account?{" "}
-              <Link 
-                href="/signup" 
-                className="text-primary hover:text-primary-hover font-medium transition-colors"
-              >
-                Sign up
-              </Link>
-            </p>
-          </MotionWrapper>
+                    {isLoading && (
+                      <span className="absolute inset-0 flex items-center justify-center">
+                        <span className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                      </span>
+                    )}
+                  </button>
+                </form>
+              </MotionWrapper>
+
+              <MotionWrapper delay={300}>
+                <div className="mt-6 text-center">
+                  <button
+                    type="button"
+                    onClick={handleResendCode}
+                    disabled={resendCooldown > 0}
+                    className="font-secondary text-sm text-primary hover:text-primary-hover transition-colors disabled:text-foreground-muted disabled:cursor-not-allowed"
+                  >
+                    {resendCooldown > 0
+                      ? `Resend code in ${resendCooldown}s`
+                      : "Resend code"
+                    }
+                  </button>
+                </div>
+              </MotionWrapper>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -242,7 +517,7 @@ function SocialButton({
   provider,
   children
 }: {
-  provider: "google" | "github"
+  provider: "google" | "linkedin"
   children: React.ReactNode
 }) {
   return (
@@ -252,7 +527,7 @@ function SocialButton({
       title="Coming soon"
       className={cn(
         "flex items-center justify-center gap-3 py-3 px-4 rounded-lg border border-border",
-        "text-sm font-medium text-foreground transition-all duration-300",
+        "font-secondary text-sm font-medium text-foreground transition-all duration-300",
         "opacity-50 cursor-not-allowed"
       )}
     >
@@ -276,9 +551,9 @@ function SocialButton({
           />
         </svg>
       )}
-      {provider === "github" && (
+      {provider === "linkedin" && (
         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
         </svg>
       )}
       <span>{children}</span>

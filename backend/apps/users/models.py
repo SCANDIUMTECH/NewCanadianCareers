@@ -223,3 +223,27 @@ class EmailVerificationToken(models.Model):
 
     def is_valid(self):
         return self.used_at is None and timezone.now() < self.expires_at
+
+
+class LoginCode(models.Model):
+    """One-time login codes sent via email."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='login_codes')
+    code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+    attempts = models.IntegerField(default=0)
+
+    class Meta:
+        db_table = 'login_codes'
+        indexes = [
+            models.Index(fields=['user', 'code']),
+        ]
+
+    def is_valid(self):
+        return (
+            self.used_at is None
+            and self.attempts < 5
+            and timezone.now() < self.expires_at
+        )

@@ -20,7 +20,7 @@ export function PlatformSection() {
         <MotionWrapper delay={0}>
           <div className="flex items-center gap-4 mb-8">
             <div className="h-px w-8 bg-primary/40" />
-            <p className="text-sm font-medium text-foreground-muted tracking-wide uppercase">
+            <p className="font-secondary text-sm font-medium text-foreground-muted tracking-wide uppercase">
               Platform
             </p>
           </div>
@@ -38,7 +38,7 @@ export function PlatformSection() {
 
         {/* The statement paragraph */}
         <MotionWrapper delay={300}>
-          <p className="mt-12 md:mt-16 text-xl md:text-2xl text-foreground-muted leading-relaxed max-w-3xl">
+          <p className="font-secondary mt-12 md:mt-16 text-xl md:text-2xl text-foreground-muted leading-relaxed max-w-3xl">
             New Canadian Careers isn&apos;t just a job board — it&apos;s infrastructure designed for how Canadian hiring should work. LMIA-friendly job categorization, credential recognition tools, and analytics that help you build a diverse workforce. Every feature exists because Canadian employers and newcomers needed it.
           </p>
         </MotionWrapper>

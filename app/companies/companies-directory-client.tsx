@@ -143,28 +143,6 @@ export default function CompaniesDirectoryClient() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border">
-        <div className="max-w-[1200px] mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center group">
-            <span className="text-lg font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary">
-              NCC
-            </span>
-            <span className="ml-1.5 w-2 h-2 rounded-full bg-primary/50 transition-all group-hover:bg-primary" />
-          </Link>
-          <div className="flex items-center gap-4">
-            <Link href="/jobs">
-              <Button variant="ghost">Browse Jobs</Button>
-            </Link>
-            <Link href="/login">
-              <Button className="bg-primary hover:bg-primary-hover text-primary-foreground">
-                Sign In
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
-
       <main className="max-w-[1200px] mx-auto px-4 md:px-6 py-8 md:py-12">
         {/* Hero Section */}
         <motion.div
@@ -473,33 +451,6 @@ export default function CompaniesDirectoryClient() {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-border mt-12">
-        <div className="max-w-[1200px] mx-auto px-4 md:px-6 py-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-foreground-muted text-sm">
-              <Link href="/" className="flex items-center">
-                <Image
-                  src="/logo.svg"
-                  alt="New Canadian Careers Logo"
-                  width={28}
-                  height={28}
-                  className="h-7 w-auto"
-                  priority
-                />
-              </Link>
-              <span>·</span>
-              <span>&copy; 2026 New Canadian Careers. All rights reserved.</span>
-            </div>
-            <div className="flex items-center gap-6 text-sm text-foreground-muted">
-              <Link href="/jobs" className="hover:text-foreground transition-colors">Jobs</Link>
-              <Link href="/companies" className="hover:text-foreground transition-colors">Companies</Link>
-              <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
-              <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   )
 }

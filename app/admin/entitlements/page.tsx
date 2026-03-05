@@ -369,7 +369,7 @@ export default function EntitlementsPage() {
                             <Avatar className="h-9 w-9">
                               <AvatarFallback className={cn(
                                 "text-xs",
-                                accountType === "company" ? "bg-blue-100 text-blue-600" : "bg-purple-100 text-purple-600"
+                                accountType === "company" ? "bg-sky/10 text-sky" : "bg-primary/10 text-primary"
                               )}>
                                 {getCompanyInitials(accountName)}
                               </AvatarFallback>
@@ -407,8 +407,8 @@ export default function EntitlementsPage() {
                             className={cn(
                               "text-xs",
                               entitlement.source === "admin_grant" && "bg-green-100 text-green-700",
-                              entitlement.source === "package_purchase" && "bg-blue-100 text-blue-700",
-                              entitlement.source === "subscription" && "bg-purple-100 text-purple-700",
+                              entitlement.source === "package_purchase" && "bg-sky/10 text-sky",
+                              entitlement.source === "subscription" && "bg-primary/10 text-primary",
                               entitlement.source === "promotion" && "bg-amber-100 text-amber-700",
                               entitlement.source === "refund" && "bg-gray-100 text-gray-700"
                             )}

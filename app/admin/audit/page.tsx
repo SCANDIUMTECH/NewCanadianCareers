@@ -64,14 +64,14 @@ import type {
 
 const actionConfig: Record<string, { label: string; color: string }> = {
   create: { label: "Create", color: "bg-green-100 text-green-700" },
-  update: { label: "Update", color: "bg-blue-100 text-blue-700" },
+  update: { label: "Update", color: "bg-sky/10 text-sky" },
   delete: { label: "Delete", color: "bg-red-100 text-red-700" },
   suspend: { label: "Suspend", color: "bg-red-100 text-red-700" },
   activate: { label: "Activate", color: "bg-green-100 text-green-700" },
   verify: { label: "Verify", color: "bg-emerald-100 text-emerald-700" },
   approve: { label: "Approve", color: "bg-green-100 text-green-700" },
   reject: { label: "Reject", color: "bg-red-100 text-red-700" },
-  grant: { label: "Grant", color: "bg-purple-100 text-purple-700" },
+  grant: { label: "Grant", color: "bg-primary/10 text-primary" },
   revoke: { label: "Revoke", color: "bg-orange-100 text-orange-700" },
   login: { label: "Login", color: "bg-gray-100 text-gray-700" },
   logout: { label: "Logout", color: "bg-gray-100 text-gray-700" },
@@ -402,7 +402,7 @@ export default function AuditPage() {
                                   "text-[10px] font-medium",
                                   !log.actor
                                     ? "bg-gray-100 text-gray-500"
-                                    : "bg-gradient-to-br from-indigo-100 to-blue-100 text-indigo-700"
+                                    : "bg-gradient-to-br from-primary/10 to-sky/10 text-primary"
                                 )}
                               >
                                 {!log.actor ? (
@@ -517,7 +517,7 @@ export default function AuditPage() {
                         "text-[9px] font-medium",
                         !selectedLog.actor
                           ? "bg-gray-100 text-gray-500"
-                          : "bg-gradient-to-br from-indigo-100 to-blue-100 text-indigo-700"
+                          : "bg-gradient-to-br from-primary/10 to-sky/10 text-primary"
                       )}>
                         {!selectedLog.actor ? <Bot className="h-3 w-3" /> : getActorInitials(selectedLog)}
                       </AvatarFallback>

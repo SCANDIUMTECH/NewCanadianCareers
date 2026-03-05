@@ -14,6 +14,11 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - frontend_net
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     labels:
       - "traefik.enable=true"
       # Dashboard routing (dev only — secured behind localhost binding)
@@ -28,7 +33,8 @@ services:
     environment:
       - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
     depends_on:
-      - traefik
+      traefik:
+        condition: service_healthy
     networks:
       - frontend_net
     profiles:
@@ -38,7 +44,8 @@ services:
   frontend:
     build:
       context: ..
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
+      target: frontend-deps
     volumes:
       - ../:/app
       - /app/node_modules    # Use container's node_modules, not host's
@@ -48,6 +55,9 @@ services:
     expose:
       - "3000"
     restart: unless-stopped
+    depends_on:
+      traefik:
+        condition: service_healthy
     networks:
       - frontend_net
     labels:
@@ -57,15 +67,19 @@ services:
       - "traefik.http.routers.frontend.rule=Host(`localhost`)"
       - "traefik.http.routers.frontend.entrypoints=websecure"
       - "traefik.http.routers.frontend.tls=true"
+      - "traefik.http.routers.frontend.middlewares=secure-headers@file"
       - "traefik.http.routers.frontend.priority=1"
       - "traefik.http.services.frontend.loadbalancer.server.port=3000"
 
   # ============ Django Web App ============
   web:
-    build: .
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: backend-deps
     command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 120
     volumes:
-      - .:/app                        # Mount source code for live reload in dev
+      - ./:/app                       # Mount backend source for live reload in dev
       - static_volume:/app/staticfiles
       - media_volume:/app/media
     env_file:
@@ -73,6 +87,8 @@ services:
     expose:
       - "8000"
     depends_on:
+      traefik:
+        condition: service_healthy
       db:
         condition: service_healthy
       redis:
@@ -99,7 +115,7 @@ services:
       - "traefik.http.routers.django.rule=(Host(`localhost`) || Host(`api.newcanadian.careers`)) && (PathPrefix(`/api`) || PathPrefix(`/health`))"
       - "traefik.http.routers.django.entrypoints=websecure"
       - "traefik.http.routers.django.tls=true"
-      - "traefik.http.routers.django.middlewares=rate-limit@file"
+      - "traefik.http.routers.django.middlewares=secure-headers@file,rate-limit@file"
       - "traefik.http.services.django.loadbalancer.server.port=8000"
       # Apply security headers to Django admin
       - "traefik.http.routers.django-admin.rule=(Host(`localhost`) || Host(`api.newcanadian.careers`)) && PathPrefix(`/django-admin`)"
@@ -118,6 +134,9 @@ services:
     expose:
       - "80"
     restart: unless-stopped
+    depends_on:
+      traefik:
+        condition: service_healthy
     networks:
       - frontend_net
     labels:
@@ -125,6 +144,7 @@ services:
       - "traefik.http.routers.static.rule=(Host(`localhost`) || Host(`api.newcanadian.careers`)) && PathPrefix(`/static`)"
       - "traefik.http.routers.static.entrypoints=websecure"
       - "traefik.http.routers.static.tls=true"
+      - "traefik.http.routers.static.middlewares=secure-headers@file"
       - "traefik.http.services.static.loadbalancer.server.port=80"
 
   # ============ Database ============
@@ -202,10 +222,13 @@ services:
 
   # ============ Celery Worker ============
   celery:
-    build: .
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: backend-deps
     command: celery -A config worker -l info
     volumes:
-      - .:/app
+      - ./:/app
     env_file:
       - .env
     depends_on:
@@ -230,10 +253,13 @@ services:
 
   # ============ Celery Beat ============
   celery-beat:
-    build: .
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: backend-deps
     command: celery -A config beat -l info
     volumes:
-      - .:/app
+      - ./:/app
     env_file:
       - .env
     depends_on:
@@ -328,8 +354,13 @@ services:
 
   # ============ RUM Consumer (Kafka → ClickHouse) ============
   rum-consumer:
-    build: .
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: backend-deps
     command: python manage.py rum_consumer
+    volumes:
+      - ./:/app
     env_file:
       - .env
     depends_on:
@@ -390,6 +421,9 @@ services:
     ports:
       - "127.0.0.1:9001:9001"  # Console — localhost only for admin access
     restart: unless-stopped
+    depends_on:
+      traefik:
+        condition: service_healthy
     networks:
       - backend_net    # Django/Celery reach MinIO for file uploads
       - frontend_net   # Traefik proxies /media/* to MinIO for public read

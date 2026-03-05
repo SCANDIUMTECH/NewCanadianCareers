@@ -121,7 +121,7 @@ export default function AudiencesPage() {
       <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary-light to-primary flex items-center justify-center shadow-lg shadow-primary/20">
               <UsersRound className="h-6 w-6 text-white" />
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-green-500 border-2 border-background" />
@@ -166,8 +166,8 @@ export default function AudiencesPage() {
               title="Segments"
               value={overview?.segment_count ?? 0}
               icon={<UserMinus className="h-4 w-4" />}
-              gradient="from-blue-500 to-indigo-600"
-              bgAccent="bg-blue-500"
+              gradient="from-sky to-sky-deep"
+              bgAccent="bg-sky"
             />
           </>
         )}
@@ -412,7 +412,7 @@ function SegmentsTab({ onRefreshOverview }: { onRefreshOverview: () => void }) {
                       className={cn(
                         "text-xs",
                         seg.segment_type === "dynamic"
-                          ? "border-blue-200 text-blue-600 bg-blue-50"
+                          ? "border-sky/20 text-sky bg-sky/10"
                           : "border-gray-200 text-gray-600 bg-gray-50"
                       )}
                     >

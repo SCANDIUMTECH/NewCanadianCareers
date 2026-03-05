@@ -1,7 +1,7 @@
-"""Fix entity_id callable default warning and sync migration state.
+"""Add entity_id field and fix callable default.
 
-The entity_id column already exists in the DB but was missing from migration state.
-Uses SeparateDatabaseAndState to fix state, then alters to remove callable default.
+Adds entity_id to User model, then alters to remove callable default
+(replaced by save() override logic).
 """
 from django.db import migrations, models
 import core.utils
@@ -14,24 +14,19 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # Step 1: Fix migration state
-        migrations.SeparateDatabaseAndState(
-            state_operations=[
-                migrations.AddField(
-                    model_name='user',
-                    name='entity_id',
-                    field=models.CharField(
-                        db_index=True,
-                        default=core.utils.generate_entity_id,
-                        editable=False,
-                        help_text='Unique 8-character alphanumeric identifier',
-                        max_length=10,
-                        unique=True,
-                    ),
-                    preserve_default=False,
-                ),
-            ],
-            database_operations=[],
+        # Step 1: Add entity_id field
+        migrations.AddField(
+            model_name='user',
+            name='entity_id',
+            field=models.CharField(
+                db_index=True,
+                default=core.utils.generate_entity_id,
+                editable=False,
+                help_text='Unique 8-character alphanumeric identifier',
+                max_length=10,
+                unique=True,
+            ),
+            preserve_default=False,
         ),
         # Step 2: Alter to remove callable default
         migrations.AlterField(

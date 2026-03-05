@@ -62,7 +62,7 @@ const COLOR_GRADIENTS: Record<string, { gradient: string; bgAccent: string }> = 
   green: { gradient: "from-emerald-500 to-teal-600", bgAccent: "bg-emerald-500" },
   amber: { gradient: "from-amber-500 to-orange-600", bgAccent: "bg-amber-500" },
   red: { gradient: "from-red-500 to-rose-600", bgAccent: "bg-red-500" },
-  blue: { gradient: "from-blue-500 to-indigo-600", bgAccent: "bg-blue-500" },
+  blue: { gradient: "from-sky to-sky-deep", bgAccent: "bg-sky" },
   default: { gradient: "from-slate-600 to-slate-800", bgAccent: "bg-slate-500" },
 }
 

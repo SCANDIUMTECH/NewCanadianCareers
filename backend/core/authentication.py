@@ -28,7 +28,7 @@ class CookieJWTAuthentication(JWTAuthentication):
             return header_result
 
         # Fall back to cookie
-        cookie_name = settings.SIMPLE_JWT.get('AUTH_COOKIE', 'orion_access')
+        cookie_name = settings.SIMPLE_JWT['AUTH_COOKIE']
         raw_token = request.COOKIES.get(cookie_name)
         if raw_token is None:
             return None

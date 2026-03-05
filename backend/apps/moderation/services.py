@@ -506,6 +506,52 @@ class FraudDetectionService:
         return qs.exists()
 
     @classmethod
+    def create_realtime_alert(cls, alert_type, severity, subject_type, subject_id, subject_name, description, indicators, ip_address=None, affected_accounts=None):
+        """Create a fraud alert from a real-time event (not triggered by a scheduled rule scan).
+
+        Use this for immediate security events detected in views (e.g., lockout bypass
+        attempts, login code flooding). The alert appears in the admin fraud dashboard
+        and triggers admin notifications.
+        """
+        from .models import FraudAlert
+
+        # Deduplicate: skip if an open alert already exists for this scenario
+        if cls._has_open_alert(rule=None, alert_type=alert_type, ip_address=ip_address,
+                               subject_type=subject_type, subject_id=subject_id):
+            return None
+
+        alert = FraudAlert.objects.create(
+            type=alert_type,
+            severity=severity,
+            status='open',
+            subject_type=subject_type,
+            subject_id=subject_id,
+            subject_name=subject_name,
+            description=description,
+            indicators=indicators or [],
+            ip_address=ip_address,
+            affected_accounts=affected_accounts or [],
+        )
+
+        # Trigger notification asynchronously (rule_id=None for realtime alerts)
+        from .tasks import notify_fraud_alert
+        try:
+            notify_fraud_alert.delay(alert.id, None)
+        except Exception as e:
+            logger.error(f"Failed to queue fraud notification for alert {alert.id}: {e}")
+
+        # Auto-mitigate for critical severity
+        if severity == 'critical':
+            from .tasks import auto_mitigate_fraud
+            try:
+                auto_mitigate_fraud.delay(alert.id)
+            except Exception as e:
+                logger.error(f"Failed to queue auto-mitigation for alert {alert.id}: {e}")
+
+        logger.info(f"Realtime fraud alert created: [{severity}] {alert_type} - {subject_name}")
+        return alert
+
+    @classmethod
     def _create_alert(cls, rule, alert_type, severity, subject_type, subject_id, subject_name, description, indicators, ip_address, affected_accounts):
         """Create a FraudAlert, increment rule counter, and trigger notifications."""
         from .models import FraudAlert, FraudRule

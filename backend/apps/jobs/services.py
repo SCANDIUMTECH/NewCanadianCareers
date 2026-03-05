@@ -407,18 +407,6 @@ BLOCKED_URL_DOMAINS = [
 ]
 
 
-def _is_private_ip(hostname: str) -> bool:
-    """Check if hostname resolves to a private/internal IP (SSRF protection)."""
-    try:
-        for info in socket.getaddrinfo(hostname, None):
-            ip = ipaddress.ip_address(info[4][0])
-            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
-                return True
-    except socket.gaierror:
-        return False
-    return False
-
-
 def validate_external_url(url):
     """
     Validate an external apply URL if the policy is enabled.
@@ -429,6 +417,10 @@ def validate_external_url(url):
       - ``{'valid': False, 'error': '...'}`` — URL is blocked
 
     Does NOT raise exceptions; the caller decides whether to hard-block.
+
+    Security: DNS is resolved once and validated to prevent DNS rebinding
+    (TOCTOU) attacks. The HTTP reachability check is removed to eliminate
+    the second DNS resolution that could resolve to a different IP.
     """
     policy = get_job_policy()
     if not policy.get('external_url_validation', True):
@@ -447,32 +439,27 @@ def validate_external_url(url):
                 'code': 'blocked_domain',
             }
 
-    # Block requests to private/internal IPs (SSRF protection)
+    # Single DNS resolution + private IP check (prevents DNS rebinding TOCTOU)
     hostname = parsed.hostname
-    if hostname and _is_private_ip(hostname):
-        return {
-            'valid': False,
-            'error': 'External URLs pointing to internal/private networks are not allowed.',
-            'code': 'private_ip',
-        }
-
-    # HEAD request to check reachability (5s timeout)
-    try:
-        req = Request(url, method='HEAD')
-        req.add_header('User-Agent', 'Orion-URLValidator/1.0')
-        resp = urlopen(req, timeout=5)
-        if resp.status >= 400:
+    if hostname:
+        try:
+            resolved = socket.getaddrinfo(hostname, None)
+            for info in resolved:
+                ip = ipaddress.ip_address(info[4][0])
+                if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+                    return {
+                        'valid': False,
+                        'error': 'External URLs pointing to internal/private networks are not allowed.',
+                        'code': 'private_ip',
+                    }
+        except socket.gaierror:
             return {
                 'valid': True,
-                'warning': f'External URL returned status {resp.status}. The URL may not be reachable.',
+                'warning': 'Could not resolve hostname. The URL will still be accepted.',
             }
-    except (URLError, OSError, ValueError) as exc:
-        logger.warning('External URL validation failed for %s: %s', url, exc)
-        return {
-            'valid': True,
-            'warning': 'Could not verify external URL reachability. The URL will still be accepted.',
-        }
 
+    # DNS-only validation is sufficient — no HTTP HEAD request to avoid second
+    # DNS resolution (SSRF via DNS rebinding).
     return {'valid': True}
 
 

@@ -1,5 +1,6 @@
 import { Suspense } from "react"
 import type { Metadata } from "next"
+import { PublicPageShell } from "@/components/public-page-shell"
 import CompaniesDirectoryClient from "./companies-directory-client"
 
 export const metadata: Metadata = {
@@ -25,8 +26,10 @@ function CompaniesLoadingSpinner() {
 
 export default function CompaniesPage() {
   return (
-    <Suspense fallback={<CompaniesLoadingSpinner />}>
-      <CompaniesDirectoryClient />
-    </Suspense>
+    <PublicPageShell>
+      <Suspense fallback={<CompaniesLoadingSpinner />}>
+        <CompaniesDirectoryClient />
+      </Suspense>
+    </PublicPageShell>
   )
 }

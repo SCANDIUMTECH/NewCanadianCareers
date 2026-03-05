@@ -30,10 +30,11 @@ def run_fraud_scan():
 
 
 @shared_task
-def notify_fraud_alert(alert_id, rule_id):
+def notify_fraud_alert(alert_id, rule_id=None):
     """
     Send notifications to all admin users when a fraud alert is triggered.
     Creates in-app notifications and sends email for high/critical severity.
+    rule_id may be None for realtime alerts not triggered by a scheduled rule.
     """
     from .models import FraudAlert, FraudRule
     from apps.users.models import User
@@ -42,10 +43,18 @@ def notify_fraud_alert(alert_id, rule_id):
 
     try:
         alert = FraudAlert.objects.get(id=alert_id)
-        rule = FraudRule.objects.get(id=rule_id)
-    except (FraudAlert.DoesNotExist, FraudRule.DoesNotExist):
-        logger.error(f"Fraud alert {alert_id} or rule {rule_id} not found")
+    except FraudAlert.DoesNotExist:
+        logger.error(f"Fraud alert {alert_id} not found")
         return
+
+    rule = None
+    if rule_id:
+        try:
+            rule = FraudRule.objects.get(id=rule_id)
+        except FraudRule.DoesNotExist:
+            logger.warning(f"Fraud rule {rule_id} not found for alert {alert_id}")
+
+    rule_name = rule.name if rule else 'Realtime Detection'
 
     # Get all admin users
     admin_users = User.objects.filter(role='admin', status='active')
@@ -65,7 +74,7 @@ def notify_fraud_alert(alert_id, rule_id):
                 'alert_id': alert.id,
                 'severity': alert.severity,
                 'type': alert.type,
-                'rule_name': rule.name,
+                'rule_name': rule_name,
             },
         )
 
@@ -84,7 +93,7 @@ def notify_fraud_alert(alert_id, rule_id):
                         'subject_name': alert.subject_name,
                         'ip_address': alert.ip_address or 'N/A',
                         'indicators': ', '.join(alert.indicators) if alert.indicators else 'None',
-                        'rule_name': rule.name,
+                        'rule_name': rule_name,
                         'alert_url': f'/admin/fraud',
                         'time': timezone.now().strftime('%Y-%m-%d %H:%M UTC'),
                     },

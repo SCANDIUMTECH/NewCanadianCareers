@@ -250,9 +250,9 @@ const statusConfig: Record<string, { label: string; color: string; icon: typeof 
   draft: { label: "Draft", color: "bg-gray-100 text-gray-700", icon: FileText },
   pending: { label: "Pending Review", color: "bg-amber-100 text-amber-700", icon: Clock },
   pending_payment: { label: "Pending Payment", color: "bg-orange-100 text-orange-700", icon: CreditCard },
-  scheduled: { label: "Scheduled", color: "bg-purple-100 text-purple-700", icon: Clock },
+  scheduled: { label: "Scheduled", color: "bg-primary/10 text-primary", icon: Clock },
   published: { label: "Published", color: "bg-emerald-100 text-emerald-700", icon: Check },
-  paused: { label: "Paused", color: "bg-blue-100 text-blue-700", icon: Pause },
+  paused: { label: "Paused", color: "bg-sky/10 text-sky", icon: Pause },
   expired: { label: "Expired", color: "bg-gray-100 text-gray-600", icon: Clock },
   filled: { label: "Filled", color: "bg-teal-100 text-teal-700", icon: CheckCircle },
   hidden: { label: "Hidden", color: "bg-red-100 text-red-700", icon: EyeOff },
@@ -1130,7 +1130,7 @@ function AdminJobDetailContent() {
                           <Badge
                             className={cn(
                               "text-xs",
-                              app.status === "new" && "bg-blue-100 text-blue-700",
+                              app.status === "new" && "bg-sky/10 text-sky",
                               app.status === "reviewing" && "bg-amber-100 text-amber-700",
                               app.status === "shortlisted" && "bg-emerald-100 text-emerald-700",
                               app.status === "rejected" && "bg-gray-100 text-gray-700"

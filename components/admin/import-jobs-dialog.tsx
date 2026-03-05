@@ -785,15 +785,15 @@ export function ImportJobsDialog({
                   )}
 
                   {/* Agency mode info banner */}
-                  <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3 mt-3">
-                    <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
-                    <div className="text-xs text-blue-800">
+                  <div className="flex items-start gap-2 rounded-lg border border-sky/20 bg-sky/10 p-3 mt-3">
+                    <Info className="w-4 h-4 text-sky mt-0.5 shrink-0" />
+                    <div className="text-xs text-sky">
                       <p className="font-medium mb-0.5">
                         Agency mode requires company data per row
                       </p>
                       <p>
-                        Each job row must include <code className="bg-blue-100 px-1 rounded text-[11px]">company_name</code> and{" "}
-                        <code className="bg-blue-100 px-1 rounded text-[11px]">company_email</code>. Companies will be
+                        Each job row must include <code className="bg-sky/10 px-1 rounded text-[11px]">company_name</code> and{" "}
+                        <code className="bg-sky/10 px-1 rounded text-[11px]">company_email</code>. Companies will be
                         auto-created if they don&apos;t already exist.
                       </p>
                     </div>
@@ -1266,11 +1266,11 @@ export function ImportJobsDialog({
                     </div>
                   )}
                   {importMode === "agency" && (
-                    <div className="rounded-md bg-blue-50 border border-blue-200 p-2.5 text-center">
-                      <p className="text-lg font-semibold text-blue-700">
+                    <div className="rounded-md bg-sky/10 border border-sky/20 p-2.5 text-center">
+                      <p className="text-lg font-semibold text-sky">
                         {importResult.companies_created}
                       </p>
-                      <p className="text-[10px] text-blue-600">
+                      <p className="text-[10px] text-sky">
                         Companies Created
                       </p>
                     </div>

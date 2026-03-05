@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { PublicPageShell } from "@/components/public-page-shell"
 import { PrivacyPolicyClient } from "./privacy-client"
 
 export const metadata: Metadata = {
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 }
 
 export default function PrivacyPolicyPage() {
-  return <PrivacyPolicyClient />
+  return (
+    <PublicPageShell>
+      <PrivacyPolicyClient />
+    </PublicPageShell>
+  )
 }

@@ -40,6 +40,7 @@ export interface EmailProvider {
   webhookEnabled: boolean
   rateLimit: string
   region: string
+  sendingDomain: string
   webhookSecret: string   // masked, per-provider
   webhookUrl: string      // per-provider
   smtpHost: string

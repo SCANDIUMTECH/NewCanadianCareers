@@ -238,7 +238,7 @@ export default function ArticleCategoriesPage() {
       <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary-light to-primary flex items-center justify-center shadow-lg shadow-primary/20">
               <Tags className="h-6 w-6 text-white" />
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-green-500 border-2 border-background" />
@@ -294,8 +294,8 @@ export default function ArticleCategoriesPage() {
               title="Total Articles"
               value={stats.totalArticles}
               icon={<Tags className="h-4 w-4" />}
-              gradient="from-violet-500 to-purple-600"
-              bgAccent="bg-violet-500"
+              gradient="from-primary-light to-primary"
+              bgAccent="bg-primary"
             />
           </>
         )}

@@ -262,11 +262,11 @@ export default function AdminUserDetailPage() {
   const getRoleBadge = (role: UserRole) => {
     switch (role) {
       case "admin":
-        return <Badge className="bg-violet-500/10 text-violet-600 border-violet-500/20">Admin</Badge>
+        return <Badge className="bg-primary/10 text-primary border-primary/20">Admin</Badge>
       case "employer":
-        return <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">Company</Badge>
+        return <Badge className="bg-sky/10 text-sky border-sky/20">Company</Badge>
       case "agency":
-        return <Badge className="bg-purple-500/10 text-purple-600 border-purple-500/20">Agency</Badge>
+        return <Badge className="bg-primary/10 text-primary border-primary/20">Agency</Badge>
       default:
         return <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">Candidate</Badge>
     }
@@ -438,7 +438,7 @@ export default function AdminUserDetailPage() {
                   variant="outline"
                   onClick={handleVerifyEmail}
                   disabled={isVerifyingEmail}
-                  className="text-blue-600"
+                  className="text-sky"
                 >
                   {isVerifyingEmail ? (
                     <>

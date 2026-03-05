@@ -83,7 +83,7 @@ const severityColors: Record<string, string> = {
   critical: "bg-red-500/10 text-red-600 border-red-500/20",
   high: "bg-orange-500/10 text-orange-600 border-orange-500/20",
   medium: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20",
-  low: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+  low: "bg-sky/10 text-sky border-sky/20",
 }
 
 const statusColors: Record<string, string> = {

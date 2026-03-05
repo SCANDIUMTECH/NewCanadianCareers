@@ -95,11 +95,11 @@ export function ArticleCard({ article, variant = "default", index, className }: 
               {article.title}
             </h2>
             {article.excerpt && (
-              <p className="text-white/70 text-sm md:text-base leading-relaxed line-clamp-2 mb-4 max-w-2xl">
+              <p className="font-secondary text-white/70 text-sm md:text-base leading-relaxed line-clamp-2 mb-4 max-w-2xl">
                 {article.excerpt}
               </p>
             )}
-            <div className="flex items-center gap-3 text-sm text-white/60">
+            <div className="flex items-center gap-3 font-secondary text-sm text-white/60">
               {article.author_name && (
                 <span className="font-medium text-white/80">{article.author_name}</span>
               )}
@@ -154,7 +154,7 @@ export function ArticleCard({ article, variant = "default", index, className }: 
             <h3 className="font-secondary text-lg md:text-xl font-bold text-white leading-snug tracking-tight mb-2 line-clamp-2">
               {article.title}
             </h3>
-            <div className="flex items-center gap-2 text-xs text-white/60">
+            <div className="flex items-center gap-2 font-secondary text-xs text-white/60">
               <span>{formatDate(article.published_at)}</span>
               <span className="w-1 h-1 rounded-full bg-white/40" />
               <span>{article.reading_time} min read</span>
@@ -197,7 +197,7 @@ export function ArticleCard({ article, variant = "default", index, className }: 
 
           <div className="absolute bottom-0 left-0 right-0 p-4">
             {article.category_name && (
-              <span className="block text-[10px] font-semibold tracking-[0.15em] uppercase text-white/50 mb-1.5">
+              <span className="block font-secondary text-[10px] font-semibold tracking-[0.15em] uppercase text-white/50 mb-1.5">
                 {article.category_name}
               </span>
             )}
@@ -244,15 +244,15 @@ export function ArticleCard({ article, variant = "default", index, className }: 
                 Featured
               </Badge>
             </div>
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight leading-tight mb-3 group-hover:text-primary transition-colors">
+            <h2 className="font-secondary text-2xl md:text-3xl font-bold tracking-tight leading-tight mb-3 group-hover:text-primary transition-colors">
               {article.title}
             </h2>
             {article.excerpt && (
-              <p className="text-muted-foreground leading-relaxed mb-6 line-clamp-3">
+              <p className="font-secondary text-muted-foreground leading-relaxed mb-6 line-clamp-3">
                 {article.excerpt}
               </p>
             )}
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-4 font-secondary text-sm text-muted-foreground">
               {article.author_name && (
                 <span className="font-medium text-foreground">{article.author_name}</span>
               )}
@@ -286,10 +286,10 @@ export function ArticleCard({ article, variant = "default", index, className }: 
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-sm leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+          <h3 className="font-secondary font-semibold text-sm leading-snug line-clamp-2 group-hover:text-primary transition-colors">
             {article.title}
           </h3>
-          <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 mt-1.5 font-secondary text-xs text-muted-foreground">
             <span>{formatDate(article.published_at)}</span>
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
@@ -329,7 +329,7 @@ export function ArticleCard({ article, variant = "default", index, className }: 
       {/* Content */}
       <div className="pt-4">
         {article.category_name && (
-          <span className="block text-[11px] font-semibold tracking-[0.12em] uppercase text-primary/70 mb-2">
+          <span className="block font-secondary text-[11px] font-semibold tracking-[0.12em] uppercase text-primary/70 mb-2">
             {article.category_name}
           </span>
         )}
@@ -337,11 +337,11 @@ export function ArticleCard({ article, variant = "default", index, className }: 
           {article.title}
         </h3>
         {article.excerpt && (
-          <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 mb-3">
+          <p className="font-secondary text-sm text-muted-foreground leading-relaxed line-clamp-2 mb-3">
             {article.excerpt}
           </p>
         )}
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <div className="flex items-center gap-3 font-secondary text-xs text-muted-foreground">
           {article.author_name && (
             <span className="font-medium text-foreground/70">{article.author_name}</span>
           )}

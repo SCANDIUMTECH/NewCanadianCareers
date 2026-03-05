@@ -118,7 +118,7 @@ export function SegmentRuleBuilder({ value, onChange, disabled }: SegmentRuleBui
               className={cn(
                 "shrink-0 text-[10px] w-10 justify-center",
                 logic === "AND"
-                  ? "border-blue-200 text-blue-600 bg-blue-50"
+                  ? "border-sky/20 text-sky bg-sky/10"
                   : "border-amber-200 text-amber-600 bg-amber-50"
               )}
             >

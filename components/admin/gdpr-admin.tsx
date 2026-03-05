@@ -147,8 +147,8 @@ const legalBasisLabels: Record<string, string> = {
 
 const requestStatusConfig: Record<string, { label: string; color: string }> = {
   pending: { label: "Pending", color: "bg-amber-100 text-amber-700" },
-  confirmed: { label: "Confirmed", color: "bg-blue-100 text-blue-700" },
-  processing: { label: "Processing", color: "bg-blue-100 text-blue-700" },
+  confirmed: { label: "Confirmed", color: "bg-sky/10 text-sky" },
+  processing: { label: "Processing", color: "bg-sky/10 text-sky" },
   done: { label: "Done", color: "bg-emerald-100 text-emerald-700" },
   rejected: { label: "Rejected", color: "bg-red-100 text-red-700" },
 }
@@ -477,7 +477,7 @@ function CookieServicesTab() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <span className={cn("text-xs font-medium", svc.is_deactivatable ? "text-blue-600" : "text-gray-400")}>
+                        <span className={cn("text-xs font-medium", svc.is_deactivatable ? "text-sky" : "text-gray-400")}>
                           {svc.is_deactivatable ? "Yes" : "No"}
                         </span>
                       </TableCell>
@@ -2288,8 +2288,8 @@ function AnalyticsOverviewTab() {
       value: `${analytics.accept_rate_30d}%`,
       sub: `${analytics.actions_30d.total} total actions`,
       icon: Check,
-      color: "text-blue-600",
-      bg: "bg-blue-50",
+      color: "text-sky",
+      bg: "bg-sky/10",
     },
     {
       label: "Open DSARs",
@@ -2312,7 +2312,7 @@ function AnalyticsOverviewTab() {
   const consentActions = [
     { label: "Accept All", value: analytics.actions_30d.allow_all, color: "bg-emerald-500" },
     { label: "Decline All", value: analytics.actions_30d.decline_all, color: "bg-red-400" },
-    { label: "Individual Grant", value: analytics.actions_30d.grant, color: "bg-blue-500" },
+    { label: "Individual Grant", value: analytics.actions_30d.grant, color: "bg-sky" },
     { label: "Individual Revoke", value: analytics.actions_30d.revoke, color: "bg-amber-500" },
   ]
 

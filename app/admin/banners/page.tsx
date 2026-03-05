@@ -109,8 +109,8 @@ const placementLabels: Record<BannerPlacement, string> = {
 }
 
 const placementColors: Record<BannerPlacement, string> = {
-  search_top: "bg-blue-100 text-blue-700",
-  search_sidebar: "bg-purple-100 text-purple-700",
+  search_top: "bg-sky/10 text-sky",
+  search_sidebar: "bg-primary/10 text-primary",
   job_detail: "bg-amber-100 text-amber-700",
   homepage: "bg-green-100 text-green-700",
 }
@@ -129,7 +129,7 @@ function getBannerStatus(banner: SponsoredBanner): BannerStatus {
 
 const statusColors: Record<BannerStatus, string> = {
   active: "bg-green-100 text-green-700",
-  scheduled: "bg-blue-100 text-blue-700",
+  scheduled: "bg-sky/10 text-sky",
   expired: "bg-gray-100 text-gray-700",
   inactive: "bg-red-100 text-red-700",
 }
@@ -279,15 +279,15 @@ export default function BannersPage() {
               value={stats.scheduled}
               color="primary"
               icon={<Clock className="h-4 w-4" />}
-              gradient="from-blue-500 to-indigo-600"
-              bgAccent="bg-blue-500"
+              gradient="from-sky to-sky-deep"
+              bgAccent="bg-sky"
             />
             <StatCard
               title="Total Impressions"
               value={stats.impressions}
               icon={<Eye className="h-4 w-4" />}
-              gradient="from-pink-500 to-rose-600"
-              bgAccent="bg-pink-500"
+              gradient="from-destructive to-destructive-deep"
+              bgAccent="bg-destructive"
               sparkColor={CHART.pink}
               sparkData={banners.map((b) => ({ v: b.impressions }))}
             />
@@ -295,8 +295,8 @@ export default function BannersPage() {
               title="Total Clicks"
               value={stats.clicks}
               icon={<MousePointer className="h-4 w-4" />}
-              gradient="from-violet-500 to-purple-600"
-              bgAccent="bg-violet-500"
+              gradient="from-primary-light to-primary"
+              bgAccent="bg-primary"
               sparkColor={CHART.purple}
               sparkData={banners.map((b) => ({ v: b.clicks }))}
               chartType="bar"
