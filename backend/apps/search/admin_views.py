@@ -1821,10 +1821,20 @@ class AdminSitemapConfigView(APIView):
 
     def patch(self, request):
         current = cache.get(CACHE_KEY_SITEMAP_CONFIG, DEFAULT_SITEMAP_CONFIG.copy())
-        for key in ('frequency', 'maxUrlsPerSitemap', 'includeJobs',
-                     'includeCompanies', 'includeCategories'):
+        _SITEMAP_TYPES = {
+            'frequency': str, 'maxUrlsPerSitemap': int,
+            'includeJobs': bool, 'includeCompanies': bool, 'includeCategories': bool,
+        }
+        for key, expected_type in _SITEMAP_TYPES.items():
             if key in request.data:
-                current[key] = request.data[key]
+                try:
+                    current[key] = expected_type(request.data[key])
+                except (TypeError, ValueError):
+                    return Response(
+                        {'error': f'Invalid type for {key}'}, status=status.HTTP_400_BAD_REQUEST
+                    )
+        if isinstance(current.get('frequency'), str):
+            current['frequency'] = current['frequency'][:50]
         cache.set(CACHE_KEY_SITEMAP_CONFIG, current, CACHE_TTL)
 
         return Response({
@@ -1975,9 +1985,17 @@ class AdminIndexNowConfigView(APIView):
             'apiKey': 'orion-indexnow-key',
             'autoSubmitOnPublish': True,
         })
-        for key in ('enabled', 'apiKey', 'autoSubmitOnPublish'):
+        _INDEXNOW_TYPES = {'enabled': bool, 'apiKey': str, 'autoSubmitOnPublish': bool}
+        for key, expected_type in _INDEXNOW_TYPES.items():
             if key in request.data:
-                current[key] = request.data[key]
+                try:
+                    current[key] = expected_type(request.data[key])
+                except (TypeError, ValueError):
+                    return Response(
+                        {'error': f'Invalid type for {key}'}, status=status.HTTP_400_BAD_REQUEST
+                    )
+        if isinstance(current.get('apiKey'), str):
+            current['apiKey'] = current['apiKey'][:200]
         cache.set(CACHE_KEY_INDEXNOW_CONFIG, current, CACHE_TTL)
 
         return Response({'message': 'IndexNow configuration saved.'})
@@ -2109,7 +2127,17 @@ class AdminSchemaSettingsView(APIView):
         current = cache.get(CACHE_KEY_SCHEMA_SETTINGS, DEFAULT_SCHEMA_SETTINGS.copy())
         for key in DEFAULT_SCHEMA_SETTINGS:
             if key in request.data:
-                current[key] = request.data[key]
+                default_val = DEFAULT_SCHEMA_SETTINGS[key]
+                expected_type = type(default_val)
+                try:
+                    current[key] = expected_type(request.data[key])
+                except (TypeError, ValueError):
+                    return Response(
+                        {'error': f'Invalid type for {key}'}, status=status.HTTP_400_BAD_REQUEST
+                    )
+                # Truncate strings to prevent cache bloat
+                if isinstance(current[key], str):
+                    current[key] = current[key][:500]
         cache.set(CACHE_KEY_SCHEMA_SETTINGS, current, CACHE_TTL)
 
         return Response(current)

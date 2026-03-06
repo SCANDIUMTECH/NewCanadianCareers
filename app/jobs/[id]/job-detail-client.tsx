@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import { toast } from "sonner"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { cn } from "@/lib/utils"
+import { cn, isSafeExternalUrl } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
@@ -224,7 +224,9 @@ export function JobDetailClient({ job }: JobDetailClientProps) {
 
     // If external apply URL, redirect there
     if (job.applyUrl) {
-      window.open(job.applyUrl, '_blank')
+      if (isSafeExternalUrl(job.applyUrl)) {
+        window.open(job.applyUrl, '_blank', 'noopener,noreferrer')
+      }
       return
     }
 

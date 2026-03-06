@@ -423,19 +423,50 @@ class JourneyService:
         return {'segment_id': segment_id, 'segment_name': segment.name}
 
     @staticmethod
+    def _validate_webhook_url(url):
+        """Reject internal/private URLs to prevent SSRF."""
+        from urllib.parse import urlparse
+        import ipaddress
+
+        parsed = urlparse(url)
+        if parsed.scheme not in ('http', 'https'):
+            raise ValueError(f'Unsupported URL scheme: {parsed.scheme}')
+        hostname = parsed.hostname
+        if not hostname:
+            raise ValueError('URL must have a hostname')
+        # Block direct IP access to private ranges
+        try:
+            ip = ipaddress.ip_address(hostname)
+            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+                raise ValueError(f'URL resolves to blocked IP range: {ip}')
+        except ValueError as exc:
+            if 'blocked IP' in str(exc):
+                raise
+            # hostname is a DNS name — check for known internal Docker service names
+            blocked = {
+                'localhost', 'redis', 'db', 'rabbitmq', 'kafka', 'zookeeper',
+                'clickhouse', 'minio', 'grafana', 'otel-collector', 'traefik',
+                'web', 'celery', 'celery-beat', 'static', 'nginx',
+            }
+            if hostname.lower() in blocked:
+                raise ValueError(f'URL hostname is blocked: {hostname}')
+        return url
+
+    @staticmethod
     def _handle_webhook(enrollment, step):
         """Fire a webhook (best-effort, non-blocking)."""
-        import json
         import requests
 
         config = step.config
         url = config.get('url', '')
         method = config.get('method', 'POST').upper()
-        headers = config.get('headers', {})
         body_template = config.get('body_template', '{}')
 
         if not url:
             raise ValueError('webhook step requires url in config')
+
+        # Validate URL to prevent SSRF against internal services
+        JourneyService._validate_webhook_url(url)
 
         user = enrollment.user
         context = {
@@ -455,7 +486,7 @@ class JourneyService:
             resp = requests.request(
                 method=method,
                 url=url,
-                headers={'Content-Type': 'application/json', **headers},
+                headers={'Content-Type': 'application/json'},
                 data=body,
                 timeout=10,
             )

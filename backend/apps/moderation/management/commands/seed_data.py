@@ -23,6 +23,11 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        if not os.environ.get('SEED_USER_PASSWORD'):
+            raise ValueError(
+                'SEED_USER_PASSWORD environment variable must be set for seed_data command'
+            )
+
         if options['clear']:
             self.stdout.write('Clearing existing data...')
             self._clear_data()
@@ -138,7 +143,7 @@ class Command(BaseCommand):
                     company=company,
                     email_verified=True,
                 )
-                user.set_password(os.environ.get('SEED_USER_PASSWORD', 'SeedDev2026!!'))
+                user.set_password(os.environ.get('SEED_USER_PASSWORD', ''))
                 user.save()
             companies.append(company)
 
@@ -173,7 +178,7 @@ class Command(BaseCommand):
                     agency=agency,
                     email_verified=True,
                 )
-                user.set_password(os.environ.get('SEED_USER_PASSWORD', 'SeedDev2026!!'))
+                user.set_password(os.environ.get('SEED_USER_PASSWORD', ''))
                 user.save()
             agencies.append(agency)
 
@@ -205,7 +210,7 @@ class Command(BaseCommand):
                 }
             )
             if created:
-                candidate.set_password(os.environ.get('SEED_USER_PASSWORD', 'SeedDev2026!!'))
+                candidate.set_password(os.environ.get('SEED_USER_PASSWORD', ''))
                 candidate.save()
             candidates.append(candidate)
 

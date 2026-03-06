@@ -452,6 +452,12 @@ class CompanyJobViewSet(viewsets.ModelViewSet):
             )
 
         days = request.data.get('days', 30)
+        try:
+            days = int(days)
+        except (TypeError, ValueError):
+            return Response({'error': 'days must be an integer'}, status=status.HTTP_400_BAD_REQUEST)
+        if days < 1 or days > 90:
+            return Response({'error': 'Extension must be between 1 and 90 days'}, status=status.HTTP_400_BAD_REQUEST)
         job.extend(days=days)
         return Response({'message': f'Job extended by {days} days'})
 
@@ -1082,6 +1088,12 @@ class AgencyJobViewSet(viewsets.ModelViewSet):
             )
 
         days = request.data.get('days', 30)
+        try:
+            days = int(days)
+        except (TypeError, ValueError):
+            return Response({'error': 'days must be an integer'}, status=status.HTTP_400_BAD_REQUEST)
+        if days < 1 or days > 90:
+            return Response({'error': 'Extension must be between 1 and 90 days'}, status=status.HTTP_400_BAD_REQUEST)
         job.extend(days=days)
         return Response({'message': f'Job extended by {days} days'})
 

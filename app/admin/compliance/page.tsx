@@ -54,6 +54,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import { sanitizeHtml } from "@/lib/sanitize"
 import { toast } from "sonner"
 import {
   getComplianceRequests,
@@ -1556,7 +1557,7 @@ export default function CompliancePage() {
                   </div>
                 )}
               </div>
-              <div className="border rounded-lg p-4 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: docViewDialog.doc.content || "<p class='text-muted-foreground'>No content yet.</p>" }} />
+              <div className="border rounded-lg p-4 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: sanitizeHtml(docViewDialog.doc.content || "") || "<p class='text-muted-foreground'>No content yet.</p>" }} />
             </div>
           )}
           <DialogFooter>

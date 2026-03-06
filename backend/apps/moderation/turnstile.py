@@ -9,6 +9,8 @@ import logging
 
 import requests
 
+from core.utils import get_client_ip  # noqa: F401 — re-exported for backward compat
+
 logger = logging.getLogger(__name__)
 
 CLOUDFLARE_VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
@@ -53,7 +55,9 @@ def verify_turnstile_token(token, ip_address=None, feature='auth', fail_closed=F
 
     # Secret key must be configured
     if not settings.turnstile_secret_key:
-        logger.warning('Turnstile enabled but secret key not configured — passing through')
+        logger.warning('Turnstile enabled but secret key not configured')
+        if fail_closed:
+            return (False, 'Security verification is not properly configured. Please contact support.')
         return (True, None)
 
     # Token must be present
@@ -87,13 +91,3 @@ def verify_turnstile_token(token, ip_address=None, feature='auth', fail_closed=F
         return (True, None)
 
 
-def get_client_ip(request):
-    """
-    Extract client IP from the request.
-    Prefers Cloudflare's CF-Connecting-IP header (set by Cloudflare Tunnel).
-    """
-    return (
-        request.META.get('HTTP_CF_CONNECTING_IP')
-        or request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip()
-        or request.META.get('REMOTE_ADDR')
-    )

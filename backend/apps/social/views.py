@@ -1,6 +1,10 @@
 """
 Social media distribution views for Orion API.
 """
+import secrets
+
+from django.conf import settings as django_settings
+from django.core.cache import cache
 from django.utils import timezone
 from rest_framework import viewsets, generics, status
 from rest_framework.views import APIView
@@ -69,11 +73,10 @@ class SocialAccountViewSet(viewsets.ModelViewSet):
             )
 
         # Validate redirect_uri against allowed origins
-        from django.conf import settings
         from urllib.parse import urlparse
 
         parsed = urlparse(redirect_uri)
-        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+        frontend_url = getattr(django_settings, 'FRONTEND_URL', 'http://localhost:3000')
         allowed_origin = urlparse(frontend_url)
 
         if parsed.scheme not in ('http', 'https') or parsed.netloc != allowed_origin.netloc:
@@ -82,12 +85,16 @@ class SocialAccountViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # Generate CSRF state token for OAuth flow (prevents cross-site request forgery)
+        state = secrets.token_urlsafe(32)
+        cache.set(f"oauth_state:{request.user.id}:{platform}", state, timeout=600)
+
         # Build OAuth URLs per platform
         oauth_urls = {
-            'linkedin': f'https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id={{LINKEDIN_CLIENT_ID}}&redirect_uri={redirect_uri}&scope=r_liteprofile%20r_emailaddress%20w_member_social',
-            'facebook': f'https://www.facebook.com/v18.0/dialog/oauth?client_id={{FACEBOOK_APP_ID}}&redirect_uri={redirect_uri}&scope=pages_manage_posts,pages_read_engagement',
-            'twitter': f'https://twitter.com/i/oauth2/authorize?response_type=code&client_id={{TWITTER_CLIENT_ID}}&redirect_uri={redirect_uri}&scope=tweet.read%20tweet.write%20users.read',
-            'instagram': f'https://api.instagram.com/oauth/authorize?client_id={{INSTAGRAM_APP_ID}}&redirect_uri={redirect_uri}&scope=user_profile,user_media&response_type=code',
+            'linkedin': f'https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id={{LINKEDIN_CLIENT_ID}}&redirect_uri={redirect_uri}&scope=r_liteprofile%20r_emailaddress%20w_member_social&state={state}',
+            'facebook': f'https://www.facebook.com/v18.0/dialog/oauth?client_id={{FACEBOOK_APP_ID}}&redirect_uri={redirect_uri}&scope=pages_manage_posts,pages_read_engagement&state={state}',
+            'twitter': f'https://twitter.com/i/oauth2/authorize?response_type=code&client_id={{TWITTER_CLIENT_ID}}&redirect_uri={redirect_uri}&scope=tweet.read%20tweet.write%20users.read&state={state}',
+            'instagram': f'https://api.instagram.com/oauth/authorize?client_id={{INSTAGRAM_APP_ID}}&redirect_uri={redirect_uri}&scope=user_profile,user_media&response_type=code&state={state}',
         }
 
         url = oauth_urls.get(platform)
@@ -117,11 +124,18 @@ class SocialAccountViewSet(viewsets.ModelViewSet):
         oauth_code = serializer.validated_data['oauth_code']
         redirect_uri = serializer.validated_data['redirect_uri']
 
-        # TODO: Exchange OAuth code for tokens based on platform
-        # This is a stub - in production, use platform-specific OAuth clients
-        # e.g., linkedin-api, tweepy, facebook-sdk
+        # Verify OAuth state token to prevent CSRF attacks
+        state = request.data.get('state', '')
+        cache_key = f"oauth_state:{request.user.id}:{platform}"
+        stored_state = cache.get(cache_key)
+        if not stored_state or not secrets.compare_digest(stored_state, state):
+            return Response(
+                {'error': 'Invalid or expired OAuth state. Please restart the connection flow.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        cache.delete(cache_key)
 
-        # Simulate OAuth token exchange
+        # Exchange OAuth code for tokens
         token_data = self._exchange_oauth_code(platform, oauth_code, redirect_uri)
 
         if not token_data:
@@ -152,13 +166,16 @@ class SocialAccountViewSet(viewsets.ModelViewSet):
         """
         Exchange OAuth code for access tokens.
 
-        This is a stub implementation. In production, implement
-        platform-specific OAuth flows:
+        In production, implement platform-specific OAuth flows:
         - LinkedIn: Use LinkedIn Marketing API
         - Twitter: Use Twitter API v2
         - Facebook: Use Facebook Graph API
         """
-        # Stub: Return mock data for development
+        # Block stub from running in production — prevents fake tokens in DB
+        if not django_settings.DEBUG:
+            return None
+
+        # Stub: Return mock data for development only
         return {
             'account_name': f'Mock {platform.title()} Account',
             'account_id': f'mock_{platform}_{timezone.now().timestamp()}',

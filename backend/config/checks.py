@@ -34,11 +34,82 @@ def check_celery_broker_url(app_configs, **kwargs):
 
     if not settings.DEBUG and broker_url and not broker_url.startswith('amqps://'):
         errors.append(
-            Warning(
+            Error(
                 'CELERY_BROKER_URL does not use TLS (amqps://).',
                 hint='Use amqps:// with TLS certificates in production for encrypted broker connections.',
-                id='orion.W001',
+                id='orion.E003',
             )
         )
+
+    return errors
+
+
+@register(Tags.security, deploy=True)
+def check_production_origins(app_configs, **kwargs):
+    """Ensure CORS and CSRF origins don't contain localhost in production."""
+    errors = []
+    if settings.DEBUG:
+        return errors
+
+    localhost_patterns = ('localhost', '127.0.0.1', '0.0.0.0')
+
+    for origin in getattr(settings, 'CORS_ALLOWED_ORIGINS', []):
+        if any(p in origin for p in localhost_patterns):
+            errors.append(
+                Error(
+                    f'CORS_ALLOWED_ORIGINS contains localhost origin: {origin}',
+                    hint='Set the CORS_ALLOWED_ORIGINS env var to production domains only.',
+                    id='orion.E010',
+                )
+            )
+            break
+
+    for origin in getattr(settings, 'CSRF_TRUSTED_ORIGINS', []):
+        if any(p in origin for p in localhost_patterns):
+            errors.append(
+                Error(
+                    f'CSRF_TRUSTED_ORIGINS contains localhost origin: {origin}',
+                    hint='Set the CSRF_TRUSTED_ORIGINS env var to production domains only.',
+                    id='orion.E011',
+                )
+            )
+            break
+
+    for host in getattr(settings, 'ALLOWED_HOSTS', []):
+        if host in localhost_patterns:
+            errors.append(
+                Error(
+                    f'ALLOWED_HOSTS contains localhost entry: {host}',
+                    hint='Remove localhost from ALLOWED_HOSTS in production.',
+                    id='orion.E012',
+                )
+            )
+            break
+
+    return errors
+
+
+@register(Tags.security, deploy=True)
+def check_production_secrets(app_configs, **kwargs):
+    """Ensure critical secrets are set in production."""
+    errors = []
+    if settings.DEBUG:
+        return errors
+
+    required_secrets = {
+        'STRIPE_SECRET_KEY': 'Stripe payments will not work.',
+        'STRIPE_WEBHOOK_SECRET': 'Stripe webhooks cannot be verified.',
+        'RESEND_API_KEY': 'Transactional emails will not be sent.',
+    }
+
+    for env_var, consequence in required_secrets.items():
+        if not os.environ.get(env_var):
+            errors.append(
+                Warning(
+                    f'{env_var} environment variable is not set.',
+                    hint=f'{consequence} Set {env_var} in your production environment.',
+                    id=f'orion.W0{list(required_secrets.keys()).index(env_var) + 20}',
+                )
+            )
 
     return errors

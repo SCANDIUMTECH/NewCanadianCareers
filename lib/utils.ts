@@ -131,3 +131,46 @@ export function getInitials(firstName: string, lastName: string): string {
   const l = lastName?.charAt(0) || '?'
   return (f + l).toUpperCase()
 }
+
+// ---------------------------------------------------------------------------
+// URL validation helpers
+// ---------------------------------------------------------------------------
+
+/** Validate a redirect URL is same-origin before navigating. */
+export function isSameOriginUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url, window.location.origin)
+    return parsed.origin === window.location.origin
+  } catch { return false }
+}
+
+/** Validate a URL uses http/https protocol only. */
+export function isSafeExternalUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    return ['http:', 'https:'].includes(parsed.protocol)
+  } catch { return false }
+}
+
+// ---------------------------------------------------------------------------
+// File upload MIME validation
+// ---------------------------------------------------------------------------
+
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+const ALLOWED_DOC_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/rtf',
+  'text/plain',
+]
+
+/** Check if a file has an allowed image MIME type. */
+export function isAllowedImageType(file: File): boolean {
+  return ALLOWED_IMAGE_TYPES.includes(file.type)
+}
+
+/** Check if a file has an allowed document MIME type. */
+export function isAllowedDocumentType(file: File): boolean {
+  return ALLOWED_DOC_TYPES.includes(file.type)
+}

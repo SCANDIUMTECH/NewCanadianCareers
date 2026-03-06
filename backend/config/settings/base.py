@@ -11,10 +11,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # The fallback is for local development only. Production settings must set SECRET_KEY.
-_DEBUG_RAW = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-only-do-not-use-in-production')
-if not os.environ.get('SECRET_KEY') and not _DEBUG_RAW:
+DEBUG = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 'yes')
+SECRET_KEY = os.environ.get('SECRET_KEY', 'xk9$m2!q7Lp#Wd3vRtZ8@nFjYc6BhA0eGs5UiOr4Jl1Nw')
+if not os.environ.get('SECRET_KEY') and not DEBUG:
     raise ValueError('SECRET_KEY environment variable must be set in production')
+
+# Support zero-downtime SECRET_KEY rotation (Django 4.1+).
+# During rotation: set new key as SECRET_KEY, add old key to FALLBACKS.
+# Remove old key from FALLBACKS after all sessions/tokens have expired (~7 days).
+_fallback_keys = os.environ.get('SECRET_KEY_FALLBACKS', '')
+SECRET_KEY_FALLBACKS = [k.strip() for k in _fallback_keys.split(',') if k.strip()]
 
 # Application definition
 INSTALLED_APPS = [
@@ -85,6 +91,13 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
+# Password hashing — Argon2id (OWASP/NIST recommended), with PBKDF2 fallback for migration.
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+]
+
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -92,12 +105,16 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {'min_length': 12},
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
     },
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+    {
+        'NAME': 'core.password_validators.ComplexityValidator',
     },
 ]
 
@@ -144,6 +161,7 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/hour',
         'user': '1000/hour',
+        'auth': '20/hour',
         'uploads': '30/hour',
         'marketing_bulk': '10/hour',
         'coupon_redemption': '20/hour',
@@ -152,6 +170,7 @@ REST_FRAMEWORK = {
         'rum_ingest': '1000/min',
         'banner_tracking': '500/hour',
         'affiliate_tracking': '500/hour',
+        'dsar_action': '20/hour',
     },
 }
 
@@ -161,25 +180,27 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024    # 10 MB — reject request bod
 DATA_UPLOAD_MAX_NUMBER_FILES = 5                   # Max files per request
 
 # JWT Settings
-DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
-
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
-    'AUTH_COOKIE': 'ncc_access',
-    'AUTH_COOKIE_REFRESH': 'ncc_refresh',
-    'AUTH_COOKIE_SESSION': 'ncc_has_session',
+    # __Secure- prefix ensures browsers reject the cookie unless Secure flag is set (HTTPS).
+    # In dev (DEBUG=True, no HTTPS), use plain names so cookies work over HTTP.
+    'AUTH_COOKIE': '__Secure-ncc_access' if not DEBUG else 'ncc_access',
+    'AUTH_COOKIE_REFRESH': '__Secure-ncc_refresh' if not DEBUG else 'ncc_refresh',
+    'AUTH_COOKIE_SESSION': '__Secure-ncc_has_session' if not DEBUG else 'ncc_has_session',
     'AUTH_COOKIE_HTTP_ONLY': True,
     'AUTH_COOKIE_SECURE': not DEBUG,  # False in dev for http://localhost
     'AUTH_COOKIE_SAMESITE': 'Lax',
+    'AUTH_COOKIE_DOMAIN': os.environ.get('SESSION_COOKIE_DOMAIN', None),
 }
 
 # CORS
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,https://localhost:3000').split(',')
+CORS_MAX_AGE = 86400  # Cache preflight responses for 24 hours (reduces OPTIONS requests)
 
 # CSRF
 CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost,https://localhost,http://localhost:3000,https://localhost:3000').split(',')
@@ -189,12 +210,19 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 SESSION_CACHE_ALIAS = 'default'
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 7  # 7 days
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SAMESITE = 'Lax'
 
 # CSRF cookie — not HttpOnly so frontend can read it if needed
 CSRF_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SAMESITE = 'Lax'
+
+# Security headers — applied in both dev and production for consistent behavior
+X_FRAME_OPTIONS = 'DENY'
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'  # Prevents cross-origin window.opener access; allow-popups for Stripe/OAuth
 
 # Celery Configuration — RabbitMQ broker, Redis result backend
 # Both URLs MUST be set via environment variables. No unauthenticated defaults.
@@ -208,6 +236,7 @@ if not CELERY_RESULT_BACKEND:
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
+CELERY_RESULT_EXPIRES = 3600  # 1 hour — prevents unbounded Redis memory growth from stored task results
 CELERY_TIMEZONE = 'UTC'
 
 # Celery broker connection resilience
@@ -351,6 +380,15 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'apps.gdpr.tasks.purge_old_consent_logs',
         'schedule': crontab(minute=0, hour=4, day_of_week='sunday'),  # Weekly on Sunday at 4 AM
     },
+    # ── Housekeeping tasks ────────────────────────────────────────
+    'flush-expired-jwt-tokens': {
+        'task': 'apps.users.tasks.flush_expired_jwt_tokens',
+        'schedule': crontab(hour=3, minute=30),  # Daily at 3:30 AM
+    },
+    'cleanup-old-stripe-webhook-events': {
+        'task': 'apps.billing.tasks.cleanup_old_webhook_events',
+        'schedule': crontab(hour=4, minute=30),  # Daily at 4:30 AM
+    },
 }
 
 # Stripe
@@ -389,6 +427,11 @@ PLATFORM_SETTINGS_DEFAULTS = {
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'filters': {
+        'mask_sensitive': {
+            '()': 'core.logging_filters.SensitiveDataFilter',
+        },
+    },
     'formatters': {
         'verbose': {
             'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
@@ -403,6 +446,7 @@ LOGGING = {
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
+            'filters': ['mask_sensitive'],
         },
     },
     'root': {
@@ -418,6 +462,11 @@ LOGGING = {
         'apps': {
             'handlers': ['console'],
             'level': os.environ.get('APPS_LOG_LEVEL', 'INFO'),
+            'propagate': False,
+        },
+        'django.security': {
+            'handlers': ['console'],
+            'level': 'WARNING',
             'propagate': False,
         },
     },

@@ -103,7 +103,7 @@ class JobDetailSerializer(serializers.ModelSerializer):
             'views', 'applications_count',
             'meta_title', 'meta_description',
             'created_at', 'updated_at',
-            'last_refreshed_at', 'spam_score'
+            'last_refreshed_at',
         ]
 
 
@@ -123,6 +123,7 @@ class JobCreateSerializer(serializers.ModelSerializer):
             'featured', 'urgent',
             'meta_title', 'meta_description'
         ]
+        read_only_fields = ['featured', 'urgent']
 
     def validate_category(self, value):
         return validate_dynamic_category(value)

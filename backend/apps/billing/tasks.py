@@ -11,7 +11,8 @@ from celery import shared_task
 logger = logging.getLogger(__name__)
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True)
+@shared_task(bind=True, max_retries=3, default_retry_delay=60, acks_late=True,
+             soft_time_limit=120, time_limit=150)
 def generate_invoice_pdf_task(self, invoice_id):
     """Generate invoice PDF and upload to MinIO."""
     from .services import InvoiceService
@@ -24,7 +25,8 @@ def generate_invoice_pdf_task(self, invoice_id):
         raise self.retry(exc=exc)
 
 
-@shared_task(bind=True, max_retries=5, default_retry_delay=30, acks_late=True)
+@shared_task(bind=True, max_retries=5, default_retry_delay=30, acks_late=True,
+             soft_time_limit=120, time_limit=150)
 def process_stripe_webhook_event(self, webhook_event_id):
     """Process a Stripe webhook event asynchronously.
 
@@ -578,3 +580,23 @@ def _dispatch_action_required_notification(company_id=None, agency_id=None,
         )
     except Exception:
         logger.exception('Failed to dispatch payment_action_required notification')
+
+
+@shared_task(soft_time_limit=60, time_limit=90)
+def cleanup_old_webhook_events():
+    """Purge completed Stripe webhook events older than 90 days.
+
+    Prevents the StripeWebhookEvent table from growing unbounded.
+    Schedule via celery-beat (daily).
+    """
+    from datetime import timedelta
+    from .models import StripeWebhookEvent
+
+    cutoff = timezone.now() - timedelta(days=90)
+    deleted, _ = StripeWebhookEvent.objects.filter(
+        status='completed',
+        processed_at__lt=cutoff,
+    ).delete()
+    if deleted:
+        logger.info("Cleaned up %d old Stripe webhook events", deleted)
+    return {"deleted": deleted}

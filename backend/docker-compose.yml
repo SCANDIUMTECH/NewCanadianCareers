@@ -27,7 +27,7 @@ services:
 
   # ============ Cloudflare Tunnel ============
   cloudflared:
-    image: cloudflare/cloudflared:latest
+    image: cloudflare/cloudflared:2024.6.1
     restart: unless-stopped
     command: tunnel --no-autoupdate run
     environment:
@@ -126,7 +126,7 @@ services:
 
   # ============ Static Files Server ============
   static:
-    image: nginx:alpine
+    image: nginx:1.27-alpine
     volumes:
       - ./traefik/static-nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - static_volume:/usr/share/nginx/html/static:ro
@@ -173,7 +173,7 @@ services:
     command: >
       redis-server
       --appendonly yes
-      --requirepass ${REDIS_PASSWORD:-changeme}
+      --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
       --rename-command FLUSHDB ""
       --rename-command FLUSHALL ""
       --rename-command DEBUG ""
@@ -184,7 +184,7 @@ services:
     networks:
       - backend_net    # Only app services on backend_net can reach Redis
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-changeme}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD must be set}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -284,7 +284,7 @@ services:
 
   # ============ Kafka ============
   zookeeper:
-    image: confluentinc/cp-zookeeper:latest
+    image: confluentinc/cp-zookeeper:7.3.0
     restart: unless-stopped
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
@@ -379,7 +379,7 @@ services:
   # Access: http://127.0.0.1:3001 (localhost only, NOT through Traefik)
   # Production: access via SSH tunnel — ssh -L 3001:localhost:3001 server
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.4.0
     restart: unless-stopped
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:?GRAFANA_ADMIN_USER must be set}
@@ -409,7 +409,7 @@ services:
 
   # ============ MinIO (S3-compatible storage) ============
   minio:
-    image: minio/minio:latest
+    image: minio/minio:RELEASE.2024-06-13T22-53-53Z
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
@@ -444,7 +444,7 @@ services:
 
   # ============ MinIO Init (bucket + policy) ============
   minio-init:
-    image: minio/mc:latest
+    image: minio/mc:RELEASE.2024-06-13T22-53-53Z
     depends_on:
       minio:
         condition: service_healthy

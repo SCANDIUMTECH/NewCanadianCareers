@@ -64,7 +64,7 @@ import {
   Trash2,
 } from "lucide-react"
 import { toast } from "sonner"
-import { cn } from "@/lib/utils"
+import { cn, isSameOriginUrl } from "@/lib/utils"
 import {
   getAdminUsers,
   getAdminUserStats,
@@ -350,7 +350,9 @@ function UsersContent() {
       const result = await startImpersonation(impersonatingUser.id, { reason: impersonateReason })
       toast.success("Starting impersonation...")
       // Redirect to impersonation URL
-      window.location.href = result.redirect_url
+      if (isSameOriginUrl(result.redirect_url)) {
+        window.location.href = result.redirect_url
+      }
     } catch (err) {
       toast.error(getErrorMsg(err, "Failed to start impersonation"))
       setActionLoading(null)

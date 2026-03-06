@@ -15,3 +15,12 @@ class EmailCheckThrottle(AnonRateThrottle):
     Mitigates email enumeration by limiting probing rate.
     """
     scope = 'email_check'
+
+
+class AuthRateThrottle(AnonRateThrottle):
+    """Stricter per-IP throttle for all auth endpoints (login, register, reset, etc.).
+
+    Turnstile is a bot-check, not a rate limit — this enforces framework-level
+    rate limiting on unauthenticated auth flows.
+    """
+    scope = 'auth'

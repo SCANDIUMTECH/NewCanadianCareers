@@ -29,6 +29,9 @@ class DataDeleteService:
 
     def _delete_authenticated_user_data(self, user):
         """Delete all data for an authenticated user."""
+        from apps.users.models import UserSession, PasswordResetToken, EmailVerificationToken, LoginCode
+
+        # Delete GDPR records
         UserConsent.objects.filter(user=user).delete()
 
         DataRequest.objects.filter(user=user).exclude(
@@ -36,11 +39,37 @@ class DataDeleteService:
             status=DataRequest.Status.PROCESSING,
         ).delete()
 
+        # Delete auth-related records
+        UserSession.objects.filter(user=user).delete()
+        PasswordResetToken.objects.filter(user=user).delete()
+        EmailVerificationToken.objects.filter(user=user).delete()
+        LoginCode.objects.filter(user=user).delete()
+
+        # Blacklist outstanding JWT tokens
+        try:
+            from rest_framework_simplejwt.token_blacklist.models import (
+                OutstandingToken, BlacklistedToken,
+            )
+            outstanding = OutstandingToken.objects.filter(user=user)
+            BlacklistedToken.objects.bulk_create(
+                [BlacklistedToken(token=t) for t in outstanding],
+                ignore_conflicts=True,
+            )
+        except (ImportError, AttributeError):
+            pass
+
+        # Delete uploaded files (resume, avatar)
+        if user.resume:
+            user.resume.delete(save=False)
+        if user.avatar:
+            user.avatar.delete(save=False)
+
         # Soft delete: deactivate and anonymize
         user.is_active = False
         user.email = f"deleted-{user.id}@deleted.local"
         user.first_name = ""
         user.last_name = ""
+        user.phone = ""
         user.save()
 
     def _delete_anonymous_data(self, email: str):

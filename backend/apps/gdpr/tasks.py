@@ -5,7 +5,7 @@ from celery import shared_task
 logger = logging.getLogger("gdpr.tasks")
 
 
-@shared_task
+@shared_task(soft_time_limit=250, time_limit=300)
 def enforce_data_retention():
     """Periodic task to enforce data retention policy (schedule via celery-beat, e.g. daily)."""
     from .services.data_retention import DataRetentionService
@@ -15,7 +15,8 @@ def enforce_data_retention():
     return {"affected_users": len(affected), "emails": affected}
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=300)
+@shared_task(bind=True, max_retries=3, default_retry_delay=300,
+             soft_time_limit=550, time_limit=600)
 def send_data_breach_notification(self, breach_id=None):
     """Task to send data breach notifications with retry on email failure."""
     from .services.data_breach import DataBreachService
@@ -29,7 +30,8 @@ def send_data_breach_notification(self, breach_id=None):
         raise self.retry(exc=exc)
 
 
-@shared_task(bind=True, max_retries=3, default_retry_delay=300)
+@shared_task(bind=True, max_retries=3, default_retry_delay=300,
+             soft_time_limit=550, time_limit=600)
 def send_policy_update_notification(self):
     """Task to send policy update notifications with retry on email failure."""
     from .services.data_breach import DataBreachService

@@ -41,7 +41,9 @@ def process_scheduled_posts():
     max_retries=3,
     default_retry_delay=60 * 5,  # 5 minutes
     autoretry_for=(Exception,),
-    retry_backoff=True
+    retry_backoff=True,
+    soft_time_limit=120,
+    time_limit=150,
 )
 def post_to_social_media(self, post_id):
     """

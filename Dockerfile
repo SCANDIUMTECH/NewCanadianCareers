@@ -42,11 +42,16 @@ WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-COPY --from=frontend-builder /app/.next .next
-COPY --from=frontend-builder /app/public ./public
-COPY --from=frontend-builder /app/node_modules ./node_modules
-COPY --from=frontend-builder /app/package.json ./
+# Create non-root user
+RUN adduser --disabled-password --gecos '' appuser && \
+    chown -R appuser:appuser /app
 
+COPY --from=frontend-builder --chown=appuser:appuser /app/.next .next
+COPY --from=frontend-builder --chown=appuser:appuser /app/public ./public
+COPY --from=frontend-builder --chown=appuser:appuser /app/node_modules ./node_modules
+COPY --from=frontend-builder --chown=appuser:appuser /app/package.json ./
+
+USER appuser
 EXPOSE 3000
 CMD ["pnpm", "start"]
 

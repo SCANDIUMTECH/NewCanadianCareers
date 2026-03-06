@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { cn, formatCurrency, getCurrencySymbol } from "@/lib/utils"
+import { cn, formatCurrency, getCurrencySymbol, isSafeExternalUrl } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -203,7 +203,9 @@ export default function AgencyPackagesPage() {
     setPurchaseLoading(pkg.id)
     try {
       const { checkout_url } = await purchasePackage({ package_id: pkg.id })
-      window.location.href = checkout_url
+      if (isSafeExternalUrl(checkout_url)) {
+        window.location.href = checkout_url
+      }
     } catch (err) {
       console.error('Failed to initiate purchase:', err)
       // Could show an error toast here
@@ -216,7 +218,9 @@ export default function AgencyPackagesPage() {
     setPurchaseLoading(pack.id)
     try {
       const { checkout_url } = await purchasePackage({ package_id: pack.id, quantity: 1 })
-      window.location.href = checkout_url
+      if (isSafeExternalUrl(checkout_url)) {
+        window.location.href = checkout_url
+      }
     } catch (err) {
       console.error('Failed to initiate purchase:', err)
     } finally {

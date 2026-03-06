@@ -470,8 +470,36 @@ class SupportCompanyTimelineView(APIView):
 # Impersonation
 # =============================================================================
 
-# In-memory store for impersonation sessions (use Redis in production)
-_impersonation_sessions = {}
+# Redis-backed impersonation session storage (safe for multi-worker deployments)
+import json as _json
+from django.core.cache import cache as _cache
+
+_IMPERSONATION_TTL = 3600  # 1 hour
+
+
+def _impersonation_key(token):
+    return f"impersonate:{token}"
+
+
+def _store_impersonation(token, data):
+    """Store impersonation session in Redis with TTL."""
+    serializable = {**data, 'expires_at': data['expires_at'].isoformat()}
+    _cache.set(_impersonation_key(token), _json.dumps(serializable), timeout=_IMPERSONATION_TTL)
+
+
+def _get_impersonation(token):
+    """Retrieve impersonation session from Redis."""
+    raw = _cache.get(_impersonation_key(token))
+    if not raw:
+        return None
+    data = _json.loads(raw)
+    data['expires_at'] = timezone.datetime.fromisoformat(data['expires_at'])
+    return data
+
+
+def _delete_impersonation(token):
+    """Delete impersonation session from Redis."""
+    _cache.delete(_impersonation_key(token))
 
 
 class ImpersonateUserView(APIView):
@@ -500,6 +528,13 @@ class ImpersonateUserView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+        # Prevent admin-to-admin impersonation (privilege escalation guard)
+        if target_user.role == 'admin':
+            return Response(
+                {'error': 'Cannot impersonate admin users'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         # Generate impersonation token
         token = str(uuid.uuid4())
         expires_at = timezone.now() + timedelta(hours=1)
@@ -513,8 +548,8 @@ class ImpersonateUserView(APIView):
             'reason': reason,
         }
 
-        # Store session
-        _impersonation_sessions[token] = session_data
+        # Store session in Redis
+        _store_impersonation(token, session_data)
 
         # Log impersonation start
         AuditLog.objects.create(
@@ -540,8 +575,8 @@ class EndImpersonationView(APIView):
         # Get token from request (could be in headers or body)
         token = request.data.get('token') or request.headers.get('X-Impersonation-Token')
 
-        if token and token in _impersonation_sessions:
-            session = _impersonation_sessions[token]
+        session = _get_impersonation(token) if token else None
+        if session:
             # Log impersonation end
             AuditLog.objects.create(
                 actor=request.user,
@@ -550,7 +585,7 @@ class EndImpersonationView(APIView):
                 target_id=str(session['target_user_id']),
                 details={'reason': 'Session ended by admin'}
             )
-            del _impersonation_sessions[token]
+            _delete_impersonation(token)
 
         return Response({'message': 'Impersonation session ended'})
 
@@ -565,8 +600,8 @@ class ImpersonationStatusView(APIView):
     def get(self, request):
         token = request.headers.get('X-Impersonation-Token')
 
-        if token and token in _impersonation_sessions:
-            session = _impersonation_sessions[token]
+        session = _get_impersonation(token) if token else None
+        if session:
             if session['expires_at'] > timezone.now():
                 data = {
                     'is_impersonating': True,
@@ -575,8 +610,8 @@ class ImpersonationStatusView(APIView):
                 serializer = ImpersonationStatusSerializer(data)
                 return Response(serializer.data)
             else:
-                # Session expired
-                del _impersonation_sessions[token]
+                # Session expired — clean up
+                _delete_impersonation(token)
 
         return Response({
             'isImpersonating': False,

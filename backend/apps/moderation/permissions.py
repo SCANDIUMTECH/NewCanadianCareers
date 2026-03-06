@@ -1,8 +1,3 @@
-from rest_framework.permissions import BasePermission
-
-class IsAdmin(BasePermission):
-    """
-    Permission class to check if user is admin
-    """
-    def has_permission(self, request, view):
-        return request.user and request.user.is_staff
+# Re-export from canonical location to prevent duplicate definitions.
+# The authoritative IsAdmin lives in core.permissions and checks role == 'admin'.
+from core.permissions import IsAdmin  # noqa: F401

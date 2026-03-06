@@ -18,12 +18,13 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from apps.moderation.turnstile import verify_turnstile_token
+from core.utils import get_client_ip
 from core.validators import UploadRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.permissions import IsAdmin
 from apps.audit.models import AuditLog
-from .throttles import ResendVerificationThrottle, EmailCheckThrottle
+from .throttles import ResendVerificationThrottle, EmailCheckThrottle, AuthRateThrottle
 from .models import User, UserSession, PasswordResetToken, EmailVerificationToken, LoginCode
 from .serializers import (
     UserSerializer, UserCreateSerializer, LoginSerializer,
@@ -38,20 +39,6 @@ from .serializers import (
 
 
 logger = logging.getLogger('apps.users')
-
-
-def get_client_ip(request):
-    """Get client IP address from request.
-
-    Priority: CF-Connecting-IP (Cloudflare) > REMOTE_ADDR (Traefik sets this).
-    We do NOT trust X-Forwarded-For first-hop as it is attacker-controlled.
-    """
-    # Cloudflare sets this header — cannot be forged at the edge
-    cf_ip = request.META.get('HTTP_CF_CONNECTING_IP')
-    if cf_ip:
-        return cf_ip.strip()
-    # Behind Traefik, REMOTE_ADDR is the real client IP
-    return request.META.get('REMOTE_ADDR', '0.0.0.0')
 
 
 def _fire_fraud_alert(alert_type, severity, user, description, indicators, ip_address):
@@ -81,6 +68,7 @@ class RegisterView(generics.CreateAPIView):
 
     serializer_class = UserCreateSerializer
     permission_classes = [AllowAny]
+    throttle_classes = [AuthRateThrottle]
 
     def create(self, request, *args, **kwargs):
         # Turnstile verification — fail-closed on critical auth endpoint
@@ -142,6 +130,7 @@ class LoginView(APIView):
     """User login endpoint with security tracking."""
 
     permission_classes = [AllowAny]
+    throttle_classes = [AuthRateThrottle]
     serializer_class = LoginSerializer
 
     def post(self, request):
@@ -199,6 +188,7 @@ class LoginView(APIView):
 
         # Create session for session-based auth
         login(request, user)
+        request.session.cycle_key()  # Prevent session fixation
 
         # Build location string from Cloudflare headers
         location_parts = filter(None, [
@@ -206,6 +196,17 @@ class LoginView(APIView):
             request.META.get('HTTP_CF_IPCOUNTRY', '')
         ])
         location = ', '.join(location_parts) or ''
+
+        # Enforce concurrent session limit (max 5 per user)
+        MAX_SESSIONS = 5
+        active_sessions = UserSession.objects.filter(
+            user=user, is_active=True,
+        ).order_by('-created_at')
+        excess = active_sessions[MAX_SESSIONS:]
+        if excess:
+            UserSession.objects.filter(
+                id__in=[s.id for s in excess],
+            ).update(is_active=False)
 
         # Create session record
         UserSession.objects.create(
@@ -248,8 +249,12 @@ class EmailCheckView(APIView):
         serializer = EmailCheckSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
+        import time
+        import random
         email = serializer.validated_data['email']
         exists = User.objects.filter(email=email, status__in=['active', 'pending']).exists()
+        # Normalize response timing to prevent timing-based enumeration
+        time.sleep(random.uniform(0.05, 0.15))
         return Response({'exists': exists})
 
 
@@ -257,6 +262,7 @@ class SendLoginCodeView(APIView):
     """Send a one-time login code via email."""
 
     permission_classes = [AllowAny]
+    throttle_classes = [AuthRateThrottle]
 
     def post(self, request):
         # Turnstile verification — fail-closed on critical auth endpoint
@@ -342,6 +348,7 @@ class VerifyLoginCodeView(APIView):
     """Verify a one-time login code and authenticate the user."""
 
     permission_classes = [AllowAny]
+    throttle_classes = [AuthRateThrottle]
 
     def post(self, request):
         from apps.audit.services import LoginSecurityService
@@ -414,7 +421,7 @@ class VerifyLoginCodeView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if latest_code.code != code:
+        if not secrets.compare_digest(str(latest_code.code), str(code)):
             latest_code.attempts += 1
             latest_code.save(update_fields=['attempts'])
             remaining = 5 - latest_code.attempts
@@ -436,12 +443,24 @@ class VerifyLoginCodeView(APIView):
 
         # Create session
         login(request, user)
+        request.session.cycle_key()  # Prevent session fixation
 
         location_parts = filter(None, [
             request.META.get('HTTP_CF_IPCITY', ''),
             request.META.get('HTTP_CF_IPCOUNTRY', '')
         ])
         location = ', '.join(location_parts) or ''
+
+        # Enforce concurrent session limit (max 5 per user)
+        MAX_SESSIONS = 5
+        active_sessions = UserSession.objects.filter(
+            user=user, is_active=True,
+        ).order_by('-created_at')
+        excess = active_sessions[MAX_SESSIONS:]
+        if excess:
+            UserSession.objects.filter(
+                id__in=[s.id for s in excess],
+            ).update(is_active=False)
 
         UserSession.objects.create(
             user=user,
@@ -505,9 +524,9 @@ class CookieTokenRefreshView(APIView):
         from rest_framework_simplejwt.exceptions import TokenError
         from core.cookies import set_auth_cookies, clear_auth_cookies
 
-        # Try cookie first, then request body (backward compat)
+        # Refresh token must come from HTTP-only cookie only
         refresh_cookie_name = django_settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH']
-        refresh_token = request.COOKIES.get(refresh_cookie_name) or request.data.get('refresh')
+        refresh_token = request.COOKIES.get(refresh_cookie_name)
         if not refresh_token:
             return Response(
                 {'error': 'No refresh token provided'},
@@ -620,6 +639,7 @@ class PasswordResetRequestView(APIView):
     """Request password reset."""
 
     permission_classes = [AllowAny]
+    throttle_classes = [AuthRateThrottle]
     serializer_class = PasswordResetRequestSerializer
 
     def post(self, request):
@@ -650,7 +670,7 @@ class PasswordResetRequestView(APIView):
                 PasswordResetToken.objects.create(
                     user=user,
                     token=token,
-                    expires_at=timezone.now() + timedelta(hours=1)
+                    expires_at=timezone.now() + timedelta(minutes=10)
                 )
 
             # Send password reset email via Resend
@@ -679,6 +699,7 @@ class PasswordResetConfirmView(APIView):
     """Confirm password reset."""
 
     permission_classes = [AllowAny]
+    throttle_classes = [AuthRateThrottle]
     serializer_class = PasswordResetConfirmSerializer
 
     def post(self, request):
@@ -792,6 +813,7 @@ class EmailVerifyView(APIView):
     """Verify email address."""
 
     permission_classes = [AllowAny]
+    throttle_classes = [AuthRateThrottle]
     serializer_class = EmailVerificationSerializer
 
     def post(self, request):
@@ -980,6 +1002,15 @@ class AdminSuspendUserView(APIView):
             except (ImportError, AttributeError):
                 pass  # token_blacklist app not installed
 
+            # Audit trail
+            AuditLog.objects.create(
+                actor=request.user,
+                action='suspend',
+                target_type='user',
+                target_id=str(user.id),
+                details={'reason': request.data.get('reason', ''), 'email': user.email},
+            )
+
             serializer = AdminUserSerializer(user)
             return Response(serializer.data)
         except User.DoesNotExist:
@@ -1000,6 +1031,15 @@ class AdminActivateUserView(APIView):
             user.status = 'active'
             user.is_active = True
             user.save(update_fields=['status', 'is_active'])
+
+            # Audit trail
+            AuditLog.objects.create(
+                actor=request.user,
+                action='activate',
+                target_type='user',
+                target_id=str(user.id),
+                details={'reason': request.data.get('reason', ''), 'email': user.email},
+            )
 
             serializer = AdminUserSerializer(user)
             return Response(serializer.data)
@@ -1114,11 +1154,34 @@ class AdminBulkSuspendUsersView(APIView):
 
         users = User.objects.filter(id__in=user_ids).exclude(role='admin')
         count = users.count()
+        affected_ids = list(users.values_list('id', flat=True))
 
-        users.update(status='suspended')
+        users.update(status='suspended', is_active=False)
 
         # Invalidate all sessions for suspended users
         UserSession.objects.filter(user__in=users).update(is_active=False)
+
+        # Blacklist all outstanding refresh tokens — immediate revocation
+        try:
+            from rest_framework_simplejwt.token_blacklist.models import (
+                OutstandingToken, BlacklistedToken
+            )
+            outstanding = OutstandingToken.objects.filter(user__in=users)
+            BlacklistedToken.objects.bulk_create(
+                [BlacklistedToken(token=t) for t in outstanding],
+                ignore_conflicts=True,
+            )
+        except (ImportError, AttributeError):
+            pass  # token_blacklist app not installed
+
+        # Audit trail
+        AuditLog.objects.create(
+            actor=request.user,
+            action='suspend',
+            target_type='user',
+            target_id='bulk',
+            details={'user_ids': affected_ids, 'count': count, 'reason': reason},
+        )
 
         return Response({
             'message': f'Suspended {count} users',
@@ -1151,11 +1214,21 @@ class AdminBulkDeleteUsersView(APIView):
         # Soft delete by marking as deleted
         users = User.objects.filter(id__in=user_ids).exclude(role='admin')
         count = users.count()
+        affected_ids = list(users.values_list('id', flat=True))
 
         users.update(status='suspended', is_active=False)
 
         # Invalidate all sessions for deleted users
         UserSession.objects.filter(user__in=users).update(is_active=False)
+
+        # Audit trail
+        AuditLog.objects.create(
+            actor=request.user,
+            action='delete',
+            target_type='user',
+            target_id='bulk',
+            details={'user_ids': affected_ids, 'count': count},
+        )
 
         return Response({
             'message': f'Deactivated {count} users',
@@ -1250,12 +1323,15 @@ class AdminImpersonateUserView(APIView):
                 }
             )
 
-            # Return only the access token — no refresh token for impersonation
-            return Response({
-                'token': str(access_token),
-                'redirect_url': f'/impersonate/{target_user.id}',
+            # Set access token as HTTP-only cookie — never expose in response body
+            from core.cookies import set_auth_cookies
+            redirect_url = f'/impersonate/{target_user.id}'
+            response = Response({
+                'redirect_url': redirect_url,
                 'expires_at': (timezone.now() + timedelta(hours=1)).isoformat()
             })
+            set_auth_cookies(response, access_token, access_token)  # no real refresh for impersonation
+            return response
         except User.DoesNotExist:
             return Response(
                 {'error': 'User not found'},
@@ -1266,7 +1342,7 @@ class AdminImpersonateUserView(APIView):
 class AdminEndImpersonationView(APIView):
     """End impersonation session — clears auth cookies to restore admin session."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAdmin]
 
     def post(self, request):
         from core.cookies import clear_auth_cookies
@@ -1507,6 +1583,19 @@ class DeleteAccountView(APIView):
 
         # Invalidate all sessions
         UserSession.objects.filter(user=user).update(is_active=False)
+
+        # Blacklist all outstanding refresh tokens — immediate revocation
+        try:
+            from rest_framework_simplejwt.token_blacklist.models import (
+                OutstandingToken, BlacklistedToken
+            )
+            outstanding = OutstandingToken.objects.filter(user=user)
+            BlacklistedToken.objects.bulk_create(
+                [BlacklistedToken(token=t) for t in outstanding],
+                ignore_conflicts=True,
+            )
+        except (ImportError, AttributeError):
+            pass  # token_blacklist app not installed
 
         return Response({'message': 'Account deleted successfully'})
 

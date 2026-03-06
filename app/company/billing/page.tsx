@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
-import { cn, formatCents } from "@/lib/utils"
+import { cn, formatCents, isSafeExternalUrl } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -168,7 +168,9 @@ export default function CompanyBillingPage() {
     setIsActionLoading(true)
     try {
       const session = await createCheckoutSession([{ package_id: packageId }])
-      window.location.href = session.url
+      if (isSafeExternalUrl(session.url)) {
+        window.location.href = session.url
+      }
     } catch (err) {
       console.error("Failed to create checkout session:", err)
       toast.error("Failed to start checkout. Please try again.")

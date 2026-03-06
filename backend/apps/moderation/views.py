@@ -2363,7 +2363,6 @@ class AdminCategoryViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsAdmin]
     serializer_class = CategorySerializer
     queryset = Category.objects.all()
-    pagination_class = None
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -2382,7 +2381,6 @@ class AdminIndustryViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsAdmin]
     serializer_class = IndustrySerializer
     queryset = Industry.objects.all()
-    pagination_class = None
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -2401,7 +2399,6 @@ class AdminRetentionRuleViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsAdmin]
     serializer_class = RetentionRuleSerializer
     queryset = RetentionRule.objects.all()
-    pagination_class = None
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -2426,7 +2423,6 @@ class AdminLegalDocumentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsAdmin]
     serializer_class = LegalDocumentSerializer
     queryset = LegalDocument.objects.all()
-    pagination_class = None
 
     def get_queryset(self):
         qs = super().get_queryset()

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import { toast } from "sonner"
-import { cn } from "@/lib/utils"
+import { cn, isAllowedDocumentType, isAllowedImageType } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -116,6 +116,12 @@ export default function ProfilePage() {
     const file = e.target.files?.[0]
     if (!file) return
 
+    if (!isAllowedDocumentType(file)) {
+      toast.error("Invalid file type. Please upload a PDF, DOC, DOCX, RTF, or TXT file.")
+      if (resumeInputRef.current) resumeInputRef.current.value = ""
+      return
+    }
+
     setIsUploadingResume(true)
     try {
       const resume = await uploadResume(file)
@@ -143,6 +149,12 @@ export default function ProfilePage() {
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+
+    if (!isAllowedImageType(file)) {
+      toast.error("Invalid file type. Please upload a JPEG, PNG, WebP, or GIF image.")
+      if (avatarInputRef.current) avatarInputRef.current.value = ""
+      return
+    }
 
     setIsUploadingAvatar(true)
     try {

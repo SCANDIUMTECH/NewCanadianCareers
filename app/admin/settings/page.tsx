@@ -51,7 +51,7 @@ import {
   Copy,
   Webhook,
 } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, isSafeExternalUrl } from "@/lib/utils"
 import { toast } from "sonner"
 import {
   getPlatformSettings,
@@ -722,7 +722,9 @@ function SettingsContent() {
       sessionStorage.setItem('slack_oauth_state', state)
       // Full-page redirect to Slack OAuth — Slack will redirect back to this
       // page with ?slack_callback=1&code=xxx which the useEffect above handles
-      window.location.href = url
+      if (isSafeExternalUrl(url)) {
+        window.location.href = url
+      }
     } catch {
       toast.error("Failed to start Slack connection")
       setIsConnectingSlack(false)

@@ -20,6 +20,14 @@ logger = logging.getLogger('apps.notifications')
 resend.api_key = settings.RESEND_API_KEY
 
 
+def _sanitize_email_header(value):
+    """Strip newlines/carriage returns to prevent email header injection."""
+    if not value:
+        return value
+    sanitized = value.replace('\r', '').replace('\n', '').strip()
+    return sanitized if sanitized else None
+
+
 def _get_active_provider():
     """Fetch the active, connected EmailProvider from the database."""
     from .models import EmailProvider
@@ -29,13 +37,14 @@ def _get_active_provider():
 def _send_via_zeptomail(provider, to_email, subject, html_content, from_field,
                         reply_to=None):
     """Send a single email via ZeptoMail v1.1 REST API."""
+    reply_to = _sanitize_email_header(reply_to)
     connection = get_connection(
         backend='apps.notifications.backends.zeptomail.ZeptoMailEmailBackend',
         api_key=provider.api_key,
         fail_silently=False,
     )
     msg = DjangoEmailMessage(
-        subject=subject,
+        subject=_sanitize_email_header(subject) or subject,
         body=html_content,
         from_email=from_field,
         to=[to_email] if isinstance(to_email, str) else to_email,
@@ -50,6 +59,7 @@ def _send_via_zeptomail(provider, to_email, subject, html_content, from_field,
 def _send_via_smtp(provider, to_email, subject, html_content, from_field,
                    reply_to=None):
     """Send a single email via SMTP."""
+    reply_to = _sanitize_email_header(reply_to)
     connection = get_connection(
         backend='django.core.mail.backends.smtp.EmailBackend',
         host=provider.smtp_host,
@@ -61,7 +71,7 @@ def _send_via_smtp(provider, to_email, subject, html_content, from_field,
         fail_silently=False,
     )
     msg = DjangoEmailMessage(
-        subject=subject,
+        subject=_sanitize_email_header(subject) or subject,
         body=html_content,
         from_email=from_field,
         to=[to_email] if isinstance(to_email, str) else to_email,
@@ -123,9 +133,12 @@ def render_email_template(template, context):
        and UI-edited templates so admins can manage content without code changes.
     2. Filesystem template via EMAIL_TEMPLATES dict — development fallback.
 
-    Django templates auto-escape HTML by default, preventing XSS.
+    DB templates use safe string substitution ({{ var }}) instead of Django's
+    Template engine to prevent server-side template injection (SSTI).
+    Filesystem templates use Django's render_to_string (trusted code).
     """
-    from django.template import Template, Context
+    import re
+    from django.utils.html import escape as html_escape
 
     # Inject common context variables
     context.setdefault('current_year', datetime.now().year)
@@ -137,8 +150,19 @@ def render_email_template(template, context):
             slug=template, status='Published'
         ).first()
         if db_template and db_template.html:
-            t = Template(db_template.html)
-            return t.render(Context(context))
+            # Safe string substitution — no Django template engine execution.
+            # Replaces {{ key }} and {{key}} with HTML-escaped context values.
+            # Uses lambda replacement to avoid re.sub backreference issues
+            # with backslashes in escaped values.
+            rendered = db_template.html
+            for key, val in context.items():
+                safe_val = html_escape(str(val))
+                rendered = re.sub(
+                    r'\{\{\s*' + re.escape(str(key)) + r'\s*\}\}',
+                    lambda _, v=safe_val: v,
+                    rendered,
+                )
+            return rendered
     except Exception as e:
         logger.warning('Failed to render DB template "%s": %s', template, e)
 
@@ -228,6 +252,8 @@ def _build_send_params(to_email, subject, html_content, from_field,
     retry_backoff=True,
     retry_backoff_max=300,
     rate_limit='100/m',
+    soft_time_limit=50,
+    time_limit=60,
 )
 def send_email(self, to_email, subject, template, context, user_id=None,
                campaign_id=None, journey_step_id=None, _log_id=None,
@@ -364,10 +390,10 @@ def send_email(self, to_email, subject, template, context, user_id=None,
         # Build Resend v2 SendParams
         params = _build_send_params(
             to_email=to_email,
-            subject=subject,
+            subject=_sanitize_email_header(subject) or subject,
             html_content=html_content,
             from_field=from_field,
-            reply_to=reply_to,
+            reply_to=_sanitize_email_header(reply_to),
             tags=email_tags if email_tags else None,
             scheduled_at=scheduled_at,
         )
@@ -443,6 +469,8 @@ def send_email(self, to_email, subject, template, context, user_id=None,
     default_retry_delay=30,
     retry_backoff=True,
     rate_limit='10/m',
+    soft_time_limit=250,
+    time_limit=300,
 )
 def send_batch_emails(self, email_list):
     """Send a batch of emails via the active provider.
@@ -1026,6 +1054,8 @@ def send_application_notification(application_id, notification_type):
     default_retry_delay=30,
     autoretry_for=(Exception,),
     retry_backoff=True,
+    soft_time_limit=20,
+    time_limit=30,
 )
 def send_slack_notification(self, channel, title, message, severity='info',
                             fields=None, action_url=None, mention=None):

@@ -33,7 +33,7 @@ def refresh_segment_counts():
 # ─── Campaign Tasks ───────────────────────────────────────────────────
 
 
-@shared_task
+@shared_task(soft_time_limit=550, time_limit=600)
 def process_campaign_send(campaign_id):
     """
     Process sending for a campaign.
@@ -68,6 +68,8 @@ def process_campaign_send(campaign_id):
     bind=True,
     max_retries=3,
     default_retry_delay=60,
+    soft_time_limit=50,
+    time_limit=60,
 )
 def send_campaign_email(self, recipient_id):
     """Send a single campaign email to a recipient."""
@@ -257,6 +259,8 @@ def advance_journey_enrollments():
     bind=True,
     max_retries=2,
     default_retry_delay=30,
+    soft_time_limit=50,
+    time_limit=60,
 )
 def execute_journey_step(self, enrollment_id):
     """Execute the current step for a specific enrollment."""
@@ -336,7 +340,7 @@ def update_journey_stats(journey_id):
 # ─── Reporting Tasks ──────────────────────────────────────────────
 
 
-@shared_task
+@shared_task(soft_time_limit=250, time_limit=300)
 def generate_report_export(report_type, filters=None, admin_user_id=None):
     """
     Generate a CSV export of a marketing report and store it.

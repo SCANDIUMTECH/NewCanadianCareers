@@ -19,6 +19,29 @@ class ServiceCategorySerializer(serializers.ModelSerializer):
         fields = ["id", "name", "slug", "description", "order"]
 
 
+def _validate_script_field(value):
+    """Reject script content with suspicious data-exfiltration patterns."""
+    import re
+    if not value:
+        return value
+    forbidden = [
+        r'document\.cookie',
+        r'localStorage\b',
+        r'sessionStorage\b',
+        r'\.getItem\s*\(',
+        r'XMLHttpRequest',
+        r'navigator\.sendBeacon',
+        r'eval\s*\(',
+        r'Function\s*\(',
+    ]
+    for pattern in forbidden:
+        if re.search(pattern, value, re.IGNORECASE):
+            raise serializers.ValidationError(
+                f"Script content contains disallowed pattern: {pattern}"
+            )
+    return value
+
+
 class ServiceSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True)
     category_slug = serializers.CharField(source="category.slug", read_only=True)
@@ -43,6 +66,12 @@ class ServiceSerializer(serializers.ModelSerializer):
             "is_advertising",
             "is_active",
         ]
+
+    def validate_head_script(self, value):
+        return _validate_script_field(value)
+
+    def validate_body_script(self, value):
+        return _validate_script_field(value)
 
 
 class ServicePublicSerializer(serializers.ModelSerializer):
@@ -125,8 +154,7 @@ class BulkConsentSerializer(serializers.Serializer):
 class ConsentHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = ConsentHistory
-        fields = "__all__"
-        read_only_fields = [
+        fields = [
             "id",
             "timestamp",
             "user",
@@ -138,6 +166,7 @@ class ConsentHistorySerializer(serializers.ModelSerializer):
             "user_agent",
             "consents_snapshot",
         ]
+        read_only_fields = fields
 
 
 class DataRequestCreateSerializer(serializers.ModelSerializer):
@@ -220,7 +249,28 @@ class DataBreachSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DataBreach
-        fields = "__all__"
+        fields = [
+            "id",
+            "title",
+            "nature_of_breach",
+            "categories_of_data",
+            "approximate_records_affected",
+            "consequences",
+            "measures_taken",
+            "severity",
+            "discovered_at",
+            "dpa_notification_deadline",
+            "dpa_notified_at",
+            "users_notified_at",
+            "users_notified_count",
+            "is_resolved",
+            "resolved_at",
+            "reported_by",
+            "is_dpa_overdue",
+            "hours_until_dpa_deadline",
+            "created_at",
+            "updated_at",
+        ]
 
     def get_is_dpa_overdue(self, obj):
         return obj.is_dpa_overdue
@@ -232,14 +282,27 @@ class DataBreachSerializer(serializers.ModelSerializer):
 class ProcessingActivitySerializer(serializers.ModelSerializer):
     class Meta:
         model = ProcessingActivity
-        fields = "__all__"
+        fields = [
+            "id",
+            "name",
+            "purpose",
+            "legal_basis",
+            "categories_of_data_subjects",
+            "categories_of_personal_data",
+            "recipients",
+            "third_country_transfers",
+            "retention_period",
+            "security_measures",
+            "is_active",
+            "created_at",
+            "updated_at",
+        ]
 
 
 class AdminAuditLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = AdminAuditLog
-        fields = "__all__"
-        read_only_fields = [
+        fields = [
             "id",
             "timestamp",
             "user",
@@ -250,6 +313,7 @@ class AdminAuditLogSerializer(serializers.ModelSerializer):
             "metadata",
             "ip_address",
         ]
+        read_only_fields = fields
 
 
 class GDPRSettingsSerializer(serializers.ModelSerializer):

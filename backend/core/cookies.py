@@ -20,6 +20,7 @@ def set_auth_cookies(response, access_token, refresh_token):
     refresh_max_age = int(jwt_settings['REFRESH_TOKEN_LIFETIME'].total_seconds())
     secure = jwt_settings.get('AUTH_COOKIE_SECURE', True)
     samesite = jwt_settings.get('AUTH_COOKIE_SAMESITE', 'Lax')
+    domain = jwt_settings.get('AUTH_COOKIE_DOMAIN', None)
 
     # Access token — HttpOnly, short-lived
     response.set_cookie(
@@ -30,6 +31,7 @@ def set_auth_cookies(response, access_token, refresh_token):
         secure=secure,
         samesite=samesite,
         path='/',
+        domain=domain,
     )
 
     # Refresh token — HttpOnly, long-lived, restricted path
@@ -41,6 +43,7 @@ def set_auth_cookies(response, access_token, refresh_token):
         secure=secure,
         samesite=samesite,
         path='/api/auth/',  # Only sent to auth endpoints
+        domain=domain,
     )
 
     # Session presence flag — JS-readable for Edge middleware + frontend hydration
@@ -52,15 +55,19 @@ def set_auth_cookies(response, access_token, refresh_token):
         secure=secure,
         samesite=samesite,
         path='/',
+        domain=domain,
     )
 
 
 def clear_auth_cookies(response):
     """Delete all auth cookies."""
+    jwt_settings = settings.SIMPLE_JWT
+    domain = jwt_settings.get('AUTH_COOKIE_DOMAIN', None)
     _, refresh_name, _ = _cookie_names()
     for cookie_name in _cookie_names():
         response.delete_cookie(
             key=cookie_name,
             path='/' if cookie_name != refresh_name else '/api/auth/',
             samesite='Lax',
+            domain=domain,
         )

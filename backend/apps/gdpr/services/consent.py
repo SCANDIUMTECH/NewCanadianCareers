@@ -5,6 +5,8 @@ from datetime import timedelta
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
+from core.utils import get_client_ip  # noqa: F401 — re-exported for backward compat
+
 from ..models import ConsentHistory, ConsentLog, GDPRSettings, Service, UserConsent
 
 logger = logging.getLogger("gdpr.consent")
@@ -15,13 +17,6 @@ def mask_ip(ip: str) -> str:
     if ":" in ip:
         return re.sub(r"[\da-f]*:[\da-f]*$", "XXXX:XXXX", ip, flags=re.IGNORECASE)
     return re.sub(r"\.\d+$", ".XXX", ip)
-
-
-def get_client_ip(request) -> str:
-    x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-    if x_forwarded_for:
-        return x_forwarded_for.split(",")[0].strip()
-    return request.META.get("REMOTE_ADDR", "0.0.0.0")
 
 
 class ConsentService:

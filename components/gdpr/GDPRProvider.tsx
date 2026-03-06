@@ -75,50 +75,73 @@ export function GDPRProvider({ children }: Props) {
 
   // ─── Execute Allowed Scripts ───────────────────────────────────────────────
 
+  // Allowlisted domains for third-party analytics/marketing scripts.
+  // Only <script src="..."> tags from these domains are executed.
+  // Inline scripts (no src) are blocked to prevent stored XSS via admin panel.
+  const ALLOWED_SCRIPT_DOMAINS = [
+    "www.googletagmanager.com",
+    "www.google-analytics.com",
+    "googletagmanager.com",
+    "cdn.segment.com",
+    "js.hs-scripts.com",
+    "js.hs-analytics.net",
+    "static.hotjar.com",
+    "plausible.io",
+    "cdn.jsdelivr.net",
+    "unpkg.com",
+  ]
+
+  const isAllowedScript = useCallback((scriptEl: HTMLScriptElement): boolean => {
+    const src = scriptEl.getAttribute("src")
+    // Block inline scripts — only allow external src-based scripts
+    if (!src) return false
+    try {
+      const url = new URL(src, window.location.origin)
+      return ALLOWED_SCRIPT_DOMAINS.some((d) => url.hostname === d || url.hostname.endsWith(`.${d}`))
+    } catch {
+      return false
+    }
+  }, [])
+
+  const injectScripts = useCallback(
+    (html: string, target: "head" | "body", markerId: string) => {
+      const attr = `data-gdpr-${target}`
+      if (document.querySelector(`[${attr}="${markerId}"]`)) return
+
+      const wrapper = document.createElement("div")
+      wrapper.setAttribute(attr, markerId)
+      wrapper.innerHTML = html
+
+      const scripts = wrapper.querySelectorAll("script")
+      scripts.forEach((oldScript) => {
+        if (!isAllowedScript(oldScript)) return
+        const newScript = document.createElement("script")
+        Array.from(oldScript.attributes).forEach((a) =>
+          newScript.setAttribute(a.name, a.value)
+        )
+        // Do not copy textContent — only allow src-based scripts
+        const container = target === "head" ? document.head : document.body
+        container.appendChild(newScript)
+      })
+
+      // Append non-script elements (e.g. <noscript>, <link>)
+      Array.from(wrapper.children).forEach((child) => {
+        if (child.tagName !== "SCRIPT") {
+          const container = target === "head" ? document.head : document.body
+          container.appendChild(child)
+        }
+      })
+    },
+    [isAllowedScript]
+  )
+
   const executeServices = useCallback(
     (serviceConsents: Record<string, ServiceConsentState>) => {
       Object.entries(serviceConsents).forEach(([id, state]) => {
         if (!state.allowed) return
 
-        if (state.head_script && !document.querySelector(`[data-gdpr-head="${id}"]`)) {
-          const wrapper = document.createElement("div")
-          wrapper.setAttribute("data-gdpr-head", id)
-          wrapper.innerHTML = state.head_script
-          const scripts = wrapper.querySelectorAll("script")
-          scripts.forEach((oldScript) => {
-            const newScript = document.createElement("script")
-            Array.from(oldScript.attributes).forEach((attr) =>
-              newScript.setAttribute(attr.name, attr.value)
-            )
-            newScript.textContent = oldScript.textContent
-            document.head.appendChild(newScript)
-          })
-          Array.from(wrapper.children).forEach((child) => {
-            if (child.tagName !== "SCRIPT") {
-              document.head.appendChild(child)
-            }
-          })
-        }
-
-        if (state.body_script && !document.querySelector(`[data-gdpr-body="${id}"]`)) {
-          const wrapper = document.createElement("div")
-          wrapper.setAttribute("data-gdpr-body", id)
-          wrapper.innerHTML = state.body_script
-          const scripts = wrapper.querySelectorAll("script")
-          scripts.forEach((oldScript) => {
-            const newScript = document.createElement("script")
-            Array.from(oldScript.attributes).forEach((attr) =>
-              newScript.setAttribute(attr.name, attr.value)
-            )
-            newScript.textContent = oldScript.textContent
-            document.body.appendChild(newScript)
-          })
-          Array.from(wrapper.children).forEach((child) => {
-            if (child.tagName !== "SCRIPT") {
-              document.body.appendChild(child)
-            }
-          })
-        }
+        if (state.head_script) injectScripts(state.head_script, "head", id)
+        if (state.body_script) injectScripts(state.body_script, "body", id)
       })
 
       // Google Consent Mode v2
@@ -227,9 +250,15 @@ export function GDPRProvider({ children }: Props) {
             setConsents(consentData.services)
             setIsBannerVisible(true)
           } else {
-            const parsed = JSON.parse(cachedConsents)
-            setConsents(parsed)
-            executeServices(parsed)
+            try {
+              const parsed = JSON.parse(cachedConsents)
+              setConsents(parsed)
+              executeServices(parsed)
+            } catch {
+              localStorage.removeItem(STORAGE_KEY)
+              localStorage.removeItem(CHOICE_KEY)
+              setIsBannerVisible(true)
+            }
           }
 
           setIsLoading(false)

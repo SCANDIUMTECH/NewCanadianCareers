@@ -4,12 +4,19 @@ affiliate link clicks, article views, and job views.
 
 Provides visitor identification, deduplication, and atomic counter updates.
 """
+import re
 import uuid
 
 from django.conf import settings
 from django.db.models import F
 from django.utils import timezone
 from rest_framework.throttling import AnonRateThrottle
+
+# UUID v4 format validator — rejects oversized or malformed visitor_id cookies
+_UUID_RE = re.compile(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+    re.IGNORECASE,
+)
 
 
 class BannerTrackingThrottle(AnonRateThrottle):
@@ -23,11 +30,15 @@ class AffiliateTrackingThrottle(AnonRateThrottle):
 
 
 def get_visitor_id(request):
-    """Get or create visitor ID for anonymous tracking."""
-    visitor_id = request.COOKIES.get('visitor_id')
-    if not visitor_id:
-        visitor_id = str(uuid.uuid4())
-    return visitor_id
+    """Get or create visitor ID for anonymous tracking.
+
+    Validates cookie value as UUID v4 to prevent cache-key bloat
+    and dedup bypass from crafted cookie values.
+    """
+    raw = request.COOKIES.get('visitor_id', '')
+    if raw and _UUID_RE.match(raw):
+        return raw
+    return str(uuid.uuid4())
 
 
 def get_request_context(request):

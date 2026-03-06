@@ -1,11 +1,11 @@
 """
 URL configuration for Orion backend.
 """
-from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
+from config.admin import ncc_admin_site
 from core.views import HealthCheckView
 from apps.social.views import JobSocialPostsView
 from apps.moderation.views import PublicSettingsView, StripePublishableKeyView
@@ -21,7 +21,7 @@ urlpatterns = [
     path('api/settings/stripe/publishable-key/', StripePublishableKeyView.as_view(), name='stripe-publishable-key'),
 
     # Django admin (at /django-admin/ to avoid conflict with Next.js /admin pages)
-    path('django-admin/', admin.site.urls),
+    path('django-admin/', ncc_admin_site.urls),
 
     # API v1
     path('api/auth/', include('apps.users.urls')),

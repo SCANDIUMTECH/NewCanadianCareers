@@ -36,7 +36,10 @@ export function resetSessionExpiredFlag(): void {
  */
 export function hasSession(): boolean {
   if (typeof window === 'undefined') return false
-  return document.cookie.split(';').some(c => c.trim().startsWith('ncc_has_session='))
+  return document.cookie.split(';').some(c => {
+    const t = c.trim()
+    return t.startsWith('ncc_has_session=') || t.startsWith('__Secure-ncc_has_session=')
+  })
 }
 
 /**
@@ -46,7 +49,9 @@ export function hasSession(): boolean {
 export function clearSessionCookie(): void {
   if (typeof window === 'undefined') return
   const secure = window.location.protocol === 'https:' ? '; Secure' : ''
+  // Clear both plain and __Secure- prefixed variants
   document.cookie = `ncc_has_session=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax${secure}`
+  document.cookie = `__Secure-ncc_has_session=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax; Secure`
 }
 
 // Flag to prevent multiple simultaneous refresh attempts
@@ -114,8 +119,7 @@ export async function apiClient<T>(
     if (refreshed) {
       try {
         response = await fetch(url, { ...options, headers, credentials: 'include' })
-      } catch (networkError) {
-        console.error('Network error refetching', url, networkError)
+      } catch {
         throw { message: 'Network error: Unable to connect to server. Please check your connection.', status: 0 } as ApiError
       }
     } else {
@@ -175,8 +179,7 @@ export async function apiClientBlob(
   let response: Response
   try {
     response = await fetch(url, { ...options, headers, credentials: 'include' })
-  } catch (networkError) {
-    console.error('Network error fetching blob', url, networkError)
+  } catch {
     throw { message: 'Network error: Unable to connect to server. Please check your connection.', status: 0 } as ApiError
   }
 
@@ -186,8 +189,7 @@ export async function apiClientBlob(
     if (refreshed) {
       try {
         response = await fetch(url, { ...options, headers, credentials: 'include' })
-      } catch (networkError) {
-        console.error('Network error refetching blob', url, networkError)
+      } catch {
         throw { message: 'Network error: Unable to connect to server. Please check your connection.', status: 0 } as ApiError
       }
     } else {

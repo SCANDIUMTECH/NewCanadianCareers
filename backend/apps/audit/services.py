@@ -6,6 +6,8 @@ from datetime import timedelta
 from django.utils import timezone
 from django.conf import settings
 
+from core.utils import get_client_ip
+
 
 class LoginSecurityService:
     """Service for login security operations."""
@@ -92,17 +94,8 @@ class LoginSecurityService:
 
     @staticmethod
     def get_client_ip(request):
-        """Extract client IP from request, preferring Cloudflare headers."""
-        # Prefer Cloudflare's connecting IP header
-        cf_ip = request.META.get('HTTP_CF_CONNECTING_IP')
-        if cf_ip:
-            return cf_ip
-
-        x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded:
-            return x_forwarded.split(',')[0].strip()
-
-        return request.META.get('REMOTE_ADDR', '')
+        """Delegate to canonical get_client_ip in core.utils."""
+        return get_client_ip(request)
 
     @staticmethod
     def _parse_float(value):

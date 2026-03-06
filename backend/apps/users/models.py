@@ -3,6 +3,7 @@ User models for Orion.
 """
 from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.core.validators import FileExtensionValidator
 from django.utils import timezone
 
 from core.encryption import EncryptedTextField
@@ -71,9 +72,15 @@ class User(AbstractUser):
 
     # Profile
     phone = models.CharField(max_length=20, blank=True)
-    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    avatar = models.ImageField(
+        upload_to='avatars/', null=True, blank=True,
+        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'webp', 'gif'])],
+    )
     bio = models.TextField(blank=True)
-    resume = models.FileField(upload_to='resumes/', null=True, blank=True)
+    resume = models.FileField(
+        upload_to='resumes/', null=True, blank=True,
+        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx', 'rtf', 'txt'])],
+    )
     resume_filename = models.CharField(max_length=255, blank=True)
 
     # Privacy settings (for candidates)

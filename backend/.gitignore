@@ -118,3 +118,7 @@ nginx/ssl/
 
 # Docker
 *.env.local
+
+# TLS certificates
+traefik/certs/*.key
+traefik/certs/*.pem

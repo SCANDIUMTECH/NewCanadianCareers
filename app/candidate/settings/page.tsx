@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
-import { cn } from "@/lib/utils"
+import { cn, isSafeExternalUrl } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -216,8 +216,8 @@ export default function SettingsPage() {
     setIsExporting(true)
     try {
       const { download_url } = await exportData()
-      if (download_url) {
-        window.open(download_url, "_blank")
+      if (download_url && isSafeExternalUrl(download_url)) {
+        window.open(download_url, "_blank", "noopener,noreferrer")
       } else {
         toast.info("Your data export is being prepared. You'll receive an email when it's ready.")
       }

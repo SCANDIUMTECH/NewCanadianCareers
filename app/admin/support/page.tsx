@@ -20,6 +20,7 @@ import {
   Loader2,
   XCircle,
 } from "lucide-react"
+import { isSameOriginUrl } from "@/lib/utils"
 import { UserAvatar } from "@/components/user-avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -180,7 +181,7 @@ export default function SupportToolsPage() {
       setImpersonateReason("")
       setImpersonateTarget(null)
       // Redirect to the impersonation URL
-      if (result.redirect_url) {
+      if (result.redirect_url && isSameOriginUrl(result.redirect_url)) {
         window.location.href = result.redirect_url
       }
     } catch (err) {

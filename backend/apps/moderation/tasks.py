@@ -11,7 +11,7 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 
-@shared_task
+@shared_task(soft_time_limit=250, time_limit=300)
 def run_fraud_scan():
     """
     Periodic fraud scan task. Evaluates all enabled fraud rules.

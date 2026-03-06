@@ -99,28 +99,23 @@ class LoginSerializer(serializers.Serializer):
 
         email = attrs.get('email')
         password = attrs.get('password')
+        generic_error = 'Invalid email or password'
 
-        # Check lockout before attempting authentication
+        # Check lockout — use generic message to prevent user enumeration
         try:
             user_check = User.objects.get(email=email)
             if user_check.locked_until and user_check.locked_until > timezone.now():
-                raise serializers.ValidationError(
-                    'Account is temporarily locked due to too many failed login attempts. '
-                    'Please try again later.'
-                )
+                raise serializers.ValidationError(generic_error)
         except User.DoesNotExist:
             pass
 
         user = authenticate(username=email, password=password)
 
         if not user:
-            raise serializers.ValidationError('Invalid email or password')
+            raise serializers.ValidationError(generic_error)
 
-        if user.status == 'suspended':
-            raise serializers.ValidationError('Your account has been suspended')
-
-        if user.status == 'pending':
-            raise serializers.ValidationError('Your account is pending approval')
+        if user.status in ('suspended', 'pending'):
+            raise serializers.ValidationError(generic_error)
 
         attrs['user'] = user
         return attrs
@@ -269,7 +264,7 @@ class AdminUserSerializer(serializers.ModelSerializer):
 class AdminUserCreateSerializer(serializers.ModelSerializer):
     """Serializer for admin creating users."""
 
-    password = serializers.CharField(write_only=True, required=False)
+    password = serializers.CharField(write_only=True, required=False, validators=[validate_password])
 
     class Meta:
         model = User
@@ -277,6 +272,14 @@ class AdminUserCreateSerializer(serializers.ModelSerializer):
             'email', 'password', 'first_name', 'last_name',
             'role', 'status', 'company', 'agency',
         ]
+
+    def validate_role(self, value):
+        """Prevent creating admin users via the API — use createsuperuser instead."""
+        if value == 'admin':
+            raise serializers.ValidationError(
+                'Cannot create admin users via the API. Use the createsuperuser management command.'
+            )
+        return value
 
     def create(self, validated_data):
         password = validated_data.pop('password', None)

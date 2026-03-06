@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useAgencyContext } from "@/hooks/use-agency"
-import { cn, formatCurrency, getCompanyInitials } from "@/lib/utils"
+import { cn, formatCurrency, getCompanyInitials, isSafeExternalUrl } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -159,7 +159,7 @@ export default function AgencyBillingPage() {
       setIsSubmitting(true)
       const result = await purchasePackage({ package_id: selectedPackage.id })
       // Redirect to checkout
-      if (result.checkout_url) {
+      if (result.checkout_url && isSafeExternalUrl(result.checkout_url)) {
         window.location.href = result.checkout_url
       }
     } catch (err) {

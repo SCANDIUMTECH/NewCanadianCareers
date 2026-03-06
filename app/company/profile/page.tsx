@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { IndustryCombobox } from "@/components/admin/industry-combobox"
+import { isAllowedImageType } from "@/lib/utils"
 import { useCompanyContext } from "@/hooks/use-company"
 import { useAuth } from "@/hooks/use-auth"
 import { ExternalLink } from "lucide-react"
@@ -123,6 +124,11 @@ export default function CompanyProfilePage() {
     const file = e.target.files?.[0]
     if (!file) return
 
+    if (!isAllowedImageType(file)) {
+      setError("Invalid file type. Please upload a JPEG, PNG, WebP, or GIF image.")
+      return
+    }
+
     setIsSaving(true)
     try {
       await uploadCompanyLogo(file)
@@ -137,6 +143,11 @@ export default function CompanyProfilePage() {
   const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+
+    if (!isAllowedImageType(file)) {
+      setError("Invalid file type. Please upload a JPEG, PNG, WebP, or GIF image.")
+      return
+    }
 
     setIsSaving(true)
     try {

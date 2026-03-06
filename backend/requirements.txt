@@ -19,6 +19,7 @@ redis>=5.0,<6.0
 djangorestframework-simplejwt>=5.3,<6.0
 django-allauth>=0.61,<1.0
 cryptography>=42.0,<44.0
+argon2-cffi>=23.1,<24.0
 
 # Payments
 stripe==14.3.0
@@ -41,10 +42,10 @@ weasyprint>=62.0,<63.0
 pydyf>=0.10.0,<0.11.0
 
 # Image handling
-Pillow>=10.2,<11.0
+Pillow>=10.3,<11.0
 
 # WSGI server
-gunicorn>=21.0,<22.0
+gunicorn>=22.0,<24.0
 
 # Environment
 python-dotenv>=1.0,<2.0

@@ -9,14 +9,24 @@ DEBUG = False
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'newcanadian.careers,api.newcanadian.careers').split(',')
 
-# Database - PostgreSQL
+# Database - PostgreSQL (production hardened)
 DATABASES = {
     'default': dj_database_url.config(
         default=os.environ.get('DATABASE_URL'),
         conn_max_age=600,
         conn_health_checks=True,
+        ssl_require=True,
     )
 }
+# Connection-level hardening: timeouts and keepalives prevent hung connections.
+DATABASES['default'].setdefault('OPTIONS', {}).update({
+    'connect_timeout': 5,                # Fail fast if DB unreachable (seconds)
+    'options': '-c statement_timeout=30000 -c lock_timeout=10000',  # 30s query / 10s lock (ms)
+    'keepalives': 1,
+    'keepalives_idle': 30,               # Send keepalive after 30s idle
+    'keepalives_interval': 10,           # Retry keepalive every 10s
+    'keepalives_count': 5,               # Give up after 5 failed keepalives
+})
 
 # Cache - Redis
 CACHES = {
@@ -32,9 +42,6 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
-SECURE_CONTENT_TYPE_NOSNIFF = True
-SECURE_BROWSER_XSS_FILTER = True
-X_FRAME_OPTIONS = 'DENY'
 
 # CSRF
 CSRF_COOKIE_SECURE = True
@@ -57,8 +64,10 @@ STORAGES = {
 AWS_ACCESS_KEY_ID = os.environ.get('MINIO_ACCESS_KEY')
 AWS_SECRET_ACCESS_KEY = os.environ.get('MINIO_SECRET_KEY')
 AWS_STORAGE_BUCKET_NAME = os.environ.get('MINIO_BUCKET_NAME', 'ncc-media')
-AWS_S3_ENDPOINT_URL = f"http://{os.environ.get('MINIO_ENDPOINT', 'minio:9000')}"
-AWS_S3_USE_SSL = os.environ.get('MINIO_USE_SSL', 'False').lower() == 'true'
+_minio_use_ssl = os.environ.get('MINIO_USE_SSL', 'False').lower() == 'true'
+_minio_scheme = 'https' if _minio_use_ssl else 'http'
+AWS_S3_ENDPOINT_URL = f"{_minio_scheme}://{os.environ.get('MINIO_ENDPOINT', 'minio:9000')}"
+AWS_S3_USE_SSL = _minio_use_ssl
 AWS_S3_FILE_OVERWRITE = False
 AWS_DEFAULT_ACL = None
 AWS_S3_SIGNATURE_VERSION = 's3v4'
@@ -76,7 +85,17 @@ LOGGING['handlers']['file'] = {
     'filename': '/var/log/ncc/django.log',
     'formatter': 'verbose',
 }
+LOGGING['handlers']['security_file'] = {
+    'class': 'logging.FileHandler',
+    'filename': '/var/log/ncc/security.log',
+    'formatter': 'verbose',
+}
 LOGGING['root']['handlers'] = ['console', 'file']
+LOGGING['loggers']['django.security'] = {
+    'handlers': ['console', 'security_file'],
+    'level': 'WARNING',
+    'propagate': False,
+}
 
 # Celery — production hardening
 # Validate broker URL at runtime (not build time) via Django system check.

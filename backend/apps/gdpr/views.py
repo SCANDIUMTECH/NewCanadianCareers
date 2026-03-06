@@ -6,7 +6,9 @@ from django.core.mail import send_mail
 from django.utils import timezone
 from rest_framework import generics, permissions, status, views
 from rest_framework.response import Response
-from rest_framework.throttling import AnonRateThrottle
+from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
+
+from core.permissions import IsAdmin
 
 from .models import (
     AdminAuditLog,
@@ -48,6 +50,11 @@ from .services.analytics import ConsentAnalyticsService
 from .services.geo_ip import is_eu_visitor
 
 User = get_user_model()
+
+
+class DSARActionThrottle(UserRateThrottle):
+    """Limits DSAR export/delete actions to prevent abuse of data export endpoints."""
+    scope = 'dsar_action'
 
 
 # ─── Public API Views ───────────────────────────────────────────────────────────
@@ -297,7 +304,7 @@ class AdminServiceCategoryListCreateView(generics.ListCreateAPIView):
 
     queryset = ServiceCategory.objects.all()
     serializer_class = ServiceCategorySerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsAdmin]
 
     def perform_create(self, serializer):
         instance = serializer.save()
@@ -315,7 +322,7 @@ class AdminServiceCategoryDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     queryset = ServiceCategory.objects.all()
     serializer_class = ServiceCategorySerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsAdmin]
 
     def perform_update(self, serializer):
         instance = serializer.save()
@@ -345,7 +352,7 @@ class AdminServiceListCreateView(generics.ListCreateAPIView):
 
     queryset = Service.objects.select_related("category").all()
     serializer_class = ServiceSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsAdmin]
     filterset_fields = ["category", "is_active", "is_analytics", "is_advertising"]
     search_fields = ["name", "description"]
 
@@ -365,7 +372,7 @@ class AdminServiceDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     queryset = Service.objects.select_related("category").all()
     serializer_class = ServiceSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsAdmin]
 
     def perform_update(self, serializer):
         instance = serializer.save()
@@ -395,7 +402,7 @@ class AdminConsentLogListView(generics.ListAPIView):
 
     queryset = ConsentLog.objects.all()
     serializer_class = ConsentLogSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsAdmin]
     search_fields = ["ip_address"]
 
 
@@ -404,7 +411,7 @@ class AdminUserConsentListView(generics.ListAPIView):
 
     queryset = UserConsent.objects.select_related("user").all()
     serializer_class = UserConsentSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsAdmin]
     search_fields = ["user__email", "user__first_name", "user__last_name"]
 
 
@@ -413,7 +420,7 @@ class AdminConsentHistoryListView(generics.ListAPIView):
 
     queryset = ConsentHistory.objects.all()
     serializer_class = ConsentHistorySerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsAdmin]
     filterset_fields = ["action", "user"]
     search_fields = ["ip_address", "service_name"]
 
@@ -423,7 +430,7 @@ class AdminAuditLogListView(generics.ListAPIView):
 
     queryset = AdminAuditLog.objects.all()
     serializer_class = AdminAuditLogSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsAdmin]
     filterset_fields = ["action_type"]
     search_fields = ["description"]
 
@@ -433,7 +440,7 @@ class AdminDataRequestListView(generics.ListAPIView):
 
     queryset = DataRequest.objects.all()
     serializer_class = DataRequestSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsAdmin]
     filterset_fields = ["request_type", "status", "is_email_confirmed"]
     search_fields = ["first_name", "last_name", "email"]
 
@@ -443,13 +450,14 @@ class AdminDataRequestDetailView(generics.RetrieveUpdateAPIView):
 
     queryset = DataRequest.objects.all()
     serializer_class = DataRequestSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsAdmin]
 
 
 class AdminDataRequestActionView(views.APIView):
     """POST /api/gdpr/admin/requests/<id>/action/ - Process a data request."""
 
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsAdmin]
+    throttle_classes = [DSARActionThrottle]
 
     def post(self, request, pk):
         try:
@@ -534,7 +542,7 @@ class AdminDataRequestActionView(views.APIView):
 class AdminDSARExtendDeadlineView(views.APIView):
     """POST /api/gdpr/admin/requests/<uuid:pk>/extend-deadline/ - Extend DSAR deadline (Art. 12(3))."""
 
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsAdmin]
 
     def post(self, request, pk):
         try:
@@ -627,7 +635,7 @@ class AdminDSARExtendDeadlineView(views.APIView):
 class AdminGDPRSettingsView(views.APIView):
     """GET/PUT /api/gdpr/admin/settings/"""
 
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsAdmin]
 
     def get(self, request):
         gdpr_settings = GDPRSettings.load()
@@ -652,7 +660,7 @@ class AdminDataBreachListCreateView(generics.ListCreateAPIView):
     """GET/POST /api/gdpr/admin/data-breaches/"""
 
     queryset = DataBreach.objects.all()
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsAdmin]
 
     def get_serializer_class(self):
         if self.request.method == "POST":
@@ -675,7 +683,7 @@ class AdminDataBreachDetailView(generics.RetrieveUpdateAPIView):
 
     queryset = DataBreach.objects.all()
     serializer_class = DataBreachSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsAdmin]
 
     def perform_update(self, serializer):
         instance = serializer.save()
@@ -691,7 +699,8 @@ class AdminDataBreachDetailView(generics.RetrieveUpdateAPIView):
 class AdminDataBreachNotifyView(views.APIView):
     """POST /api/gdpr/admin/data-breach/notify/ - Send data breach notification to all users."""
 
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsAdmin]
+    throttle_classes = [DSARActionThrottle]
 
     def post(self, request):
         breach_id = request.data.get("breach_id")
@@ -713,7 +722,7 @@ class AdminDataBreachNotifyView(views.APIView):
 class AdminPolicyUpdateNotifyView(views.APIView):
     """POST /api/gdpr/admin/policy-update/notify/ - Send policy update notification to all users."""
 
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsAdmin]
 
     def post(self, request):
         service = DataBreachService()
@@ -736,7 +745,7 @@ class AdminProcessingActivityListCreateView(generics.ListCreateAPIView):
 
     queryset = ProcessingActivity.objects.all()
     serializer_class = ProcessingActivitySerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsAdmin]
 
     def perform_create(self, serializer):
         instance = serializer.save()
@@ -754,7 +763,7 @@ class AdminProcessingActivityDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     queryset = ProcessingActivity.objects.all()
     serializer_class = ProcessingActivitySerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsAdmin]
 
     def perform_update(self, serializer):
         instance = serializer.save()
@@ -782,7 +791,7 @@ class AdminProcessingActivityDetailView(generics.RetrieveUpdateDestroyAPIView):
 class AdminConsentAnalyticsView(views.APIView):
     """GET /api/gdpr/admin/analytics/ - Aggregated consent & compliance stats."""
 
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsAdmin]
 
     def get(self, request):
         analytics_service = ConsentAnalyticsService()
